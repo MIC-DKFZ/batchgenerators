@@ -1,6 +1,8 @@
 __author__ = 'fabian'
 from scipy.ndimage.filters import gaussian_filter
 import numpy as np
+from copy import deepcopy
+from scipy.ndimage import map_coordinates
 
 def generate_elastic_transform_coordinates(shape, alpha, sigma):
     n_dim = len(shape)
@@ -12,9 +14,46 @@ def generate_elastic_transform_coordinates(shape, alpha, sigma):
     indices = [np.reshape(i+j, (-1, 1)) for i,j in zip(offsets, coords)]
     return indices
 
+def create_zero_centered_coordinate_mesh(shape):
+    tmp = tuple([np.arange(i) for i in shape])
+    coords = np.array(np.meshgrid(*tmp, indexing='ij')).astype(float)
+    for d in range(len(shape)):
+        coords[d] -= ((np.array(shape).astype(float) - 1) / 2.)[d]
+    return coords
+
+def elastic_deform_coordinates(coordinates, alpha, sigma):
+    n_dim = len(coordinates)
+    offsets = []
+    for _ in range(n_dim):
+        offsets.append(gaussian_filter((np.random.random(coordinates.shape[1:]) * 2 - 1), sigma, mode="constant", cval=0) * alpha)
+    offsets = np.array(offsets)
+    indices = offsets + coordinates
+    return indices
+
+def rotate_coords_3d(coords, angle_x, angle_y, angle_z):
+    rot_matrix = np.identity(len(coords))
+    rot_matrix = create_matrix_rotation_x_3d(angle_x, rot_matrix)
+    rot_matrix = create_matrix_rotation_y_3d(angle_y, rot_matrix)
+    rot_matrix = create_matrix_rotation_z_3d(angle_z, rot_matrix)
+    coords = np.dot(coords.reshape(len(coords), -1).transpose(), rot_matrix).transpose().reshape(coords.shape)
+    return coords
+
+def scale_coords(coords, scale):
+    return coords * scale
+
+def uncenter_coords(coords):
+    shp = coords.shape[1:]
+    coords = deepcopy(coords)
+    for d in range(coords.shape[0]):
+        coords[d] += (shp[d] - 1) /2.
+    return coords
+
+def interpolate_img(img, coords, order=3, mode='nearest'):
+    return map_coordinates(img, coords, order=order, mode=mode)
+
 def generate_noise(shape, alpha, sigma):
     noise = np.random.random(shape) * 2 - 1
-    noise = gaussian_filter(noise, sigma, mode="constant", cval=0) *alpha
+    noise = gaussian_filter(noise, sigma, mode="constant", cval=0) * alpha
     return noise
 
 def find_entries_in_array(entries, myarray):
@@ -175,16 +214,6 @@ def resize_image_by_padding(image, new_shape, pad_value=None):
             pad_value = image[0, 0, 0]
         else:
             raise ValueError("Image must be either 2 or 3 dimensional")
-    '''pad_x = [(new_shape[0]-shape[0])/2, (new_shape[0]-shape[0])/2]
-    pad_y = [(new_shape[1]-shape[1])/2, (new_shape[1]-shape[1])/2]
-    if len(shape) == 3:
-        pad_z = [(new_shape[2]-shape[2])/2, (new_shape[2]-shape[2])/2]
-    if (new_shape[0]-shape[0])%2 == 1:
-        pad_x[1] += 1
-    if (new_shape[1]-shape[1])%2 == 1:
-        pad_y[1] += 1
-    if (len(shape) == 3) and ((new_shape[1]-shape[1])%2 == 1):
-        pad_z[1] += 1'''
     res = np.ones(list(new_shape), dtype=image.dtype) * pad_value
     start = np.array(new_shape)/2. - np.array(shape)/2.
     if len(shape) == 2:
