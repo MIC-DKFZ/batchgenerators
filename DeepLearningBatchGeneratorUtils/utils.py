@@ -38,6 +38,11 @@ def rotate_coords_3d(coords, angle_x, angle_y, angle_z):
     coords = np.dot(coords.reshape(len(coords), -1).transpose(), rot_matrix).transpose().reshape(coords.shape)
     return coords
 
+def rotate_coords_2d(coords, angle):
+    rot_matrix = create_matrix_rotation_2d(angle)
+    coords = np.dot(coords.reshape(len(coords), -1).transpose(), rot_matrix).transpose().reshape(coords.shape)
+    return coords
+
 def scale_coords(coords, scale):
     return coords * scale
 
@@ -48,8 +53,8 @@ def uncenter_coords(coords):
         coords[d] += (shp[d] - 1) /2.
     return coords
 
-def interpolate_img(img, coords, order=3, mode='nearest'):
-    return map_coordinates(img, coords, order=order, mode=mode)
+def interpolate_img(img, coords, order=3, mode='nearest', cval=0.0):
+    return map_coordinates(img, coords, order=order, mode=mode, cval=cval)
 
 def generate_noise(shape, alpha, sigma):
     noise = np.random.random(shape) * 2 - 1
