@@ -29,6 +29,7 @@ class BatchGeneratorBase():
         if not self._iter_initialized:
             self._initialize_iter()
         if self._batches_generated >= self._num_batches:
+            self._iter_initialized = False
             raise StopIteration
         minibatch = self.generate_train_batch()
         self._batches_generated += 1

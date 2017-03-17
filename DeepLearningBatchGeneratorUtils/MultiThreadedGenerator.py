@@ -1,10 +1,11 @@
 __author__ = 'Fabian Isensee'
+# LICENCE FABIAN ONLY: HANDS OFF
 from multiprocessing import Process
 from multiprocessing import Queue as MPQueue
 import numpy as np
 import sys
 
-class MultiThreadedGenerator(object):
+'''class MultiThreadedGenerator(object):
     def __init__(self, generator, num_processes, num_cached):
         self.generator = generator
         self.num_processes = num_processes
@@ -69,9 +70,9 @@ class MultiThreadedGenerator(object):
 
     def __del__(self):
         print "MultiThreadedGenerator: destructor was called"
-        self._finish()
+        self._finish()'''
 
-class MultiThreadedGenerator2(object):
+class MultiThreadedGenerator(object):
     def __init__(self, generator, num_processes, num_cached_per_queue, seeds=None):
         if seeds is not None:
             assert len(seeds) == num_processes
@@ -83,7 +84,7 @@ class MultiThreadedGenerator2(object):
         self.num_cached_per_queue = num_cached_per_queue
         self._queues = []
         self._threads = []
-        self.__end_ctr = 0
+        self._end_ctr = 0
         self._queue_loop = 0
 
     def __iter__(self):
@@ -102,30 +103,29 @@ class MultiThreadedGenerator2(object):
             try:
                 item = self._queues[self._next_queue()].get()
                 while item == "end":
-                    self.__end_ctr += 1
-                    if self.__end_ctr == self.num_processes:
+                    self._end_ctr += 1
+                    if self._end_ctr == self.num_processes:
                         print "MultiThreadedGenerator: finished data generation"
                         self._finish()
+                        raise StopIteration
 
                     item = self._queues[self._next_queue()].get()
                 return item
             except KeyboardInterrupt:
-                print "MultiThreadedGenerator: caught exception:", sys.exc_info()[0]
+                print "MultiThreadedGenerator: caught exception:", sys.exc_info()
                 self._finish()
                 raise KeyboardInterrupt
-            except Exception:
-                print "MultiThreadedGenerator: caught exception:", sys.exc_info()[0]
-                self._finish()
-                raise Exception
 
     def _start(self):
         if len(self._threads) == 0:
             print "starting workers"
             self._queue_loop = 0
+            self._end_ctr = 0
 
             def producer(queue, generator):
                 for item in generator:
                     queue.put(item)
+                queue.put("end")
 
             for i in xrange(self.num_processes):
                 np.random.seed(self.seeds[i])
@@ -146,7 +146,7 @@ class MultiThreadedGenerator2(object):
             self._queues = []
             self._threads = []
             self._queue = None
-            self.__end_ctr = 0
+            self._end_ctr = 0
             self._queue_loop = 0
 
     def __del__(self):
