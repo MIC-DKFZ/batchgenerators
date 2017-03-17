@@ -20,7 +20,7 @@ class TestMultiThreading(unittest.TestCase):
         ctr = 0
         for batch in batch_gen:
             ctr += 1
-        print("generated " + str(ctr) + " batches")
+        # print("generated " + str(ctr) + " batches")
 
         self.assertEqual(ctr, NR_THREADS*NR_BATCHES_PER_THREAD, "number of batches do not match")
 
@@ -44,7 +44,6 @@ class TestMultiThreading(unittest.TestCase):
         for batch in batch_gen:
             results.append(batch["data"])
         results = np.array(results)
-        print(results)
 
         true_results = [[[ 0.43689317,  0.612149  ]],
                         [[ 0.39720258,  0.78873014]],
