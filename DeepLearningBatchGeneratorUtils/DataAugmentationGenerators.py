@@ -7,6 +7,65 @@ from utils import *
 from scipy.ndimage.filters import gaussian_filter
 from skimage.transform import resize
 
+
+def ultimate_transform_generator(generator,
+                                 do_elastic_deform=True, alpha=(0., 1000.), sigma=(10., 13.),
+                                 do_rotation=True, angle_x=(0, 2*np.pi), angle_y=(0, 2*np.pi), angle_z = (0, 2*np.pi),
+                                 do_scale=True, scale=(0.75, 1.25)):
+    '''
+    THE ultimate generator. It has all you need:
+    :param generator:
+    :param do_elastic_deform:
+    :param alpha:
+    :param sigma:
+    :param do_rotation:
+    :param angle_x:
+    :param angle_y:
+    :param angle_z:
+    :param do_scale:
+    :param scale:
+    :return:
+    '''
+    if not (isinstance(alpha, list) or isinstance(alpha, tuple)):
+        alpha = [alpha, alpha]
+    if not (isinstance(sigma, list) or isinstance(sigma, tuple)):
+        sigma = [sigma, sigma]
+    for data_dict in generator:
+        assert "data" in data_dict.keys(), "your data generator needs to return a python dictionary with at least a 'data' key value pair"
+        data = data_dict["data"]
+        do_seg = False
+        seg = None
+        if "seg" in data_dict.keys():
+            seg = data_dict["seg"]
+            do_seg = True
+        shape = np.array(data.shape[2:])
+        dim = len(shape)
+        for sample_id in xrange(data.shape[0]):
+            coords = create_zero_centered_coordinate_mesh(shape)
+            if do_elastic_deform:
+                a = np.random.uniform(alpha[0], alpha[1])
+                s = np.random.uniform(sigma[0], sigma[1])
+                coords = elastic_deform_coordinates(coords, a, s)
+            if do_rotation:
+                a_x = np.random.uniform(angle_x[0], angle_x[1])
+                if dim == 3:
+                    a_y = np.random.uniform(angle_y[0], angle_y[1])
+                    a_z = np.random.uniform(angle_z[0], angle_z[1])
+                    coords = rotate_coords_3d(coords, a_x, a_y, a_z)
+                else:
+                    coords = rotate_coords_2d(coords, a_x)
+            if do_scale:
+                sc = np.random.uniform(scale[0], scale[1])
+                coords = scale_coords(coords, sc)
+            coords = uncenter_coords(coords)
+            for channel_id in range(data.shape[1]):
+                data[sample_id, channel_id] = interpolate_img(data[sample_id, channel_id], coords, 3, 'nearest')
+            if do_seg:
+                for channel_id in range(seg.shape[1]):
+                    seg[sample_id, channel_id] = interpolate_img(seg[sample_id, channel_id], coords, 0, 'constant', cval=0.0)
+            yield data_dict
+
+
 def rotation_and_elastic_transform_generator(generator, alpha=100, sigma=10, angle_x=(0, 2*np.pi), angle_y=(0, 2*np.pi), angle_z = (0, 2*np.pi)):
     '''
     If you plan on using rotations and elastic deformations, use this generator. Most of the computation time is spend
