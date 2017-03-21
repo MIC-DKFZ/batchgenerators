@@ -227,6 +227,25 @@ def resize_image_by_padding(image, new_shape, pad_value=None):
         res[int(start[0]):int(start[0])+int(shape[0]), int(start[1]):int(start[1])+int(shape[1]), int(start[2]):int(start[2])+int(shape[2])] = image
     return res
 
+def resize_image_by_padding_batched(image, new_shape, pad_value=None):
+    shape = tuple(list(image.shape[2:]))
+    new_shape = tuple(np.max(np.concatenate((shape, new_shape)).reshape((2,len(shape))), axis=0))
+    if pad_value is None:
+        if len(shape)==2:
+            pad_value = image[0,0]
+        elif len(shape)==3:
+            pad_value = image[0, 0, 0]
+        else:
+            raise ValueError("Image must be either 2 or 3 dimensional")
+    start = np.array(new_shape)/2. - np.array(shape)/2.
+    if len(shape) == 2:
+        res = np.ones((image.shape[0], image.shape[1], new_shape[0], new_shape[1]), dtype=image.dtype) * pad_value
+        res[:, :, int(start[0]):int(start[0])+int(shape[0]), int(start[1]):int(start[1])+int(shape[1])] = image[:, :]
+    elif len(shape) == 3:
+        res = np.ones((image.shape[0], image.shape[1], new_shape[0], new_shape[1], new_shape[2]), dtype=image.dtype) * pad_value
+        res[:, :, int(start[0]):int(start[0])+int(shape[0]), int(start[1]):int(start[1])+int(shape[1]), int(start[2]):int(start[2])+int(shape[2])] = image[:, :]
+    return res
+
 def create_matrix_rotation_x_3d(angle, matrix = None):
     rotation_x = np.array([[1,              0,              0],
                            [0,              np.cos(angle),  -np.sin(angle)],

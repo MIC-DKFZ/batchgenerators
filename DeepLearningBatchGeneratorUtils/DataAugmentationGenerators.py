@@ -11,7 +11,8 @@ from skimage.transform import resize
 def ultimate_transform_generator(generator,
                                  do_elastic_deform=True, alpha=(0., 1000.), sigma=(10., 13.),
                                  do_rotation=True, angle_x=(0, 2*np.pi), angle_y=(0, 2*np.pi), angle_z = (0, 2*np.pi),
-                                 do_scale=True, scale=(0.75, 1.25)):
+                                 do_scale=True, scale=(0.75, 1.25), border_mode_data='nearest', border_cval_data=0, order_data=3,
+                                 border_mode_seg='constant', border_cval_seg=0, order_seg=0):
     '''
     THE ultimate generator. It has all you need:
     :param generator:
@@ -59,11 +60,11 @@ def ultimate_transform_generator(generator,
                 coords = scale_coords(coords, sc)
             coords = uncenter_coords(coords)
             for channel_id in range(data.shape[1]):
-                data[sample_id, channel_id] = interpolate_img(data[sample_id, channel_id], coords, 3, 'nearest')
+                data[sample_id, channel_id] = interpolate_img(data[sample_id, channel_id], coords, order_data, border_mode_data, cval=border_cval_data)
             if do_seg:
                 for channel_id in range(seg.shape[1]):
-                    seg[sample_id, channel_id] = interpolate_img(seg[sample_id, channel_id], coords, 0, 'constant', cval=0.0)
-            yield data_dict
+                    seg[sample_id, channel_id] = interpolate_img(seg[sample_id, channel_id], coords, order_seg, border_mode_seg, cval=border_cval_seg)
+        yield data_dict
 
 
 def rotation_and_elastic_transform_generator(generator, alpha=100, sigma=10, angle_x=(0, 2*np.pi), angle_y=(0, 2*np.pi), angle_z = (0, 2*np.pi)):

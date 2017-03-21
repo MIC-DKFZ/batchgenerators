@@ -149,6 +149,10 @@ class MultiThreadedGenerator(object):
             self._end_ctr = 0
             self._queue_loop = 0
 
+    def restart(self):
+        self._finish()
+        self._start()
+
     def __del__(self):
         print "MultiThreadedGenerator: destructor was called"
         self._finish()
