@@ -60,3 +60,4 @@ class TestMultiThreading(unittest.TestCase):
 
         elementwise_equality = np.isclose(results, true_results)   #isclose comparison needed for float
         self.assertTrue(np.all(elementwise_equality), "Order and/or content of MultiThreadedGenerator not reproducible")
+
