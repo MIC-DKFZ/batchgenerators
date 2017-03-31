@@ -28,7 +28,7 @@ class TestMultiThreading(unittest.TestCase):
             for _ in range(5000):
                 _ = batch_gen.next()
         except Exception:
-            self.fail("Producing unlimited batched failed with msg: %s" % str(sys.exc_info()))
+            self.fail("Producing unlimited batches failed with msg: %s" % str(sys.exc_info()))
 
     def test_seeding_False(self):
         # seed=False will not trigger a reseeding of the global numpy rng by the generator
