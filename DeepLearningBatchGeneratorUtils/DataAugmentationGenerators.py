@@ -289,9 +289,10 @@ def center_crop_seg_generator(generator, output_size):
             raise Exception("Invalid dimension for seg. seg should be either [BATCH_SIZE, channels, x, y] or [BATCH_SIZE, channels, x, y, z]")
         yield data_dict
 
-def mirror_axis_generator(generator):
+def mirror_axis_generator(generator, axes=[2,3,4]):
     '''
     yields mirrored data and seg.
+    iff axes == [2,3,4]:
     3D data: 12.5% of each constellation: x only, y only, z only, xy, xz, yz, xzy, none
     2D data: 25% of each constellation: x, xy, y, none
     '''
@@ -308,15 +309,15 @@ def mirror_axis_generator(generator):
         BATCH_SIZE = data.shape[0]
         idx = np.arange(BATCH_SIZE)
         for id in idx:
-            if np.random.uniform() < 0.5:
+            if 2 in axes and np.random.uniform() < 0.5:
                 data[id, :, :] = data[id, :, ::-1]
                 if do_seg:
                     seg[id, :, :] = seg[id, :, ::-1]
-            if np.random.uniform() < 0.5:
+            if 3 in axes and np.random.uniform() < 0.5:
                 data[id, :, :, :] = data[id, :, :, ::-1]
                 if do_seg:
                     seg[id, :, :, :] = seg[id, :, :, ::-1]
-            if len(data.shape) == 5:
+            if 4 in axes and len(data.shape) == 5:
                 if np.random.uniform() < 0.5:
                     data[id, :, :, :, :] = data[id, :, :, :, ::-1]
                     if do_seg:
