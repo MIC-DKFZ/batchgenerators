@@ -409,9 +409,11 @@ def rescale_and_crop_generator(generator, scale_range, crop_size, random=True):
             data_dict['seg'] = new_seg
         yield data_dict
 
-def random_crop_generator(generator, crop_size=128):
+def random_crop_generator(generator, crop_size=128, margins=[0,0,0]):
     '''
     yields a random crop of size crop_size, crop_size may be a tuple with one entry for each dimension of your data (2D/3D)
+    :param margins: allows to give cropping margins measured symmetrically from the image boundaries, which
+    restrict the 'box' from which to randomly crop
     '''
     for data_dict in generator:
         assert "data" in data_dict.keys(), "your data generator needs to return a python dictionary with at least a 'data' key value pair"
@@ -427,14 +429,14 @@ def random_crop_generator(generator, crop_size=128):
             assert len(crop_size) == len(data.shape)-2, "If you provide a list/tuple as center crop make sure it has the same dimension as your data (2d/3d)"
 
         if crop_size[0] < data.shape[2]:
-            lb_x = np.random.randint(0, data.shape[2]-crop_size[0])
+            lb_x = np.random.randint(margins[0], data.shape[2]-crop_size[0]-margins[0])
         elif crop_size[0] == data.shape[2]:
             lb_x = 0
         else:
             raise ValueError, "crop_size[0] must be smaller or equal to the images x dimension"
 
         if crop_size[1] < data.shape[3]:
-            lb_y = np.random.randint(0, data.shape[3]-crop_size[1])
+            lb_y = np.random.randint(margins[1], data.shape[3]-crop_size[1]-margins[1])
         elif crop_size[1] == data.shape[3]:
             lb_y = 0
         else:
@@ -446,7 +448,7 @@ def random_crop_generator(generator, crop_size=128):
                 data_dict["seg"] = seg[:, :, lb_x:lb_x+crop_size[0], lb_y:lb_y+crop_size[1]]
         elif len(data.shape) == 5:
             if crop_size[2] < data.shape[4]:
-                lb_z = np.random.randint(0, data.shape[4]-crop_size[2])
+                lb_z = np.random.randint(margins[2], data.shape[4]-crop_size[2]-margins[2])
             elif crop_size[2] == data.shape[4]:
                 lb_z = 0
             else:
@@ -455,6 +457,7 @@ def random_crop_generator(generator, crop_size=128):
             if do_seg:
                 data_dict["seg"] = seg[:, :, lb_x:lb_x+crop_size[0], lb_y:lb_y+crop_size[1], lb_z:lb_z+crop_size[2]]
         yield data_dict
+
 
 def data_channel_selection_generator(generator, selected_channels):
     '''
