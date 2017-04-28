@@ -69,7 +69,7 @@ def find_entries_in_array(entries, myarray):
     return np.take(lut, myarray.astype(int))
 
 def center_crop_3D_image(img, crop_size):
-    center = np.array(img.shape) / 2
+    center = np.array(img.shape) / 2.
     if type(crop_size) not in (tuple, list):
         center_crop = [int(crop_size)] * len(img.shape)
     else:
@@ -79,7 +79,7 @@ def center_crop_3D_image(img, crop_size):
 
 def center_crop_3D_image_batched(img, crop_size):
     # dim 0 is batch, dim 1 is channel, dim 2, 3 and 4 are x y z
-    center = np.array(img.shape[2:]) / 2
+    center = np.array(img.shape[2:]) / 2.
     if type(crop_size) not in (tuple, list):
         center_crop = [int(crop_size)] * (len(img.shape) -2)
     else:
@@ -88,7 +88,7 @@ def center_crop_3D_image_batched(img, crop_size):
     return img[:, :, int(center[0] - center_crop[0] / 2.):int(center[0] + center_crop[0] / 2.), int(center[1] - center_crop[1] / 2.):int(center[1] + center_crop[1] / 2.), int(center[2] - center_crop[2] / 2.):int(center[2] + center_crop[2] / 2.)]
 
 def center_crop_2D_image(img, crop_size):
-    center = np.array(img.shape) / 2
+    center = np.array(img.shape) / 2.
     if type(crop_size) not in (tuple, list):
         center_crop = [int(crop_size)] * len(img.shape)
     else:
@@ -98,7 +98,7 @@ def center_crop_2D_image(img, crop_size):
 
 def center_crop_2D_image_batched(img, crop_size):
     # dim 0 is batch, dim 1 is channel, dim 2 and 3 are x y
-    center = np.array(img.shape[2:]) / 2
+    center = np.array(img.shape[2:]) / 2.
     if type(crop_size) not in (tuple, list):
         center_crop = [int(crop_size)] * (len(img.shape) -2)
     else:
