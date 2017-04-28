@@ -85,7 +85,7 @@ def center_crop_3D_image_batched(img, crop_size):
     else:
         center_crop = crop_size
         assert len(center_crop) == (len(img.shape) - 2), "If you provide a list/tuple as center crop make sure it has the same len as your data has dims (3d)"
-    return img[:, :int(center[0] - center_crop[0] / 2.):int(center[0] + center_crop[0] / 2.), int(center[1] - center_crop[1] / 2.):int(center[1] + center_crop[1] / 2.), int(center[2] - center_crop[2] / 2.):int(center[2] + center_crop[2] / 2.)]
+    return img[:, :, int(center[0] - center_crop[0] / 2.):int(center[0] + center_crop[0] / 2.), int(center[1] - center_crop[1] / 2.):int(center[1] + center_crop[1] / 2.), int(center[2] - center_crop[2] / 2.):int(center[2] + center_crop[2] / 2.)]
 
 def center_crop_2D_image(img, crop_size):
     center = np.array(img.shape) / 2
@@ -104,7 +104,7 @@ def center_crop_2D_image_batched(img, crop_size):
     else:
         center_crop = crop_size
         assert len(center_crop) == (len(img.shape) - 2), "If you provide a list/tuple as center crop make sure it has the same len as your data has dims (2d)"
-    return img[:, :int(center[0] - center_crop[0] / 2.):int(center[0] + center_crop[0] / 2.), int(center[1] - center_crop[1] / 2.):int(center[1] + center_crop[1] / 2.)]
+    return img[:, :, int(center[0] - center_crop[0] / 2.):int(center[0] + center_crop[0] / 2.), int(center[1] - center_crop[1] / 2.):int(center[1] + center_crop[1] / 2.)]
 
 def random_crop_3D_image(img, crop_size):
     if type(crop_size) not in (tuple, list):
