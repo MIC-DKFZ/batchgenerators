@@ -4,6 +4,7 @@ from multiprocessing import Process
 from multiprocessing import Queue as MPQueue
 import numpy as np
 import sys
+import logging
 
 '''class MultiThreadedGenerator(object):
     def __init__(self, generator, num_processes, num_cached):
@@ -105,14 +106,14 @@ class MultiThreadedGenerator(object):
                 while item == "end":
                     self._end_ctr += 1
                     if self._end_ctr == self.num_processes:
-                        print "MultiThreadedGenerator: finished data generation"
+                        logging.debug("MultiThreadedGenerator: finished data generation")
                         self._finish()
                         raise StopIteration
 
                     item = self._queues[self._next_queue()].get()
                 return item
             except KeyboardInterrupt:
-                print "MultiThreadedGenerator: caught exception:", sys.exc_info()
+                logging.error("MultiThreadedGenerator: caught exception: {}".format(sys.exc_info()))
                 self._finish()
                 raise KeyboardInterrupt
 
@@ -134,11 +135,11 @@ class MultiThreadedGenerator(object):
                 self._threads[-1].daemon = True
                 self._threads[-1].start()
         else:
-            print "MultiThreadedGenerator Warning: start() has been called but workers are already running"
+            logging.debug("MultiThreadedGenerator Warning: start() has been called but workers are already running")
 
     def _finish(self):
         if len(self._threads) != 0:
-            print "MultiThreadedGenerator: workers terminated"
+            logging.debug("MultiThreadedGenerator: workers terminated")
             for i, thread in enumerate(self._threads):
                 #if thread.is_alive():
                 thread.terminate()
@@ -154,5 +155,5 @@ class MultiThreadedGenerator(object):
         self._start()
 
     def __del__(self):
-        print "MultiThreadedGenerator: destructor was called"
+        logging.debug("MultiThreadedGenerator: destructor was called")
         self._finish()
