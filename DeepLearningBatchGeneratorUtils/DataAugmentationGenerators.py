@@ -545,3 +545,64 @@ def pad_generator(generator, new_size, pad_value_data=None, pad_value_seg=None):
         data_dict["data"] = res_data
         yield data_dict
 
+def channel_translation_generator(generator, const_channel=0, max_shifts={'z':2, 'y':2, 'x':2}):
+    """
+    Translates all channels within an instance of a batch according to randomly drawn shifts from within [-max_shift, max_shift].
+    One channel is held constant, the others are shifted in the same manner.
+    :param generator:
+    :param const_channel:
+    :param max_shifts:
+    :return:
+    """
+
+    for data_dict in generator:
+
+        data = data_dict["data"]
+        shape = data.shape
+
+        const_data = data[:,[const_channel]]
+        trans_data = data[:,[i for i in range(shape[1]) if i != const_channel]]
+
+        # iterate the batch dimension
+        for j in range(shape[0]):
+
+            slice = trans_data[j]
+
+            ixs = {}
+            pad = {}
+
+            if len(shape) == 5:
+                dims = ['z', 'y', 'x']
+            else:
+                dims = ['y', 'x']
+
+            # iterate the image dimensions, randomly draw shifts/translations
+            for i,v in enumerate(dims):
+                rand_shift = np.random.choice(range(-max_shifts[v], max_shifts[v], 1))
+
+                if rand_shift > 0:
+                    ixs[v] = {'lo':0, 'hi':-rand_shift}
+                    pad[v] = {'lo':rand_shift, 'hi':0}
+                else:
+                    ixs[v] = {'lo':abs(rand_shift), 'hi':shape[2+i]}
+                    pad[v] = {'lo':0, 'hi':abs(rand_shift)}
+
+            # shift and pad so as to retain the original image shape
+            if len(shape) == 5:
+                slice = slice[:,ixs['z']['lo']:ixs['z']['hi'],ixs['y']['lo']:ixs['y']['hi'],ixs['x']['lo']:ixs['x']['hi']]
+                slice = np.pad(slice, ((0,0),(pad['z']['lo'], pad['z']['hi']), (pad['y']['lo'], pad['y']['hi']), (pad['x']['lo'], pad['x']['hi'])), \
+					 mode='constant', constant_values=(0, 0))
+            if len(shape) == 4:
+                slice = slice[:, ixs['y']['lo']:ixs['y']['hi'],ixs['x']['lo']:ixs['x']['hi']]
+                slice = np.pad(slice, ((0,0), (pad['y']['lo'], pad['y']['hi']), (pad['x']['lo'], pad['x']['hi'])), \
+					 mode='constant', constant_values=(0, 0))
+
+            trans_data[j] = slice
+
+        data_dict['data'] = np.concatenate([const_data, trans_data], axis=1)
+
+        yield data_dict
+
+
+
+
