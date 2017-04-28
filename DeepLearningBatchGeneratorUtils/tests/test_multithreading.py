@@ -2,10 +2,14 @@ import unittest
 import numpy as np
 from MockBatchGenerator import MockBatchGenerator
 from DeepLearningBatchGeneratorUtils.MultiThreadedGenerator import MultiThreadedGenerator
+import logging
 
 class TestMultiThreading(unittest.TestCase):
 
     def setUp(self):
+        logging.basicConfig(format='%(levelname)s: %(message)s')  # set formatting of output
+        logging.getLogger().setLevel(logging.WARNING)  # to see debug messages use logging.DEBUG
+
         self.seed = 1234
         np.random.seed(self.seed)
         self.x = np.random.rand(100, 2)

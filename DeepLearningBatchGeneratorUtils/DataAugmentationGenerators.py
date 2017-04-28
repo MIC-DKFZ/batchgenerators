@@ -545,6 +545,7 @@ def pad_generator(generator, new_size, pad_value_data=None, pad_value_seg=None):
         data_dict["data"] = res_data
         yield data_dict
 
+
 def channel_translation_generator(generator, const_channel=0, max_shifts={'z':2, 'y':2, 'x':2}):
     """
     Translates all channels within an instance of a batch according to randomly drawn shifts from within [-max_shift, max_shift].
