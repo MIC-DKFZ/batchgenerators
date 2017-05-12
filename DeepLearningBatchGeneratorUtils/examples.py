@@ -1,7 +1,7 @@
 __author__ = 'fabian'
 from DataGeneratorBase import BatchGeneratorBase
 import numpy as np
-from DataAugmentationGenerators import *
+from SpatialTransformGenerators import *
 from MultiThreadedGenerator import MultiThreadedGenerator
 import matplotlib.pyplot as plt
 
