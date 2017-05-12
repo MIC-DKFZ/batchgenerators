@@ -58,3 +58,19 @@ def brightness_augmentation_generator(generator, mu, sigma, per_channel=True):
             tmp[tmp > 1] = 1
             data[sample] = tmp
         yield data_dict
+
+
+def gamma_augmentation_generator(generator, gamma_range=(0.5, 2)):
+    # augments by shifting the gamma value as in gamma correction (https://en.wikipedia.org/wiki/Gamma_correction)
+    for data_dict in generator:
+        data = data_dict['data']
+        for sample in range(data.shape[0]):
+            if np.random.random() < 0.5 and gamma_range[0] < 1:
+                gamma = np.random.uniform(gamma_range[0], 1)
+            else:
+                gamma = np.random.uniform(max(gamma_range[0], 1), gamma_range[1])
+            minm = data[sample].min()
+            rnge = data[sample].max() - minm
+            data[sample] = np.power(((data[sample]-minm)/float(rnge)), gamma) * rnge + minm
+        data_dict['data'] = data
+        yield data_dict
