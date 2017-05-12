@@ -414,5 +414,84 @@ def channel_translation_generator(generator, const_channel=0, max_shifts={'z':2,
         yield data_dict
 
 
+def ultimate_transform_generator_v2(generator, patch_size, patch_center_dist_from_border=30,
+                                 do_elastic_deform=True, alpha=(0., 1000.), sigma=(10., 13.),
+                                 do_rotation=True, angle_x=(0, 2*np.pi), angle_y=(0, 2*np.pi), angle_z = (0, 2*np.pi),
+                                 do_scale=True, scale=(0.75, 1.25), border_mode_data='nearest', border_cval_data=0, order_data=3,
+                                 border_mode_seg='constant', border_cval_seg=0, order_seg=0):
+    '''
+    THE ultimate generator. It has all you need. It alleviates the problem of having to crop your data to a reasonably sized patch size before plugging it into the
+    old ultimate_transform generator (In the old one you would put in patches larger than your final patch size so that rotations and deformations to not introduce black borders).
+    Before: Large crops = no borders but slow, small crops = black borders (duh).
+    Here you can just plug in the whole uncropped image and get your desired patch size as output, without performance loss or black borders
+    :param generator:
+    :param do_elastic_deform:
+    :param alpha:
+    :param sigma:
+    :param do_rotation:
+    :param angle_x:
+    :param angle_y:
+    :param angle_z:
+    :param do_scale:
+    :param scale:
+    :return:
+    '''
+    if not (isinstance(alpha, list) or isinstance(alpha, tuple)):
+        alpha = [alpha, alpha]
+    if not (isinstance(sigma, list) or isinstance(sigma, tuple)):
+        sigma = [sigma, sigma]
+    for data_dict in generator:
+        assert "data" in data_dict.keys(), "your data generator needs to return a python dictionary with at least a 'data' key value pair"
+        data = data_dict["data"]
+        do_seg = False
+        seg = None
+        shape = patch_size
+        assert len(shape) == len(data.shape[2:]), "dimension of patch_size and data must match!"
+        dim = len(shape)
+        if "seg" in data_dict.keys():
+            seg = data_dict["seg"]
+            do_seg = True
+            if dim == 2:
+                seg_result = np.zeros((seg.shape[0], seg.shape[1], patch_size[0], patch_size[1]), dtype=np.float32)
+            else:
+                seg_result = np.zeros((seg.shape[0], seg.shape[1], patch_size[0], patch_size[1], patch_size[2]), dtype=np.float32)
+        if dim == 2:
+            data_result = np.zeros((data.shape[0], data.shape[1], patch_size[0], patch_size[1]), dtype=np.float32)
+        else:
+            data_result = np.zeros((data.shape[0], data.shape[1], patch_size[0], patch_size[1], patch_size[2]), dtype=np.float32)
 
-
+        if not isinstance(patch_center_dist_from_border, (list, tuple)):
+            patch_center_dist_from_border = dim * [patch_center_dist_from_border]
+        for sample_id in xrange(data.shape[0]):
+            coords = create_zero_centered_coordinate_mesh(shape)
+            if do_elastic_deform:
+                a = np.random.uniform(alpha[0], alpha[1])
+                s = np.random.uniform(sigma[0], sigma[1])
+                coords = elastic_deform_coordinates(coords, a, s)
+            if do_rotation:
+                a_x = np.random.uniform(angle_x[0], angle_x[1])
+                if dim == 3:
+                    a_y = np.random.uniform(angle_y[0], angle_y[1])
+                    a_z = np.random.uniform(angle_z[0], angle_z[1])
+                    coords = rotate_coords_3d(coords, a_x, a_y, a_z)
+                else:
+                    coords = rotate_coords_2d(coords, a_x)
+            if do_scale:
+                if np.random.random() < 0.5 and scale[0] < 1:
+                    sc = np.random.uniform(scale[0], 1)
+                else:
+                    sc = np.random.uniform(max(scale[0], 1), scale[1])
+                coords = scale_coords(coords, sc)
+            # now find a nice center location
+            for d in range(dim):
+                ctr = np.random.uniform(patch_center_dist_from_border[d], data.shape[d+2]-patch_center_dist_from_border[d])
+                coords[d] += ctr
+            for channel_id in range(data.shape[1]):
+                data_result[sample_id, channel_id] = interpolate_img(data[sample_id, channel_id], coords, order_data, border_mode_data, cval=border_cval_data)
+            if do_seg:
+                for channel_id in range(seg.shape[1]):
+                    seg_result[sample_id, channel_id] = interpolate_img(seg[sample_id, channel_id], coords, order_seg, border_mode_seg, cval=border_cval_seg)
+        if do_seg:
+            data_dict['seg'] = seg_result
+        data_dict['data'] = data_result
+        yield data_dict
