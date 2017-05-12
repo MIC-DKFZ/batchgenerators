@@ -36,3 +36,25 @@ def contrast_augmentation_generator(generator, contrast_range=(0.75, 1.25), pres
                         data[sample][c][data[sample][c] > maxm] = maxm
         data_dict['data'] = data
         yield data_dict
+
+
+def brightness_augmentation_generator(generator, mu, sigma, per_channel=True):
+    # adds a randomly sampled (gaussian with mu and sigma) offset
+    # this is done separately for each channel if per_channel is set to True
+    for data_dict in generator:
+        data = data_dict['data']
+        for sample in range(data.shape[0]):
+            tmp = np.array(data[sample])
+            brain_mask = data_dict['seg'][sample, 1:]!=0
+            brain_mask = np.vstack([brain_mask] * len(tmp))
+            if not per_channel:
+                rnd_nb = np.random.normal(mu, sigma)
+                tmp[brain_mask] += rnd_nb
+            else:
+                for c in range(tmp.shape[0]):
+                    rnd_nb = np.random.normal(mu, sigma)
+                    tmp[c][brain_mask[c]] += rnd_nb
+            tmp[tmp < 0] = 0
+            tmp[tmp > 1] = 1
+            data[sample] = tmp
+        yield data_dict
