@@ -1,5 +1,4 @@
 __author__ = 'Fabian Isensee'
-# LICENCE FABIAN ONLY: HANDS OFF
 from multiprocessing import Process
 from multiprocessing import Queue as MPQueue
 import numpy as np

@@ -6,5 +6,5 @@ import SpatialTransformGenerators
 import ColorAugmentationGenerators
 import CropAndPadGenerators
 import ChannelSelectionGenerators
+import UtilityGenerators
 from utils import *
-from util_generators import *
