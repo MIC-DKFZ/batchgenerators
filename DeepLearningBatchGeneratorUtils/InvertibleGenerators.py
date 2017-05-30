@@ -2,6 +2,7 @@ author = 'Simon Kohl'
 
 import numpy as np
 from utils import *
+from copy import deepcopy
 
 class InvertibleRotationGenerator():
 	"""
@@ -17,8 +18,9 @@ class InvertibleRotationGenerator():
 
 	def __init__(self, generator, angle_x=(0, 2*np.pi), angle_y=(0, 2*np.pi), angle_z=(0, 2*np.pi),
 				 border_mode_data='nearest', border_cval_data=0, order_data=3,
-				 border_mode_seg='constant', border_cval_seg=0, order_seg=0):
+				 border_mode_seg='constant', border_cval_seg=0, order_seg=0, seed=42):
 
+		np.random.seed(seed)
 		self.generator = generator
 		self.params = {'ax':angle_x, 'ay':angle_y, 'az':angle_z,
 					   'bmode_data':border_mode_data, 'bmode_seg':border_mode_seg,
@@ -29,37 +31,36 @@ class InvertibleRotationGenerator():
 
 
 	def rotate(self, data_dict):
-
 			data = data_dict["data"]
 			do_seg = False
 			seg = None
 			if "seg" in data_dict.keys():
 				seg = data_dict["seg"]
 				do_seg = True
-
+			shape = np.array(data.shape[2:])
+			dim = len(shape)
 			for sample_id in xrange(data.shape[0]):
-				coords = create_zero_centered_coordinate_mesh(self.shape)
-				if self.dim == 3:
+				coords = create_zero_centered_coordinate_mesh(shape)
+
+				if dim == 3:
 					coords = rotate_coords_3d(coords,
 											  self.rand_params['ax'][sample_id],
 											  self.rand_params['ay'][sample_id],
 											  self.rand_params['az'][sample_id])
 				else:
 					coords = rotate_coords_2d(coords, self.rand_params['ax'][sample_id])
-
+				coords = uncenter_coords(coords)
 				for channel_id in range(data.shape[1]):
 					data[sample_id, channel_id] = interpolate_img(data[sample_id, channel_id], coords,
-																  self.params['order_data'], self.params['bmode_data'],
-																  cval=self.params['bcval_data'])
-					data_dict['data'] = data
+																	  self.params['order_data'], self.params['bmode_data'],
+																	  cval=self.params['bcval_data'])
 				if do_seg:
 					for channel_id in range(seg.shape[1]):
 						seg[sample_id, channel_id] = interpolate_img(seg[sample_id, channel_id], coords,
-																  self.params['order_seg'], self.params['bmode_seg'],
-																  cval=self.params['bcval_seg'] )
-					data_dict['seg'] = seg
+																	  self.params['order_seg'], self.params['bmode_seg'],
+																	  cval=self.params['bcval_seg'])
 
-			return data_dict
+			return {'data':data, 'seg':seg}
 
 	def generate(self):
 
@@ -74,17 +75,19 @@ class InvertibleRotationGenerator():
 				self.rand_params['ay'] = np.random.uniform(self.params['ay'][0], self.params['ay'][1], size=self.shape[0])
 				self.rand_params['az'] = np.random.uniform(self.params['az'][0], self.params['az'][1], size=self.shape[0])
 
+			initial_data_dict = deepcopy(data_dict)
 			rotated_data_dict = self.rotate(data_dict)
-			yield data_dict, rotated_data_dict
+			yield initial_data_dict, rotated_data_dict
 
 	def invert(self, data_dict):
 
+		rotated_data_dict = deepcopy(data_dict)
 		self.rand_params['ax'] = -self.rand_params['ax']
 		if self.dim == 3:
 			self.rand_params['ay'] = -self.rand_params['ay']
 			self.rand_params['az'] = -self.rand_params['az']
 
-		return self.rotate(data_dict)
+		return self.rotate(rotated_data_dict)
 
 
 
