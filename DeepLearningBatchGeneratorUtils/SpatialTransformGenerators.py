@@ -418,7 +418,7 @@ def ultimate_transform_generator_v2(generator, patch_size, patch_center_dist_fro
                                  do_elastic_deform=True, alpha=(0., 1000.), sigma=(10., 13.),
                                  do_rotation=True, angle_x=(0, 2*np.pi), angle_y=(0, 2*np.pi), angle_z = (0, 2*np.pi),
                                  do_scale=True, scale=(0.75, 1.25), border_mode_data='nearest', border_cval_data=0, order_data=3,
-                                 border_mode_seg='constant', border_cval_seg=0, order_seg=0):
+                                 border_mode_seg='constant', border_cval_seg=0, order_seg=0, random_crop=True):
     '''
     THE ultimate generator. It has all you need. It alleviates the problem of having to crop your data to a reasonably sized patch size before plugging it into the
     old ultimate_transform generator (In the old one you would put in patches larger than your final patch size so that rotations and deformations to not introduce black borders).
@@ -484,7 +484,10 @@ def ultimate_transform_generator_v2(generator, patch_size, patch_center_dist_fro
                 coords = scale_coords(coords, sc)
             # now find a nice center location
             for d in range(dim):
-                ctr = np.random.uniform(patch_center_dist_from_border[d], data.shape[d+2]-patch_center_dist_from_border[d])
+                if random_crop:
+                    ctr = np.random.uniform(patch_center_dist_from_border[d], data.shape[d+2]-patch_center_dist_from_border[d])
+                else:
+                    ctr = int(np.round(data.shape[d+2] / 2.))
                 coords[d] += ctr
             for channel_id in range(data.shape[1]):
                 data_result[sample_id, channel_id] = interpolate_img(data[sample_id, channel_id], coords, order_data, border_mode_data, cval=border_cval_data)
