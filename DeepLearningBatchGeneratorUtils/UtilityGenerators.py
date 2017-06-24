@@ -64,8 +64,8 @@ def normalize_data_generator(gen):
     :return:
     '''
     for data_dict in gen:
-        for b in data_dict['data'].shape[0]:
-            for c in data_dict['data'][b].shape[0]:
+        for b in range(data_dict['data'].shape[0]):
+            for c in range(data_dict['data'][b].shape[0]):
                 mn = data_dict['data'][b][c].mean()
                 sd = data_dict['data'][b][c].std()
                 data_dict['data'][b][c] = (data_dict['data'][b][c] - mn) / sd
