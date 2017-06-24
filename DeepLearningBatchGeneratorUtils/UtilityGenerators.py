@@ -56,3 +56,17 @@ def soft_rescale_seg_for_deep_supervision_generator(generator, rescaling_factors
             else:
                 data_dict[output_key][r] = res
         yield data_dict
+
+def normalize_data_generator(gen):
+    '''
+    normalizes all data to zero mean unis variance (done separately for each channel in each training instance)
+    :param gen:
+    :return:
+    '''
+    for data_dict in gen:
+        for b in data_dict['data'].shape[0]:
+            for c in data_dict['data'][b].shape[0]:
+                mn = data_dict['data'][b][c].mean()
+                sd = data_dict['data'][b][c].std()
+                data_dict['data'][b][c] = (data_dict['data'][b][c] - mn) / sd
+        yield data_dict
