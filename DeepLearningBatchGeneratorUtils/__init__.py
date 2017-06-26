@@ -7,4 +7,7 @@ import ColorAugmentationGenerators
 import CropAndPadGenerators
 import ChannelSelectionGenerators
 import UtilityGenerators
+import NoiseGenerators
+import ResamplingAugmentationGenerators
+import SampleNormalizationGenerators
 from utils import *
