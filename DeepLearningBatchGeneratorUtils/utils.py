@@ -289,12 +289,13 @@ def create_matrix_rotation_2d(angle, matrix = None):
 def create_random_rotation(angle_x = (0, 2*np.pi), angle_y = (0, 2*np.pi), angle_z = (0, 2*np.pi)):
     return create_matrix_rotation_x_3d(np.random.uniform(*angle_x), create_matrix_rotation_y_3d(np.random.uniform(*angle_y), create_matrix_rotation_z_3d(np.random.uniform(*angle_z))))
 
-def convert_seg_image_to_one_hot_encoding(image):
+def convert_seg_image_to_one_hot_encoding(image, classes=None):
     '''
     Takes as input an nd array of a label map (any dimension). Outputs a one hot encoding of the label map.
     Example (3D): if input is of shape (x, y, z), the output will ne of shape (n_classes, x, y, z)
     '''
-    classes = np.unique(image)
+    if classes is None:
+        classes = np.unique(image)
     out_image = np.zeros([len(classes)]+list(image.shape), dtype=image.dtype)
     for i, c in enumerate(classes):
         out_image[i][image == c] = 1
