@@ -3,7 +3,7 @@ __author__ = 'Fabian Isensee'
 import numpy as np
 from abc import ABCMeta, abstractmethod
 
-class BatchGeneratorBase():
+class BatchGeneratorBase(object):
     def __init__(self, data, BATCH_SIZE, num_batches=None, seed=False):
         __metaclass__ = ABCMeta
         self._data = data
