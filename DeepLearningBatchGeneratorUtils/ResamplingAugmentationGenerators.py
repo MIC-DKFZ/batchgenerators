@@ -1,9 +1,9 @@
 import random
 import numpy as np
-from nilearn.image.resampling import resample_img, resample_to_img
 import nibabel as nib
 
 def linear_downsampling_generator(generator, max_downsampling_factor=3, isotropic=False):
+    from nilearn.image.resampling import resample_img, resample_to_img
     '''
     downsamples each sample (linearly) by a random factor and upsamples to original resolution again (nearest neighbor)
     '''
