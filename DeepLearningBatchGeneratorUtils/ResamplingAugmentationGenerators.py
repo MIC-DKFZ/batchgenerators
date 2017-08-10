@@ -70,13 +70,9 @@ def linear_downsampling_generator_scipy(generator, zoom_range=(0.5, 1)):
         data = data_dict['data']    # shape of data must be: (batch_size, nr_of_channels, x, y, [z])  (z ist optional; nr_of_channels can be 1)
         dim = len(data.shape[2:])   # remove batch_size and nr_of_channels dimension
 
-        print("data shape: {}".format(data.shape))
-
         for sample_idx in range(data.shape[0]):
 
             zoom = round(random.uniform(zoom_range[0], zoom_range[1]), 2)
-            # zoom = 0.78
-            # zoom = 0.88
 
             for channel_idx in range(data.shape[1]):
                 img = data[sample_idx, channel_idx]
