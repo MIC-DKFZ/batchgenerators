@@ -469,10 +469,19 @@ def ultimate_transform_generator_v2(generator, patch_size, patch_center_dist_fro
                 s = np.random.uniform(sigma[0], sigma[1])
                 coords = elastic_deform_coordinates(coords, a, s)
             if do_rotation:
-                a_x = np.random.uniform(angle_x[0], angle_x[1])
+                if angle_x[0] == angle_x[1]:
+                    a_x = angle_x[0]
+                else:
+                    a_x = np.random.uniform(angle_x[0], angle_x[1])
                 if dim == 3:
-                    a_y = np.random.uniform(angle_y[0], angle_y[1])
-                    a_z = np.random.uniform(angle_z[0], angle_z[1])
+                    if angle_y[0] == angle_y[1]:
+                        a_y = angle_y[0]
+                    else:
+                        a_y = np.random.uniform(angle_y[0], angle_y[1])
+                    if angle_z[0] == angle_z[1]:
+                        a_z = angle_z[0]
+                    else:
+                        a_z = np.random.uniform(angle_z[0], angle_z[1])
                     coords = rotate_coords_3d(coords, a_x, a_y, a_z)
                 else:
                     coords = rotate_coords_2d(coords, a_x)
