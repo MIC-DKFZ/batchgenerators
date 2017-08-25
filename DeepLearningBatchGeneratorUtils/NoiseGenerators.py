@@ -20,6 +20,24 @@ def rician_noise_generator(generator, noise_variance=(0, 0.1)):
         data_dict["data"] = data
         yield data_dict
 
+def gaussian_noise_generator(generator, noise_variance=(0, 0.1)):
+    '''
+    Adds gaussian noise with the given variance.
+
+    '''
+    for data_dict in generator:
+        assert "data" in data_dict.keys(), "your data generator needs to return a python dictionary with at least a 'data' key value pair"
+
+        data = data_dict['data']
+        for sample_idx in range(data.shape[0]):
+            sample = data[sample_idx]
+            variance = random.uniform(noise_variance[0], noise_variance[1])
+            sample = sample + np.random.normal(0.0, variance, size=sample.shape)
+            data[sample_idx] = sample
+
+        data_dict["data"] = data
+        yield data_dict
+
 def rician_noise_generator_dipy(generator, snr_range=(1, 10)):
     '''
     Adds rician noise to produce a image with the specified SNR.
