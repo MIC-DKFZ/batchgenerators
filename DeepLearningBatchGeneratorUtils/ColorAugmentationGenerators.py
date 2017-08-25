@@ -1,4 +1,5 @@
 import numpy as np
+import random
 from utils import general_cc_var_num_channels, illumination_jitter
 
 def contrast_augmentation_generator(generator, contrast_range=(0.75, 1.25), preserve_range=True, per_channel=True):
@@ -40,24 +41,45 @@ def contrast_augmentation_generator(generator, contrast_range=(0.75, 1.25), pres
 
 
 def brightness_augmentation_generator(generator, mu, sigma, per_channel=True):
-    # adds a randomly sampled (gaussian with mu and sigma) offset
-    # this is done separately for each channel if per_channel is set to True
+    '''
+    Adds a randomly sampled offset (gaussian with mean mu and std sigma).
+    This is done separately for each channel if per_channel is set to True.
+    '''
     for data_dict in generator:
         data = data_dict['data']
-        for sample in range(data.shape[0]):
-            tmp = np.array(data[sample])
-            brain_mask = data_dict['seg'][sample, 1:]!=0
-            brain_mask = np.vstack([brain_mask] * len(tmp))
+        for sample_idx in range(data.shape[0]):
+            sample = data[sample_idx]
+            brain_mask = sample != 0  # roughly select only brain, no background
             if not per_channel:
                 rnd_nb = np.random.normal(mu, sigma)
-                tmp[brain_mask] += rnd_nb
+                sample[brain_mask] += rnd_nb
             else:
-                for c in range(tmp.shape[0]):
+                for c in range(sample.shape[0]):
                     rnd_nb = np.random.normal(mu, sigma)
-                    tmp[c][brain_mask[c]] += rnd_nb
-            tmp[tmp < 0] = 0
-            tmp[tmp > 1] = 1
-            data[sample] = tmp
+                    sample[c][brain_mask[c]] += rnd_nb
+            data[sample_idx] = sample
+        data_dict['data'] = data
+        yield data_dict
+
+
+def brightness_augmentation_by_multiplication_generator(generator, multiplier_range=(0.5,2), per_channel=True):
+    '''
+    Multiplies each voxel with a randomly sampled multiplier.
+    This is done separately for each channel if per_channel is set to True.
+    '''
+    for data_dict in generator:
+        data = data_dict['data']
+        for sample_idx in range(data.shape[0]):
+            sample = data[sample_idx]
+            brain_mask = sample != 0  # roughly select only brain, no background
+            multiplier = random.uniform(multiplier_range[0], multiplier_range[1])
+            if not per_channel:
+                sample[brain_mask] *= multiplier
+            else:
+                for c in range(sample.shape[0]):
+                    sample[c][brain_mask[c]] *= multiplier
+            data[sample_idx] = sample
+        data_dict['data'] = data
         yield data_dict
 
 
