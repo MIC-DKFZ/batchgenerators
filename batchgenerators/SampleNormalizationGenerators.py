@@ -1,6 +1,4 @@
 import numpy as np
-import random
-
 
 def zero_one_normalization_generator(generator):
     '''
@@ -20,4 +18,33 @@ def zero_one_normalization_generator(generator):
                 data[sample_idx] /= std
 
         data_dict["data"] = data
+        yield data_dict
+
+
+def normalize_data_generator(gen):
+    '''
+    normalizes all data to zero mean unis variance (done separately for each channel in each training instance)
+    :param gen:
+    :return:
+    '''
+    for data_dict in gen:
+        for b in range(data_dict['data'].shape[0]):
+            for c in range(data_dict['data'][b].shape[0]):
+                mn = data_dict['data'][b][c].mean()
+                sd = data_dict['data'][b][c].std()
+                if sd == 0:
+                    sd = 1.
+                data_dict['data'][b][c] = (data_dict['data'][b][c] - mn) / sd
+        yield data_dict
+
+
+def cut_off_outliers_generator(generator, percentile_lower=0.2, percentile_upper=99.8):
+    for data_dict in generator:
+        for b in range(data_dict['data'].shape[0]):
+            for c in range(data_dict['data'][b].shape[0]):
+                img = data_dict['data'][b][c].ravel()
+                cut_off_lower = np.percentile(img, percentile_lower)
+                cut_off_upper = np.percentile(img, percentile_upper)
+                data_dict['data'][b][c][data_dict['data'][b][c] < cut_off_lower] = cut_off_lower
+                data_dict['data'][b][c][data_dict['data'][b][c] > cut_off_upper] = cut_off_upper
         yield data_dict

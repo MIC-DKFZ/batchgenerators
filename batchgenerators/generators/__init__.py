@@ -4,3 +4,4 @@ import data_generator_base
 import crop_and_pad_generators
 import invertible_rotation_generator
 import multi_threaded_generator
+import spatial_transform_generators

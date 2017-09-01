@@ -1,6 +1,5 @@
 __author__ = 'Fabian Isensee'
 
-import SpatialTransformGenerators
 import UtilityGenerators
 import NoiseGenerators
 import ResamplingAugmentationGenerators

@@ -1,1 +1,3 @@
 import color_augmentations
+import crop_and_pad_augmentations
+import spatial_transformations
