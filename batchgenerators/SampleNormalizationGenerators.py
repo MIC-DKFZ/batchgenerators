@@ -1,11 +1,15 @@
+from builtins import range
+
 import numpy as np
+
 
 def zero_one_normalization_generator(generator):
     '''
     normalizes each sample to zero mean and std one
     '''
     for data_dict in generator:
-        assert "data" in data_dict.keys(), "your data generator needs to return a python dictionary with at least a 'data' key value pair"
+        assert "data" in list(
+            data_dict.keys()), "your data generator needs to return a python dictionary with at least a 'data' key value pair"
 
         data = data_dict['data']
         shape = data[0].shape

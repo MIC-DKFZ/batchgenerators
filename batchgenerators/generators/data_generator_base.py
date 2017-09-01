@@ -1,7 +1,8 @@
-__author__ = 'Fabian Isensee'
+from builtins import object
 
 import numpy as np
 from abc import ABCMeta, abstractmethod
+
 
 class BatchGeneratorBase(object):
     def __init__(self, data, BATCH_SIZE, num_batches=None, seed=False):
@@ -25,7 +26,7 @@ class BatchGeneratorBase(object):
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         if not self._iter_initialized:
             self._initialize_iter()
         if self._batches_generated >= self._num_batches:

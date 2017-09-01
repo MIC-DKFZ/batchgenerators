@@ -1,5 +1,7 @@
-from batchgenerators.augmentations.color_augmentations import (augment_contrast,
-augment_brightness_additive, augment_brightness_multiplicative, augment_gamma, augment_illumination, augment_PCA_shift)
+from __future__ import print_function
+
+from batchgenerators.augmentations.color_augmentations import augment_PCA_shift, augment_brightness_additive, \
+    augment_brightness_multiplicative, augment_contrast, augment_gamma, augment_illumination
 
 
 def contrast_augmentation_generator(generator, contrast_range=(0.75, 1.25), preserve_range=True, per_channel=True):
@@ -7,9 +9,9 @@ def contrast_augmentation_generator(generator, contrast_range=(0.75, 1.25), pres
     # preserve_range will cut off values that due to contrast enhancement get over/below the original minimum/maximum of the data
     # per_channel does the contrast enhancement separately for each channel
     for data_dict in generator:
-        data_dict['data'] = augment_contrast(data_dict['data'], contrast_range=contrast_range, preserve_range=preserve_range, per_channel=per_channel)
+        data_dict['data'] = augment_contrast(data_dict['data'], contrast_range=contrast_range,
+                                             preserve_range=preserve_range, per_channel=per_channel)
         yield data_dict
-
 
 
 def brightness_augmentation_generator(generator, mu, sigma, per_channel=True):
@@ -17,14 +19,14 @@ def brightness_augmentation_generator(generator, mu, sigma, per_channel=True):
     Adds a randomly sampled offset (gaussian with mean mu and std sigma).
     This is done separately for each channel if per_channel is set to True.
     '''
-    print "Warning (for Fabian): This should no longer be used for brain tumor segmentation (brain mask support dropped)"
+    print(
+        "Warning (for Fabian): This should no longer be used for brain tumor segmentation (brain mask support dropped)")
     for data_dict in generator:
         data_dict['data'] = augment_brightness_additive(data_dict['data'], mu, sigma, per_channel)
         yield data_dict
 
 
-
-def brightness_augmentation_by_multiplication_generator(generator, multiplier_range=(0.5,2), per_channel=True):
+def brightness_augmentation_by_multiplication_generator(generator, multiplier_range=(0.5, 2), per_channel=True):
     '''
     Multiplies each voxel with a randomly sampled multiplier.
     This is done separately for each channel if per_channel is set to True.
@@ -34,14 +36,11 @@ def brightness_augmentation_by_multiplication_generator(generator, multiplier_ra
         yield data_dict
 
 
-
-
 def gamma_augmentation_generator(generator, gamma_range=(0.5, 2), invert_image=False):
     # augments by shifting the gamma value as in gamma correction (https://en.wikipedia.org/wiki/Gamma_correction)
     for data_dict in generator:
         data_dict['data'] = augment_gamma(data_dict['data'], gamma_range, invert_image)
         yield data_dict
-
 
 
 def illumintaion_augmentation_generator(generator, white_rgb):
@@ -58,7 +57,6 @@ def illumintaion_augmentation_generator(generator, white_rgb):
         yield data_dict
 
 
-
 def fancy_color_augmentation_generator(generator, U, s, sigma=0.2):
     '''Implements the fancy color augmentation used in AlexNet. U is the matrix of eigenvalues of your training data,
     s are the eigenvectors. Augmentation is done by sampling one random number rnd (gaussian distribution with  parameter
@@ -67,4 +65,3 @@ def fancy_color_augmentation_generator(generator, U, s, sigma=0.2):
     for data_dict in generator:
         data_dict['data'] = augment_PCA_shift(data_dict['data'], U, s, sigma)
         yield data_dict
-

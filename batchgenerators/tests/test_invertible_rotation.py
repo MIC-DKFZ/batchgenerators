@@ -1,9 +1,12 @@
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import next
 __author__ = 'Simon Kohl'
 
 import unittest
 import numpy as np
 from skimage import data
-from MockBatchGenerator import MockRepeatBatchGenerator
+from .MockBatchGenerator import MockRepeatBatchGenerator
 from DeepLearningBatchGeneratorUtils.InvertibleGenerators import InvertibleRotationGenerator
 
 
@@ -41,9 +44,9 @@ class TestInvRot(unittest.TestCase):
 
         ### check whether rotation is invertible in the invariant central region of the 2D image
         center = tuple([int(i/2) for i in inverse_rotated_batch['data'].shape[2:]])
-        print center, self.i_shape
-        print center[0]-self.i_shape[0],center[0]+self.i_shape[0]
-        print center[1]-self.i_shape[1],center[1]+self.i_shape[1]
+        print(center, self.i_shape)
+        print(center[0]-self.i_shape[0],center[0]+self.i_shape[0])
+        print(center[1]-self.i_shape[1],center[1]+self.i_shape[1])
 
         allowed_error_fractions = [0.2, 0.1]
         for i,type in enumerate(['data', 'seg']):

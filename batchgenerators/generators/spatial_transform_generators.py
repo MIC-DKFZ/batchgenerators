@@ -1,4 +1,5 @@
-from batchgenerators.augmentations.spatial_transformations import augment_mirroring, augment_channel_translation, augment_spatial
+from batchgenerators.augmentations.spatial_transformations import augment_channel_translation, augment_mirroring, \
+    augment_spatial
 
 
 def mirror_axis_generator(generator, axes=(2, 3, 4)):
@@ -9,10 +10,11 @@ def mirror_axis_generator(generator, axes=(2, 3, 4)):
     2D data: 25% of each constellation: x, xy, y, none
     '''
     for data_dict in generator:
-        assert "data" in data_dict.keys(), "your data generator needs to return a python dictionary with at least a 'data' key value pair"
+        assert "data" in list(
+            data_dict.keys()), "your data generator needs to return a python dictionary with at least a 'data' key value pair"
         data = data_dict["data"]
         seg = None
-        if "seg" in data_dict.keys():
+        if "seg" in list(data_dict.keys()):
             seg = data_dict["seg"]
         data, seg = augment_mirroring(data, seg, axes)
         data_dict["data"] = data
@@ -32,7 +34,7 @@ def channel_translation_generator(generator, const_channel=0, max_shifts=None):
     """
 
     if max_shifts is None:
-        max_shifts = {'z':2, 'y':2, 'x':2}
+        max_shifts = {'z': 2, 'y': 2, 'x': 2}
 
     for data_dict in generator:
         data_dict["data"] = augment_channel_translation(data_dict["data"], const_channel, max_shifts)
@@ -40,10 +42,12 @@ def channel_translation_generator(generator, const_channel=0, max_shifts=None):
 
 
 def spatial_augmentation_generator(generator, patch_size, patch_center_dist_from_border=30,
-                                 do_elastic_deform=True, alpha=(0., 1000.), sigma=(10., 13.),
-                                 do_rotation=True, angle_x=(0, 2*np.pi), angle_y=(0, 2*np.pi), angle_z = (0, 2*np.pi),
-                                 do_scale=True, scale=(0.75, 1.25), border_mode_data='nearest', border_cval_data=0, order_data=3,
-                                 border_mode_seg='constant', border_cval_seg=0, order_seg=0, random_crop=True):
+                                   do_elastic_deform=True, alpha=(0., 1000.), sigma=(10., 13.),
+                                   do_rotation=True, angle_x=(0, 2 * np.pi), angle_y=(0, 2 * np.pi),
+                                   angle_z=(0, 2 * np.pi),
+                                   do_scale=True, scale=(0.75, 1.25), border_mode_data='nearest', border_cval_data=0,
+                                   order_data=3,
+                                   border_mode_seg='constant', border_cval_seg=0, order_seg=0, random_crop=True):
     '''
     THE ultimate generator. It has all you need. It alleviates the problem of having to crop your data to a reasonably sized patch size before plugging it into the
     old ultimate_transform generator (In the old one you would put in patches larger than your final patch size so that rotations and deformations to not introduce black borders).
@@ -66,13 +70,14 @@ def spatial_augmentation_generator(generator, patch_size, patch_center_dist_from
     if not (isinstance(sigma, list) or isinstance(sigma, tuple)):
         sigma = [sigma, sigma]
     for data_dict in generator:
-        assert "data" in data_dict.keys(), "your data generator needs to return a python dictionary with at least a 'data' key value pair"
+        assert "data" in list(
+            data_dict.keys()), "your data generator needs to return a python dictionary with at least a 'data' key value pair"
         data = data_dict["data"]
         do_seg = False
         seg = None
         shape = patch_size
         assert len(shape) == len(data.shape[2:]), "dimension of patch_size and data must match!"
-        if "seg" in data_dict.keys():
+        if "seg" in list(data_dict.keys()):
             seg = data_dict["seg"]
             do_seg = True
         data_result, seg_result = augment_spatial(data, seg, patch_size, patch_center_dist_from_border,

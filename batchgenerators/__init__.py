@@ -1,9 +1,5 @@
-__author__ = 'Fabian Isensee'
+from __future__ import absolute_import
 
-import UtilityGenerators
-import NoiseGenerators
-import ResamplingAugmentationGenerators
-import SampleNormalizationGenerators
-import utils
 import batchgenerators.augmentations
 import batchgenerators.generators
+from . import NoiseGenerators, ResamplingAugmentationGenerators, SampleNormalizationGenerators, UtilityGenerators, utils

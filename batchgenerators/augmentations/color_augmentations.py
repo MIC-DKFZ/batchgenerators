@@ -1,6 +1,10 @@
+from builtins import range
+
 import numpy as np
 import random
+
 from batchgenerators.utils import general_cc_var_num_channels, illumination_jitter
+
 
 def augment_contrast(data, contrast_range=(0.75, 1.25), preserve_range=True, per_channel=True):
     for sample in range(data.shape[0]):
@@ -48,7 +52,7 @@ def augment_brightness_additive(data, mu, sigma, per_channel=True):
     return data
 
 
-def augment_brightness_multiplicative(data, multiplier_range=(0.5,2), per_channel=True):
+def augment_brightness_multiplicative(data, multiplier_range=(0.5, 2), per_channel=True):
     for sample_idx in range(data.shape[0]):
         sample = data[sample_idx]
         brain_mask = sample != 0  # roughly select only brain, no background
