@@ -1,6 +1,7 @@
 import numpy as np
 import random
 
+
 def rician_noise_generator(generator, noise_variance=(0, 0.1)):
     '''
     Adds rician noise with the given variance.
@@ -20,6 +21,7 @@ def rician_noise_generator(generator, noise_variance=(0, 0.1)):
         data_dict["data"] = data
         yield data_dict
 
+
 def gaussian_noise_generator(generator, noise_variance=(0, 0.1)):
     '''
     Adds gaussian noise with the given variance.
@@ -37,6 +39,7 @@ def gaussian_noise_generator(generator, noise_variance=(0, 0.1)):
 
         data_dict["data"] = data
         yield data_dict
+
 
 def rician_noise_generator_dipy(generator, snr_range=(1, 10)):
     '''

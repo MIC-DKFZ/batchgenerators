@@ -1,6 +1,7 @@
 import random
 import numpy as np
 
+
 def linear_downsampling_generator(generator, max_downsampling_factor=2, isotropic=False):
     '''
     Downsamples each sample (linearly) by a random factor and upsamples to original resolution again (nearest neighbor).

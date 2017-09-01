@@ -1,6 +1,7 @@
 import numpy as np
 import random
 
+
 def zero_one_normalization_generator(generator):
     '''
     normalizes each sample to zero mean and std one
