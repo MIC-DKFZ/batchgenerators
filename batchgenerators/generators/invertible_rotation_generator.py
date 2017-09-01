@@ -3,8 +3,8 @@ from builtins import object, range
 import numpy as np
 from copy import deepcopy
 
-from batchgenerators.utils import rotate_coords_3d, create_zero_centered_coordinate_mesh, uncenter_coords, \
-    rotate_coords_2d, interpolate_img
+from batchgenerators.augmentations.utils import create_zero_centered_coordinate_mesh, interpolate_img, rotate_coords_2d, \
+    rotate_coords_3d, uncenter_coords
 
 
 class InvertibleRotationGenerator(object):

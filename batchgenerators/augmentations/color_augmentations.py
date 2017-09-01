@@ -3,7 +3,7 @@ from builtins import range
 import numpy as np
 import random
 
-from batchgenerators.utils import general_cc_var_num_channels, illumination_jitter
+from batchgenerators.augmentations.utils import general_cc_var_num_channels, illumination_jitter
 
 
 def augment_contrast(data, contrast_range=(0.75, 1.25), preserve_range=True, per_channel=True):
