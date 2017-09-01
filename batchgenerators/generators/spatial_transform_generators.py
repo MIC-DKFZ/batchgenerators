@@ -1,3 +1,5 @@
+import numpy as np
+
 from batchgenerators.augmentations.spatial_transformations import augment_channel_translation, augment_mirroring, \
     augment_spatial
 
