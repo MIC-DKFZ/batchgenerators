@@ -45,18 +45,18 @@ def brightness_augmentation_generator(generator, mu, sigma, per_channel=True):
     Adds a randomly sampled offset (gaussian with mean mu and std sigma).
     This is done separately for each channel if per_channel is set to True.
     '''
+    print "Warning (for Fabian): This should no longer be used for brain tumor segmentation (brain mask support dropped)"
     for data_dict in generator:
         data = data_dict['data']
         for sample_idx in range(data.shape[0]):
             sample = data[sample_idx]
-            brain_mask = sample != 0  # roughly select only brain, no background
             if not per_channel:
                 rnd_nb = np.random.normal(mu, sigma)
-                sample[brain_mask] += rnd_nb
+                sample += rnd_nb
             else:
                 for c in range(sample.shape[0]):
                     rnd_nb = np.random.normal(mu, sigma)
-                    sample[c][brain_mask[c]] += rnd_nb
+                    sample[c] += rnd_nb
             data[sample_idx] = sample
         data_dict['data'] = data
         yield data_dict
