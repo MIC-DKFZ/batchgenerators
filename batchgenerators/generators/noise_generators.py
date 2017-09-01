@@ -3,6 +3,8 @@ from builtins import range
 import numpy as np
 import random
 
+from batchgenerators.augmentations.noise_augmentations import augment_rician_noise, augment_gaussian_noise
+
 
 def rician_noise_generator(generator, noise_variance=(0, 0.1)):
     '''
@@ -13,15 +15,7 @@ def rician_noise_generator(generator, noise_variance=(0, 0.1)):
         assert "data" in list(
             data_dict.keys()), "your data generator needs to return a python dictionary with at least a 'data' key value pair"
 
-        data = data_dict['data']
-        for sample_idx in range(data.shape[0]):
-            sample = data[sample_idx]
-            variance = random.uniform(noise_variance[0], noise_variance[1])
-            sample = np.sqrt((sample + np.random.normal(0.0, variance, size=sample.shape)) ** 2 +
-                             np.random.normal(0.0, variance, size=sample.shape) ** 2)
-            data[sample_idx] = sample
-
-        data_dict["data"] = data
+        data_dict["data"] = augment_rician_noise(data_dict['data'], noise_variance=noise_variance)
         yield data_dict
 
 
@@ -34,14 +28,7 @@ def gaussian_noise_generator(generator, noise_variance=(0, 0.1)):
         assert "data" in list(
             data_dict.keys()), "your data generator needs to return a python dictionary with at least a 'data' key value pair"
 
-        data = data_dict['data']
-        for sample_idx in range(data.shape[0]):
-            sample = data[sample_idx]
-            variance = random.uniform(noise_variance[0], noise_variance[1])
-            sample = sample + np.random.normal(0.0, variance, size=sample.shape)
-            data[sample_idx] = sample
-
-        data_dict["data"] = data
+        data_dict["data"] = augment_gaussian_noise(data_dict['data'], noise_variance=noise_variance)
         yield data_dict
 
 

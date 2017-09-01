@@ -2,4 +2,5 @@ from __future__ import absolute_import
 
 import batchgenerators.augmentations
 import batchgenerators.generators
-from . import NoiseGenerators, ResamplingAugmentationGenerators, SampleNormalizationGenerators, UtilityGenerators, utils
+from batchgenerators.generators import noise_generators
+from . import ResamplingAugmentationGenerators, SampleNormalizationGenerators, UtilityGenerators, utils
