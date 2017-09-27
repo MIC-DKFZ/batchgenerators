@@ -1,6 +1,7 @@
+from __future__ import absolute_import
 import unittest
 import numpy as np
-from MockBatchGenerator import MockBatchGenerator
+from .MockBatchGenerator import MockBatchGenerator
 from DeepLearningBatchGeneratorUtils.MultiThreadedGenerator import MultiThreadedGenerator
 import logging
 

@@ -1,5 +1,11 @@
+from builtins import range
+
 import numpy as np
-from batchgenerators.utils import create_zero_centered_coordinate_mesh, rotate_coords_2d, rotate_coords_3d, elastic_deform_coordinates, scale_coords, interpolate_img
+
+from batchgenerators.augmentations.utils import create_zero_centered_coordinate_mesh, elastic_deform_coordinates, \
+    interpolate_img, \
+    rotate_coords_2d, rotate_coords_3d, scale_coords
+
 
 def augment_mirroring(data, seg=None, axes=(2, 3, 4)):
     data = np.copy(data)
@@ -51,7 +57,7 @@ def augment_channel_translation(data, const_channel=0, max_shifts=None):
 
         # iterate the image dimensions, randomly draw shifts/translations
         for i, v in enumerate(dims):
-            rand_shift = np.random.choice(range(-max_shifts[v], max_shifts[v], 1))
+            rand_shift = np.random.choice(list(range(-max_shifts[v], max_shifts[v], 1)))
 
             if rand_shift > 0:
                 ixs[v] = {'lo': 0, 'hi': -rand_shift}
@@ -100,7 +106,7 @@ def augment_spatial(data, seg, patch_size, patch_center_dist_from_border=30,
 
     if not isinstance(patch_center_dist_from_border, (list, tuple)):
         patch_center_dist_from_border = dim * [patch_center_dist_from_border]
-    for sample_id in xrange(data.shape[0]):
+    for sample_id in range(data.shape[0]):
         coords = create_zero_centered_coordinate_mesh(patch_size)
         if do_elastic_deform:
             a = np.random.uniform(alpha[0], alpha[1])
@@ -145,4 +151,3 @@ def augment_spatial(data, seg, patch_size, patch_center_dist_from_border=30,
                 seg_result[sample_id, channel_id] = interpolate_img(seg[sample_id, channel_id], coords, order_seg,
                                                                     border_mode_seg, cval=border_cval_seg)
     return data_result, seg_result
-

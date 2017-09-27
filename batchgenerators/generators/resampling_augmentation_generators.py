@@ -1,5 +1,7 @@
-import random
+from builtins import range
+
 import numpy as np
+import random
 
 
 def linear_downsampling_generator(generator, max_downsampling_factor=2, isotropic=False):
@@ -16,10 +18,12 @@ def linear_downsampling_generator(generator, max_downsampling_factor=2, isotropi
     from nilearn.image.resampling import resample_img, resample_to_img
 
     for data_dict in generator:
-        assert "data" in data_dict.keys(), "your data generator needs to return a python dictionary with at least a 'data' key value pair"
+        assert "data" in list(
+            data_dict.keys()), "your data generator needs to return a python dictionary with at least a 'data' key value pair"
 
-        data = data_dict['data']    #shape of data must be: (batch_size, nr_of_channels, x, y, [z])  (z ist optional; nr_of_channels can be 1)
-        dim = len(data.shape[2:])        #remove batch_size and nr_of_channels dimension
+        data = data_dict[
+            'data']  # shape of data must be: (batch_size, nr_of_channels, x, y, [z])  (z ist optional; nr_of_channels can be 1)
+        dim = len(data.shape[2:])  # remove batch_size and nr_of_channels dimension
         for sample_idx in range(data.shape[0]):
 
             fact = random.uniform(1, max_downsampling_factor)
@@ -31,13 +35,14 @@ def linear_downsampling_generator(generator, max_downsampling_factor=2, isotropi
                     img_data = data[sample_idx, channel_idx]
                 elif dim == 2:
                     tmp = data[sample_idx, channel_idx]
-                    img_data = np.reshape(tmp, (1, tmp.shape[0], tmp.shape[1]))   #add third spatial dimension to make resample_img work
+                    img_data = np.reshape(tmp, (
+                    1, tmp.shape[0], tmp.shape[1]))  # add third spatial dimension to make resample_img work
                 else:
                     raise ValueError("Invalid dimension size")
 
                 image = nib.Nifti1Image(img_data, affine)
                 affine2 = affine
-                if isotropic :
+                if isotropic:
                     affine2[0, 0] = fact
                     affine2[1, 1] = fact
                     affine2[2, 2] = fact
@@ -48,7 +53,7 @@ def linear_downsampling_generator(generator, max_downsampling_factor=2, isotropi
                 affine2[3, 3] = 1
                 image2 = resample_img(image, target_affine=affine2, interpolation='continuous')
                 image3 = resample_to_img(image2, image, 'nearest')
-                data[sample_idx,channel_idx] = np.squeeze(image3.get_data())
+                data[sample_idx, channel_idx] = np.squeeze(image3.get_data())
 
         data_dict["data"] = data
         yield data_dict
@@ -66,10 +71,12 @@ def linear_downsampling_generator_scipy(generator, zoom_range=(0.5, 1)):
     import scipy.ndimage
 
     for data_dict in generator:
-        assert "data" in data_dict.keys(), "your data generator needs to return a python dictionary with at least a 'data' key value pair"
+        assert "data" in list(
+            data_dict.keys()), "your data generator needs to return a python dictionary with at least a 'data' key value pair"
 
-        data = data_dict['data']    # shape of data must be: (batch_size, nr_of_channels, x, y, [z])  (z ist optional; nr_of_channels can be 1)
-        dim = len(data.shape[2:])   # remove batch_size and nr_of_channels dimension
+        data = data_dict[
+            'data']  # shape of data must be: (batch_size, nr_of_channels, x, y, [z])  (z ist optional; nr_of_channels can be 1)
+        dim = len(data.shape[2:])  # remove batch_size and nr_of_channels dimension
 
         for sample_idx in range(data.shape[0]):
 
@@ -87,9 +94,9 @@ def linear_downsampling_generator_scipy(generator, zoom_range=(0.5, 1)):
 
                     # pad with 0 if dimension too small
                     img_padded = np.zeros((img.shape[0], img.shape[1], img.shape[2]))
-                    img_padded[:img_up.shape[0],:img_up.shape[1],:img_up.shape[2]] = img_up
+                    img_padded[:img_up.shape[0], :img_up.shape[1], :img_up.shape[2]] = img_up
 
-                    data[sample_idx,channel_idx] = img_padded
+                    data[sample_idx, channel_idx] = img_padded
 
                 elif dim == 2:
                     # cut if dimension got too long
@@ -105,7 +112,3 @@ def linear_downsampling_generator_scipy(generator, zoom_range=(0.5, 1)):
 
         data_dict["data"] = data
         yield data_dict
-
-
-
-

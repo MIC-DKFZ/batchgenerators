@@ -1,10 +1,13 @@
-author = 'Simon Kohl'
+from builtins import object, range
 
 import numpy as np
-from utils import *
 from copy import deepcopy
 
-class InvertibleRotationGenerator():
+from batchgenerators.augmentations.utils import create_zero_centered_coordinate_mesh, interpolate_img, rotate_coords_2d, \
+    rotate_coords_3d, uncenter_coords
+
+
+class InvertibleRotationGenerator(object):
     """
     Enables rotatation of batch data received from a generator object and the inverse roatation
     Use-case: Use rotations in the prediction step and rotate back the results
@@ -16,30 +19,29 @@ class InvertibleRotationGenerator():
     inverse_rotated_batch = inv_rot_batch_gen.invert(rotated_batch)
     """
 
-    def __init__(self, generator, angle_x=(0, 2*np.pi), angle_y=(0, 2*np.pi), angle_z=(0, 2*np.pi),
+    def __init__(self, generator, angle_x=(0, 2 * np.pi), angle_y=(0, 2 * np.pi), angle_z=(0, 2 * np.pi),
                  border_mode_data='nearest', border_cval_data=0, order_data=3,
                  border_mode_seg='constant', border_cval_seg=0, order_seg=0, seed=42):
 
         np.random.seed(seed)
         self.generator = generator
-        self.params = {'ax':angle_x, 'ay':angle_y, 'az':angle_z,
-                       'bmode_data':border_mode_data, 'bmode_seg':border_mode_seg,
-                       'bcval_data':border_cval_data, 'bcval_seg':border_cval_seg,
-                       'order_data':order_data, 'order_seg':order_seg}
+        self.params = {'ax': angle_x, 'ay': angle_y, 'az': angle_z,
+                       'bmode_data': border_mode_data, 'bmode_seg': border_mode_seg,
+                       'bcval_data': border_cval_data, 'bcval_seg': border_cval_seg,
+                       'order_data': order_data, 'order_seg': order_seg}
 
         self.rand_params = {}
-
 
     def rotate(self, data_dict):
         data = data_dict["data"]
         do_seg = False
         seg = None
-        if "seg" in data_dict.keys():
+        if "seg" in list(data_dict.keys()):
             seg = data_dict["seg"]
             do_seg = True
         shape = np.array(data.shape[2:])
         dim = len(shape)
-        for sample_id in xrange(data.shape[0]):
+        for sample_id in range(data.shape[0]):
             coords = create_zero_centered_coordinate_mesh(shape)
 
             if dim == 3:
@@ -60,20 +62,23 @@ class InvertibleRotationGenerator():
                                                                  self.params['order_seg'], self.params['bmode_seg'],
                                                                  cval=self.params['bcval_seg'])
 
-        return {'data':data, 'seg':seg}
+        return {'data': data, 'seg': seg}
 
     def generate(self):
 
         for data_dict in self.generator:
-            assert "data" in data_dict.keys(), "your data generator needs to return a python dictionary with at least a 'data' key value pair"
+            assert "data" in list(
+                data_dict.keys()), "your data generator needs to return a python dictionary with at least a 'data' key value pair"
 
             self.shape = np.array(data_dict["data"].shape[2:])
             self.dim = len(self.shape)
 
             self.rand_params['ax'] = np.random.uniform(self.params['ax'][0], self.params['ax'][1], size=self.shape[0])
             if self.dim == 3:
-                self.rand_params['ay'] = np.random.uniform(self.params['ay'][0], self.params['ay'][1], size=self.shape[0])
-                self.rand_params['az'] = np.random.uniform(self.params['az'][0], self.params['az'][1], size=self.shape[0])
+                self.rand_params['ay'] = np.random.uniform(self.params['ay'][0], self.params['ay'][1],
+                                                           size=self.shape[0])
+                self.rand_params['az'] = np.random.uniform(self.params['az'][0], self.params['az'][1],
+                                                           size=self.shape[0])
 
             initial_data_dict = deepcopy(data_dict)
             rotated_data_dict = self.rotate(data_dict)
@@ -88,12 +93,3 @@ class InvertibleRotationGenerator():
             self.rand_params['az'] = -self.rand_params['az']
 
         return self.rotate(rotated_data_dict)
-
-
-
-
-
-
-
-
-

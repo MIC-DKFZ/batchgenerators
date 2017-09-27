@@ -1,3 +1,10 @@
+from __future__ import print_function
+
+from future import standard_library
+
+standard_library.install_aliases()
+from builtins import range
+from builtins import object
 from multiprocessing import Process
 from multiprocessing import Queue as MPQueue
 import numpy as np
@@ -30,28 +37,28 @@ class MultiThreadedGenerator(object):
             self._queue_loop = 0
         return r
 
-    def next(self):
-            if len(self._queues) == 0:
-                self._start()
-            try:
-                item = self._queues[self._next_queue()].get()
-                while item == "end":
-                    self._end_ctr += 1
-                    if self._end_ctr == self.num_processes:
-                        logging.debug("MultiThreadedGenerator: finished data generation")
-                        self._finish()
-                        raise StopIteration
+    def __next__(self):
+        if len(self._queues) == 0:
+            self._start()
+        try:
+            item = self._queues[self._next_queue()].get()
+            while item == "end":
+                self._end_ctr += 1
+                if self._end_ctr == self.num_processes:
+                    logging.debug("MultiThreadedGenerator: finished data generation")
+                    self._finish()
+                    raise StopIteration
 
-                    item = self._queues[self._next_queue()].get()
-                return item
-            except KeyboardInterrupt:
-                logging.error("MultiThreadedGenerator: caught exception: {}".format(sys.exc_info()))
-                self._finish()
-                raise KeyboardInterrupt
+                item = self._queues[self._next_queue()].get()
+            return item
+        except KeyboardInterrupt:
+            logging.error("MultiThreadedGenerator: caught exception: {}".format(sys.exc_info()))
+            self._finish()
+            raise KeyboardInterrupt
 
     def _start(self):
         if len(self._threads) == 0:
-            print "starting workers"
+            print("starting workers")
             self._queue_loop = 0
             self._end_ctr = 0
 
@@ -60,7 +67,7 @@ class MultiThreadedGenerator(object):
                     queue.put(item)
                 queue.put("end")
 
-            for i in xrange(self.num_processes):
+            for i in range(self.num_processes):
                 np.random.seed(self.seeds[i])
                 self._queues.append(MPQueue(self.num_cached_per_queue))
                 self._threads.append(Process(target=producer, args=(self._queues[i], self.generator)))

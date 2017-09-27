@@ -1,6 +1,9 @@
+from __future__ import absolute_import
+from builtins import str
+from builtins import range
 import unittest
 import numpy as np
-from MockBatchGenerator import MockBatchGenerator
+from .MockBatchGenerator import MockBatchGenerator
 from DeepLearningBatchGeneratorUtils.MultiThreadedGenerator import MultiThreadedGenerator
 import sys
 
@@ -26,7 +29,7 @@ class TestMultiThreading(unittest.TestCase):
                                        seed=self.seed)
         try:
             for _ in range(5000):
-                _ = batch_gen.next()
+                _ = next(batch_gen)
         except Exception:
             self.fail("Producing unlimited batches failed with msg: %s" % str(sys.exc_info()))
 

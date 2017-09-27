@@ -1,7 +1,4 @@
-import color_augmentation_generators
-import channel_selection_generators
-import data_generator_base
-import crop_and_pad_generators
-import invertible_rotation_generator
-import multi_threaded_generator
-import spatial_transform_generators
+from __future__ import absolute_import
+
+from . import channel_selection_generators, color_augmentation_generators, crop_and_pad_generators, data_generator_base, \
+    invertible_rotation_generator, multi_threaded_generator, spatial_transform_generators

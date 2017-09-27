@@ -1,4 +1,7 @@
+from builtins import range
+
 import numpy as np
+
 
 def center_crop(data, output_size, seg=None):
     seg_return = None
@@ -11,18 +14,18 @@ def center_crop(data, output_size, seg=None):
     center = np.array(data.shape[2:]) / 2
     if len(data.shape) == 5:
         data_return = data[:, :, int(center[0] - center_crop[0] / 2.):int(center[0] + center_crop[0] / 2.),
-                            int(center[1] - center_crop[1] / 2.):int(center[1] + center_crop[1] / 2.),
-                            int(center[2] - center_crop[2] / 2.):int(center[2] + center_crop[2] / 2.)]
+                      int(center[1] - center_crop[1] / 2.):int(center[1] + center_crop[1] / 2.),
+                      int(center[2] - center_crop[2] / 2.):int(center[2] + center_crop[2] / 2.)]
         if seg is not None:
             seg_return = seg[:, :, int(center[0] - center_crop[0] / 2.):int(center[0] + center_crop[0] / 2.),
-                               int(center[1] - center_crop[1] / 2.):int(center[1] + center_crop[1] / 2.),
-                               int(center[2] - center_crop[2] / 2.):int(center[2] + center_crop[2] / 2.)]
+                         int(center[1] - center_crop[1] / 2.):int(center[1] + center_crop[1] / 2.),
+                         int(center[2] - center_crop[2] / 2.):int(center[2] + center_crop[2] / 2.)]
     elif len(data.shape) == 4:
         data_return = data[:, :, int(center[0] - center_crop[0] / 2.):int(center[0] + center_crop[0] / 2.),
-                            int(center[1] - center_crop[1] / 2.):int(center[1] + center_crop[1] / 2.)]
+                      int(center[1] - center_crop[1] / 2.):int(center[1] + center_crop[1] / 2.)]
         if seg is not None:
             seg_return = seg[:, :, int(center[0] - center_crop[0] / 2.):int(center[0] + center_crop[0] / 2.),
-                               int(center[1] - center_crop[1] / 2.):int(center[1] + center_crop[1] / 2.)]
+                         int(center[1] - center_crop[1] / 2.):int(center[1] + center_crop[1] / 2.)]
     else:
         raise Exception(
             "Invalid dimension for seg. seg should be either [BATCH_SIZE, channels, x, y] or [BATCH_SIZE, channels, x, y, z]")
@@ -39,11 +42,11 @@ def center_crop_seg(seg, output_size):
     center = np.array(seg.shape[2:]) / 2
     if len(seg.shape) == 4:
         seg_return = seg[:, :, int(center[0] - center_crop[0] / 2.):int(center[0] + center_crop[0] / 2.),
-                           int(center[1] - center_crop[1] / 2.):int(center[1] + center_crop[1] / 2.)]
+                     int(center[1] - center_crop[1] / 2.):int(center[1] + center_crop[1] / 2.)]
     elif len(seg.shape) == 5:
         seg_return = seg[:, :, int(center[0] - center_crop[0] / 2.):int(center[0] + center_crop[0] / 2.),
-                           int(center[1] - center_crop[1] / 2.):int(center[1] + center_crop[1] / 2.),
-                           int(center[2] - center_crop[2] / 2.):int(center[2] + center_crop[2] / 2.)]
+                     int(center[1] - center_crop[1] / 2.):int(center[1] + center_crop[1] / 2.),
+                     int(center[2] - center_crop[2] / 2.):int(center[2] + center_crop[2] / 2.)]
     else:
         raise Exception(
             "Invalid dimension for seg. seg should be either [BATCH_SIZE, channels, x, y] or [BATCH_SIZE, channels, x, y, z]")
@@ -51,7 +54,7 @@ def center_crop_seg(seg, output_size):
     return seg_return
 
 
-def random_crop(data, seg=None, crop_size=128, margins=[0,0,0]):
+def random_crop(data, seg=None, crop_size=128, margins=[0, 0, 0]):
     seg_return = None
     if type(crop_size) not in (tuple, list):
         crop_size = [crop_size] * (len(data.shape) - 2)
@@ -142,4 +145,3 @@ def pad(data, new_size, seg=None, pad_value_data=None, pad_value_seg=None):
                         int(start[1]):int(start[1]) + int(shape[1]), int(start[2]):int(start[2]) + int(shape[2])] = seg[
                             i, j]
     return res_data, res_seg
-
