@@ -62,7 +62,7 @@ def augment_brightness_multiplicative(data, multiplier_range=(0.5,2), per_channe
     return data
 
 
-def augment_gamma(data, gamma_range=(0.5, 2), invert_image=False):
+def augment_gamma(data, gamma_range=(0.5, 2), invert_image=False, epsilon=1e-7):
     for sample in range(data.shape[0]):
         if invert_image:
             data = - data
@@ -72,7 +72,7 @@ def augment_gamma(data, gamma_range=(0.5, 2), invert_image=False):
             gamma = np.random.uniform(max(gamma_range[0], 1), gamma_range[1])
         minm = data[sample].min()
         rnge = data[sample].max() - minm
-        data[sample] = np.power(((data[sample] - minm) / float(rnge)), gamma) * rnge + minm
+        data[sample] = np.power(((data[sample] - minm) / float(rnge + epsilon)), gamma) * rnge + minm
     return data
 
 
