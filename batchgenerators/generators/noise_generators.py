@@ -4,20 +4,20 @@ import numpy as np
 import random
 from warnings import warn
 
-from batchgenerators.augmentations.noise_augmentations import augment_rician_noise, augment_gaussian_noise
+from batchgenerators.augmentations.noise_augmentations import augment_gaussian_noise
 
 
-def rician_noise_generator(generator, noise_variance=(0, 0.1)):
-    '''
-    Adds rician noise with the given variance.
-
-    '''
-    for data_dict in generator:
-        assert "data" in list(
-            data_dict.keys()), "your data generator needs to return a python dictionary with at least a 'data' key value pair"
-
-        data_dict["data"] = augment_rician_noise(data_dict['data'], noise_variance=noise_variance)
-        yield data_dict
+# def rician_noise_generator(generator, noise_variance=(0, 0.1)):
+#     '''
+#     Adds rician noise with the given variance.
+#
+#     '''
+#     for data_dict in generator:
+#         assert "data" in list(
+#             data_dict.keys()), "your data generator needs to return a python dictionary with at least a 'data' key value pair"
+#
+#         data_dict["data"] = augment_rician_noise(data_dict['data'], noise_variance=noise_variance)
+#         yield data_dict
 
 
 def gaussian_noise_generator(generator, noise_variance=(0, 0.1)):

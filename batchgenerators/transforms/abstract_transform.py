@@ -2,7 +2,8 @@ import abc
 import numpy as np
 
 
-class AbstractTransform(metaclass=abc.ABCMeta):
+class AbstractTransform(object):
+    __metaclass__ = abc.ABCMeta
     @abc.abstractmethod
     def __call__(self, **data_dict):
         raise NotImplementedError("Abstract, so implement")
