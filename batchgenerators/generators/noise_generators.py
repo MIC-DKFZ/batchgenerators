@@ -2,6 +2,7 @@ from builtins import range
 
 import numpy as np
 import random
+from warnings import warn
 
 from batchgenerators.augmentations.noise_augmentations import augment_rician_noise, augment_gaussian_noise
 
@@ -20,6 +21,7 @@ def rician_noise_generator(generator, noise_variance=(0, 0.1)):
 
 
 def gaussian_noise_generator(generator, noise_variance=(0, 0.1)):
+    warn("using deprecated generator center_crop_seg_generator", Warning)
     '''
     Adds gaussian noise with the given variance.
 
