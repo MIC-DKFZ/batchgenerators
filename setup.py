@@ -7,5 +7,6 @@ setup(name='batchgenerators',
       author='Fabian Isensee',
       author_email='f.isensee@dkfz-heidelberg.de',
       license='MIT',
-      packages=['batchgenerators', 'batchgenerators.augmentations', 'batchgenerators.generators', 'batchgenerators.examples', 'batchgenerators.transforms'],
+      packages=['batchgenerators', 'batchgenerators.augmentations', 'batchgenerators.generators',
+      'batchgenerators.examples', 'batchgenerators.transforms', 'batchgenerators.dataloading'],
       zip_safe=False)

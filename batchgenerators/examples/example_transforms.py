@@ -18,7 +18,7 @@ rd_s = RndTransform(s)
 
 c = Compose([rd_s, m, g])
 
-from batchgenerators.transforms.multi_threaded_augmenter import MultiThreadedAugmenter
+from batchgenerators.dataloading.multi_threaded_augmenter import MultiThreadedAugmenter
 
 mth = MultiThreadedAugmenter(b, c, 8, 2, None)
 mth.restart()
