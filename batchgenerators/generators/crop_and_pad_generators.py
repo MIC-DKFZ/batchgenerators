@@ -1,7 +1,10 @@
+from _warnings import warn
+
 from batchgenerators.augmentations.crop_and_pad_augmentations import center_crop, center_crop_seg, pad, random_crop
 
 
 def center_crop_generator(generator, output_size):
+    warn("using deprecated generator center_crop_generator", Warning)
     '''
     yields center crop of size output_size (may be int or tuple) from data and seg
     '''
@@ -20,6 +23,8 @@ def center_crop_generator(generator, output_size):
 
 
 def center_crop_seg_generator(generator, output_size):
+    warn("using deprecated generator center_crop_seg_generator", Warning)
+
     '''
     yields center crop of size output_size (from seg (forwards data with size unchanged). This generator is used if the
     output shape of a segmentation network is different from the input shape (f. ex when unpadded convolutions are used)
@@ -38,6 +43,8 @@ def center_crop_seg_generator(generator, output_size):
 
 
 def random_crop_generator(generator, crop_size=128, margins=(0, 0, 0)):
+    warn("using deprecated generator random_crop_generator", Warning)
+
     '''
     yields a random crop of size crop_size, crop_size may be a tuple with one entry for each dimension of your data (2D/3D)
     :param margins: allows to give cropping margins measured symmetrically from the image boundaries, which
@@ -58,6 +65,8 @@ def random_crop_generator(generator, crop_size=128, margins=(0, 0, 0)):
 
 
 def pad_generator(generator, new_size, pad_value_data=None, pad_value_seg=None):
+    warn("using deprecated generator pad_generator", Warning)
+
     '''
     pads data and seg with value pad_value so that the images have the size new_size
     if pad_value is None then the value of img[0,0] is taken (for each channel in each sample in the minibatch separately), same with seg
