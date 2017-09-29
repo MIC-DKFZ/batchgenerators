@@ -1,10 +1,11 @@
 from builtins import range
-
+from warnings import warn
 
 def data_channel_selection_generator(generator, selected_channels):
     '''
     yields selected channels from data
     '''
+    warn("using deprecated generator data_channel_selection_generator", Warning)
     for data_dict in generator:
         assert "data" in list(
             data_dict.keys()), "your data generator needs to return a python dictionary with at least a 'data' key value pair"
@@ -17,6 +18,7 @@ def seg_channel_selection_generator(generator, selected_channels, keep_discarded
     '''
     yields selected channels from seg
     '''
+    warn("using deprecated generator seg_channel_selection_generator", Warning)
     for data_dict in generator:
         do_seg = False
         seg = None
