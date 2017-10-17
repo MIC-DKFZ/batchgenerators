@@ -346,19 +346,6 @@ def create_random_rotation(angle_x=(0, 2 * np.pi), angle_y=(0, 2 * np.pi), angle
                                                                        np.random.uniform(*angle_z))))
 
 
-def convert_seg_image_to_one_hot_encoding(image, classes=None):
-    '''
-    Takes as input an nd array of a label map (any dimension). Outputs a one hot encoding of the label map.
-    Example (3D): if input is of shape (x, y, z), the output will ne of shape (n_classes, x, y, z)
-    '''
-    if classes is None:
-        classes = np.unique(image)
-    out_image = np.zeros([len(classes)] + list(image.shape), dtype=image.dtype)
-    for i, c in enumerate(classes):
-        out_image[i][image == c] = 1
-    return out_image
-
-
 def illumination_jitter(img, u, s, sigma):
     # img must have shape [....., c] where c is the color channel
     alpha = np.random.normal(0, sigma, s.shape)
