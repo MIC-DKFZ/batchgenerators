@@ -1,9 +1,9 @@
 import numpy as np
 
 def range_normalization(data, rnge=(0, 1), per_channel=True):
-    for b in data.shape[0]:
+    for b in range(data.shape[0]):
         if per_channel:
-            for c in data.shape[1]:
+            for c in range(data.shape[1]):
                 mn = data[b, c].min()
                 mx = data[b, c].max()
                 data[b, c] -= mn
@@ -21,9 +21,9 @@ def range_normalization(data, rnge=(0, 1), per_channel=True):
 
 
 def zero_mean_unit_variance_normalization(data, per_channel=True, epsilon=1e-7):
-    for b in data.shape[0]:
+    for b in range(data.shape[0]):
         if per_channel:
-            for c in data.shape[1]:
+            for c in range(data.shape[1]):
                 mean = data[b, c].mean()
                 std = data[b, c].std() + epsilon
                 data[b, c] = (data[b, c] - mean) / std
