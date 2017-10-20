@@ -1,4 +1,4 @@
-from abstract_transform import AbstractTransform
+from batchgenerators.transforms.abstract_transform import AbstractTransform
 from batchgenerators.augmentations.crop_and_pad_augmentations import center_crop, center_crop_seg, random_crop, pad
 
 
@@ -47,6 +47,7 @@ class RandomCropTranform(AbstractTransform):
 
         data, seg = random_crop(data, seg, self.crop_size, self.margins)
 
+        data_dict["data"] = data
         if seg is not None:
             data_dict["seg"] = seg
 
