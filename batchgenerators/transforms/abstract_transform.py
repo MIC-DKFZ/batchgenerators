@@ -16,7 +16,8 @@ class AbstractTransform(object):
 
 class RndTransform(AbstractTransform):
 
-    def __init__(self, transform, prob=0.5):
+    def __init__(self, transform, prob=0.5, alternative_transform=None):
+        self.alternative_transform = alternative_transform
         self.transform = transform
         self.prob = prob
 
@@ -26,7 +27,10 @@ class RndTransform(AbstractTransform):
         if rnd_val < self.prob:
             return self.transform(**data_dict)
         else:
-            return data_dict
+            if self.alternative_transform is not None:
+                return self.alternative_transform(**data_dict)
+            else:
+                return data_dict
 
 
 class Compose(AbstractTransform):
