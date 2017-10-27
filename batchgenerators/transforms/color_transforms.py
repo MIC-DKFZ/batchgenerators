@@ -6,7 +6,7 @@ from batchgenerators.transforms.abstract_transform import AbstractTransform
 class ContrastAugmentationTransform(AbstractTransform):
     def __init__(self, contrast_range=(0.75, 1.25), preserve_range=True, per_channel=True):
         self.contrast_range = contrast_range
-        self.preserver_range = preserve_range
+        self.preserve_range = preserve_range
         self.per_channel = per_channel
 
     def __call__(self, **data_dict):

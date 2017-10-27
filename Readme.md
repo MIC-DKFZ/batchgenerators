@@ -34,7 +34,7 @@ composed transform into our **multithreader**: batchgenerators.dataloading.multi
 ## How to use it
 The working principle is simple: Derive from DataLoaderBase class, reimplement generate_train_batch member function and
 use it to stack your augmentations!
-For an example see `batchgenerators/examples/example.py`
+For an example see `batchgenerators/examples/example_ipynb.ipynb`
 
 
 ## Data Structure
@@ -54,21 +54,20 @@ Install dependencies
 pip install numpy scipy nilearn matplotlib scikit-image nibabel
 ```
 
-Install dldabg
+Install batchgenerators
 ```
 git clone https://phabricator.mitk.org/source/dldabg.git
 cd dldabg
-pip install --upgrade -e .
+pip install -e .
 ```
 
 Using `-e` will make pip use a symlink to the source. So when you pull the newest changes of the repo your pip
-installation will automatically use the newest code. Using --upgrade is recommended because we may push changes/bugfixes
-without changing the version number.
+installation will automatically use the newest code. If not using -e, using --upgrade is recommended because we may push
+changes/bugfixes without changing the version number.
 
 Import as follows
 ```
 from batchgenerators.transforms.color_transforms import ContrastAugmentationTransform
 ```
-
 
 Note: This package also includes 'generators'. Support for those will be dropped in the future. That was our old design.

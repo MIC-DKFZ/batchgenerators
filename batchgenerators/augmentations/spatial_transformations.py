@@ -104,7 +104,7 @@ def augment_spatial(data, seg, patch_size, patch_center_dist_from_border=30,
         data_result = np.zeros((data.shape[0], data.shape[1], patch_size[0], patch_size[1], patch_size[2]),
                                dtype=np.float32)
 
-    if not isinstance(patch_center_dist_from_border, (list, tuple)):
+    if not isinstance(patch_center_dist_from_border, (list, tuple, np.ndarray)):
         patch_center_dist_from_border = dim * [patch_center_dist_from_border]
     for sample_id in range(data.shape[0]):
         coords = create_zero_centered_coordinate_mesh(patch_size)
