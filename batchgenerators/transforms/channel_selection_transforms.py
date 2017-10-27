@@ -3,6 +3,12 @@ from abstract_transform import AbstractTransform
 
 
 class DataChannelSelectionTransform(AbstractTransform):
+    """Selects color channels from the batch and discards the others.
+
+    Args:
+        channels (list of int): List of channels to be kept.
+
+    """
     def __init__(self, channels):
         self.channels = channels
 
@@ -12,6 +18,12 @@ class DataChannelSelectionTransform(AbstractTransform):
 
 
 class SegChannelSelectionTransform(AbstractTransform):
+    """Segmentations may have more than one channel. This transform selects segmentation channels
+
+    Args:
+        channels (list of int): List of channels to be kept.
+
+    """
     def __init__(self, channels, keep_discarded_seg=False):
         self.channels = channels
         self.keep_discarded = keep_discarded_seg

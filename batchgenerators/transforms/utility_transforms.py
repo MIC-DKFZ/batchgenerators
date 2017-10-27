@@ -4,7 +4,8 @@ from batchgenerators.augmentations.utils import convert_seg_image_to_one_hot_enc
 import numpy as np
 
 class DictToTensor(AbstractTransform):
-
+    """Utility function for pytorch. Converts data (and seg) numpy ndarrays to pytorch tensors
+    """
     def __call__(self, **data_dict):
 
         data = data_dict.get("data")
@@ -18,16 +19,28 @@ class DictToTensor(AbstractTransform):
 
 
 class ConvertSegToOnehotTransform(AbstractTransform):
-    def __init__(self, classes):
+    """Creates a one hot encoding of one of the seg channels. Important when using our soft dice loss.
+
+    Args:
+        classes (tuple of int): All the class labels that are in the dataset
+
+        seg_channel (int): channel of seg to convert to onehot
+
+        output_key (string): key to use for output of the one hot encoding. Default is 'seg' but that will override any
+        other existing seg channels. Therefore you have the option to change that. BEWARE: Any non-'seg' segmentations
+        will not be augmented anymore. Use this only at the very end of your pipeline!
+    """
+    def __init__(self, classes, seg_channel=0, output_key="seg"):
+        self.output_key = output_key
+        self.seg_channel = seg_channel
         self.classes = classes
 
     def __call__(self, **data_dict):
         seg = data_dict.get("seg")
         if seg is not None:
-            assert seg.shape[1] == 1, "only supports one segmentation channel"
             new_seg = np.zeros([seg.shape[0], len(self.classes)] + list(seg.shape[2:]), dtype=seg.dtype)
             for b in range(seg.shape[0]):
-                new_seg[b] = convert_seg_image_to_one_hot_encoding(seg[b, 0], self.classes)
+                new_seg[b] = convert_seg_image_to_one_hot_encoding(seg[b, self.seg_channel], self.classes)
             seg = new_seg
         else:
             from warnings import warn

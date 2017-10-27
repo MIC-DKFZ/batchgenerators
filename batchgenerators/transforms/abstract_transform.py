@@ -15,7 +15,19 @@ class AbstractTransform(object):
 
 
 class RndTransform(AbstractTransform):
+    """Applies a transformation with a specified probability
 
+    Args:
+        transform: The transformation (or composed transformation)
+
+        prob: The probability with which to apply it
+
+        alternative_transform: Will be applied if transform is not called. If transform alters for example the
+        spatial dimension of the data, you need to compensate that with calling a dummy transformation that alters the
+        spatial dimension in a similar way. We included this functionality because of SpatialTransform which has the
+        ability to do cropping. If we want to not apply the spatial transformation we will still need to crop and
+        therefore set the alternative_transform to an instance of RandomCropTransform of CenterCropTransform
+    """
     def __init__(self, transform, prob=0.5, alternative_transform=None):
         self.alternative_transform = alternative_transform
         self.transform = transform

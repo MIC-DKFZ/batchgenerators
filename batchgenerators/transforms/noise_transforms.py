@@ -12,6 +12,13 @@ from batchgenerators.augmentations.noise_augmentations import augment_gaussian_n
 
 
 class GaussianNoiseTransform(AbstractTransform):
+    """Adds additive Gaussian Noise
+
+    Args:
+        noise_variance (tuple of float): samples variance of Gaussian distribution from this interval
+
+    CAREFUL: This transform will modify the value range of your data!
+    """
     def __init__(self, noise_variance=(0, 0.1)):
         self.noise_variance = noise_variance
 

@@ -13,7 +13,27 @@ import logging
 
 
 class MultiThreadedAugmenter(object):
-    def __init__(self, data_loader, transform, num_processes, num_cached_per_queue, seeds=None):
+    """ Makes your pipeline multi threaded. Yeah!
+
+    If seeded we guarantee that batches are retunred in the same order and with the same augmentation every time this
+    is run. This is realized internally by using une queue per worker and querying the queues one ofter the other.
+
+    Args:
+        data_loader (generator or DataLoaderBase instance): Your data loader. Must have a .next() function and return
+        a dict that complies with our data structure
+
+        transform (Transform instance): Any of our transformations. If you want to use multiple transformations then
+        use our Compose transform!
+
+        num_processes (int): number of processes
+
+        num_cached_per_queue (int): number of batches cached per process (each process has its own
+        multiprocessing.Queue). We found 2 to be ideal.
+
+        seeds (list of int): one seed for each worker. Must have len(num_processes).
+        If None then seeds = range(num_processes)
+    """
+    def __init__(self, data_loader, transform, num_processes, num_cached_per_queue=2, seeds=None):
         self.transform = transform
         if seeds is not None:
             assert len(seeds) == num_processes

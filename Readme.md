@@ -43,9 +43,12 @@ is kept simple as well: It is just a regular python dictionary! We did this to a
 data that is passed along through the pipeline. The dictionary must have a 'data' key:value pair. It optionally can
 handle a 'seg' key:vlaue pair to hold a segmentation. If a 'seg' key:value pair is present all spatial transformations
 will also be applied to the segmentation! A part from 'data' and 'seg' you are free to do whatever you want (your image
-classification/rtegression target for example). All key:value pairs other than 'data' and 'seg' will be passed through the
+classification/regression target for example). All key:value pairs other than 'data' and 'seg' will be passed through the
 pipeline unmodified.
 
+'data' value must have shape (b, c, x, y) for 2D or shape (b, c, x, y, z) for 3D!
+'seg' value must have shape (b, c, x, y) for 2D or shape (b, c, x, y, z) for 3D! Color channel may be used here to
+allow for several segmentation maps. If you have only one segmentation, make sure to have shape (b, 1, x, y (, z))
 
 ##How to install locally
 

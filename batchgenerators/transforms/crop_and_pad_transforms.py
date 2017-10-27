@@ -3,6 +3,12 @@ from batchgenerators.augmentations.crop_and_pad_augmentations import center_crop
 
 
 class CenterCropTransform(AbstractTransform):
+    """ Crops data and seg (if available) in the center
+
+    Args:
+        output_size (int or tuple of int): Output patch size
+
+    """
     def __init__(self, output_size):
         self.output_size = output_size
 
@@ -19,6 +25,13 @@ class CenterCropTransform(AbstractTransform):
 
 
 class CenterCropSegTransform(AbstractTransform):
+    """ Crops seg in the center (required if you are using unpadded convolutions in a segmentation network).
+    Leaves data as it is
+
+    Args:
+        output_size (int or tuple of int): Output patch size
+
+    """
     def __init__(self, output_size):
         self.output_size = output_size
 
@@ -36,6 +49,14 @@ class CenterCropSegTransform(AbstractTransform):
 
 
 class RandomCropTransform(AbstractTransform):
+    """ Randomly crops data and seg (if available)
+
+    Args:
+        crop_size (int or tuple of int): Output patch size
+
+        margins (tuple of int): how much distance should the patch border have to the image broder (bilaterally)?
+
+    """
     def __init__(self, crop_size=128, margins =(0, 0, 0)):
         self.margins = margins
         self.crop_size = crop_size
@@ -56,6 +77,17 @@ class RandomCropTransform(AbstractTransform):
 
 
 class PadTransform(AbstractTransform):
+    """Pads data and seg
+
+    Args:
+        new_size (tuple of int): Size after padding
+
+        pad_value_data: constant value with which to pad data. If None it uses the image value of [0, 0(, 0)] for each
+        sample and channel
+
+        pad_value_seg: constant value with which to pad segIf None it uses the seg value of [0, 0(, 0)] for each sample
+        and channel
+    """
     def __init__(self, new_size, pad_value_data =None, pad_value_seg =None):
         self.pad_value_seg = pad_value_seg
         self.pad_value_data = pad_value_data

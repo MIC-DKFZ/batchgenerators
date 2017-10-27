@@ -5,6 +5,13 @@ import numpy as np
 
 
 class Mirror(AbstractTransform):
+    """ Randomly mirrors data along specified axes. Mirroring is evenly distributed. Probability of mirroring along
+    each axis is 0.5
+
+    Args:
+        axes (tuple of int): axes along which to mirror
+
+    """
     def __init__(self, axes=(2, 3, 4)):
         self.axes = axes
 
@@ -21,6 +28,14 @@ class Mirror(AbstractTransform):
 
 
 class ChannelTranslation(AbstractTransform):
+    """Simulates badly aligned color channels/modalities by shifting them against each other
+
+    Args:
+        const_channel: Which color channel is constant? The others are shifted
+
+        max_shifts (dict {'x':2, 'y':2, 'z':2}): How many pixels should be shifted for each channel?
+
+    """
     def __init__(self, const_channel=0, max_shifts=None):
         self.max_shift = max_shifts
         self.const_channel = const_channel
@@ -35,10 +50,55 @@ class ChannelTranslation(AbstractTransform):
 
 
 class SpatialTransform(AbstractTransform):
+    """The ultimate spatial transform generator. Rotation, deformation, scaling, cropping: It has all you ever dreamed
+    of. Computational time scales only with patch_size, not with input patch size or type of augmentations used.
+    Internally, this transform will use a coordinate grid of shape patch_size to which the transformations are
+    applied (very fast). Interpolation on the image data will only be done at the very end
+
+    Args:
+        patch_size (tuple/list/ndarray of int): Output patch size
+
+        patch_center_dist_from_border (tuple/list/ndarray of int, or int): How far should the center pixel of the
+        extracted patch be from the image border? Recommended to use patch_size//2.
+        This only applies when random_crop=False
+
+        do_elastic_deform (bool): Whether or not to apply elastic deformation
+
+        alpha (tuple of float): magnitude of the elastic deformation; randomly sampled from interval
+
+        sigma (tuple of float): scale of the elastic deformation (small = local, large = global); randomly sampled
+        from interval
+
+        do_rotation (bool): Whether or not to apply rotation
+
+        angle_x, angle_y, angle_z (tuple of float): angle in rad; randomly sampled from interval. Always double check
+        whether axes are correct!
+
+        do_scale (bool): Whether or not to apply scaling
+
+        scale (tuple of float): scale range ; scale is randomly sampled from interval
+
+        border_mode_data: How to treat border pixels in data? see scipy.ndimage.map_coordinates
+
+        border_cval_data: If border_mode_data=constant, what value to use?
+
+        order_data: Order of interpolation for data. see scipy.ndimage.map_coordinates
+
+        border_mode_seg: How to treat border pixels in seg? see scipy.ndimage.map_coordinates
+
+        border_cval_seg: If border_mode_seg=constant, what value to use?
+
+        order_seg: Order of interpolation for seg. see scipy.ndimage.map_coordinates. Strongly recommended to use 0!
+        If !=0 then you will have to round to int and also beware of interpolation artifacts if you have more then
+        labels 0 and 1. (for example if you have [0, 0, 0, 2, 2, 1, 0] the neighboring [0, 0, 2] bay result in [0, 1, 2])
+
+        random_crop: True: do a random crop of size patch_size and minimal distance to border of
+        patch_center_dist_from_border. False: do a center crop of size patch_size
+    """
     def __init__(self, patch_size, patch_center_dist_from_border=30,
                  do_elastic_deform=True, alpha=(0., 1000.), sigma=(10., 13.),
                  do_rotation=True, angle_x=(0, 2 * np.pi), angle_y=(0, 2 * np.pi), angle_z=(0, 2 * np.pi),
-                 do_scale=True, scale=(0.75, 1.25), border_mode_data='nearest', border_cval_data=0, order_data=1,
+                 do_scale=True, scale=(0.75, 1.25), border_mode_data='nearest', border_cval_data=0, order_data=3,
                  border_mode_seg='constant', border_cval_seg=0, order_seg=0, random_crop=True):
         self.patch_size = patch_size
         self.patch_center_dist_from_border = patch_center_dist_from_border

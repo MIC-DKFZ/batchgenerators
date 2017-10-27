@@ -5,6 +5,30 @@ from abc import ABCMeta, abstractmethod
 
 
 class DataLoaderBase(object):
+    """ Derive from this class and override generate_train_batch. If you don't want to use this you can use any
+    generator.
+    You can modify this class however you want. How the data is presented as batch is you responsibility. You can sample
+    randomly, cycle through the training examples or sample the dtaa according to a specific pattern. Just make sure to
+    use our default data structure!
+    {'data':your_batch_of_shape_(b, c, x, y(, z)),
+    'seg':your_batch_of_shape_(b, c, x, y(, z)),
+    'anything_else1':whatever,
+    'anything_else2':whatever2,
+    ...}
+
+    (seg is optional)
+
+    Args:
+        data (anything): Your dataset. Stored as member variable self._data
+
+        BATCH_SIZE (int): batch size. Stored as member variable self.BATCH_SIZE
+
+        num_batches (int): How many batches will be generated before raising StopIteration. None=unlimited. Careful
+        when using MultiThreadedAugmenter: Each process will produce num_batches batches.
+
+        seed (False, None, int): seed to seed the numpy rng with. False = no seeding
+
+    """
     def __init__(self, data, BATCH_SIZE, num_batches=None, seed=False):
         __metaclass__ = ABCMeta
         self._data = data
