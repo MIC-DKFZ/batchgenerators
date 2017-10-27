@@ -35,7 +35,7 @@ class CenterCropSegTransform(AbstractTransform):
 
 
 
-class RandomCropTranform(AbstractTransform):
+class RandomCropTransform(AbstractTransform):
     def __init__(self, crop_size=128, margins =(0, 0, 0)):
         self.margins = margins
         self.crop_size = crop_size
