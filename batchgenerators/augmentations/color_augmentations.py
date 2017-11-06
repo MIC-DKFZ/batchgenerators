@@ -69,13 +69,12 @@ def augment_brightness_additive(data, mu, sigma, per_channel=True):
 def augment_brightness_multiplicative(data, multiplier_range=(0.5, 2), per_channel=True):
     for sample_idx in range(data.shape[0]):
         sample = data[sample_idx]
-        brain_mask = sample != 0  # roughly select only brain, no background
         multiplier = random.uniform(multiplier_range[0], multiplier_range[1])
         if not per_channel:
-            sample[brain_mask] *= multiplier
+            sample *= multiplier
         else:
             for c in range(sample.shape[0]):
-                sample[c][brain_mask[c]] *= multiplier
+                sample[c] *= multiplier
         data[sample_idx] = sample
     return data
 

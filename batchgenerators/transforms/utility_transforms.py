@@ -14,7 +14,7 @@
 
 
 import torch
-from abstract_transform import AbstractTransform
+from batchgenerators.transforms.abstract_transform import AbstractTransform
 from batchgenerators.augmentations.utils import convert_seg_image_to_one_hot_encoding
 import numpy as np
 

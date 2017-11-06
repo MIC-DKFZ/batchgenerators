@@ -85,6 +85,7 @@ def center_crop(data, crop_size, seg=None):
                 seg_return = np.zeros([seg_shape[0], seg_shape[1]] + list(center_crop_size), dtype=data[0].dtype)
             for i, data_smpl in enumerate(data):
                 center = np.array(data_smpl.shape[1:]) / 2
+
                 data_return[i,] = data_smpl[:,
                                   int(center[0] - center_crop_size[0] / 2.):int(center[0] + center_crop_size[0] / 2.),
                                   int(center[1] - center_crop_size[1] / 2.):int(center[1] + center_crop_size[1] / 2.)]
@@ -165,6 +166,8 @@ def random_crop(data, seg=None, crop_size=128, margins=[0, 0, 0]):
         assert len(crop_size) == len(
             data_shape) - 2, "If you provide a list/tuple as center crop make sure it has the same dimension as your data (2d/3d)"
 
+    lb_x, lb_y = get_rnd_vals(crop_size, data_shape, margins)
+
     if len(data_shape) == 4:
         if not is_list:
             data_return = data[:, :, lb_x:lb_x + crop_size[0], lb_y:lb_y + crop_size[1]]
@@ -208,63 +211,6 @@ def random_crop(data, seg=None, crop_size=128, margins=[0, 0, 0]):
     return data_return, seg_return
 
 
-#
-# def random_crop(data, seg=None, crop_size=128, margins=[0, 0, 0]):
-#
-#     if isinstance(data, np.ndarray):
-#         is_list = False
-#         data_shape = tuple(list(data.shape))
-#     elif isinstance(data, (list, tuple)):
-#         is_list = True
-#         assert len(data) > 0 and isinstance(data[0], np.ndarray)
-#         data_shape = (len(data), *data[0].shape)
-#     else:
-#         raise TypeError("Data has to be either a numpy array or a list")
-#
-#
-#
-#     seg_return = None
-#     if type(crop_size) not in (tuple, list, np.ndarray):
-#         crop_size = [crop_size] * (len(data_shape) - 2)
-#     else:
-#         assert len(crop_size) == len(
-#             data_shape) - 2, "If you provide a list/tuple as center crop make sure it has the same dimension as your data (2d/3d)"
-#
-#     if crop_size[0] < data_shape[2]:
-#         lb_x = np.random.randint(margins[0], data_shape[2] - crop_size[0] - margins[0])
-#     elif crop_size[0] == data_shape[2]:
-#         lb_x = 0
-#     else:
-#         raise ValueError("crop_size[0] must be smaller or equal to the images x dimension")
-#
-#     if crop_size[1] < data_shape[3]:
-#         lb_y = np.random.randint(margins[1], data_shape[3] - crop_size[1] - margins[1])
-#     elif crop_size[1] == data_shape[3]:
-#         lb_y = 0
-#     else:
-#         raise ValueError("crop_size[1] must be smaller or equal to the images y dimension")
-#
-#     if len(data_shape) == 4:
-#         data_return = data[:][:, lb_x:lb_x + crop_size[0], lb_y:lb_y + crop_size[1]]
-#         if seg is not None:
-#             seg_return = seg[:][:, lb_x:lb_x + crop_size[0], lb_y:lb_y + crop_size[1]]
-#     elif len(data_shape) == 5:
-#         if crop_size[2] < data_shape[4]:
-#             lb_z = np.random.randint(margins[2], data_shape[4] - crop_size[2] - margins[2])
-#         elif crop_size[2] == data_shape[4]:
-#             lb_z = 0
-#         else:
-#             raise ValueError("crop_size[2] must be smaller or equal to the images z dimension")
-#         data_return = data[:][:, lb_x:lb_x + crop_size[0], lb_y:lb_y + crop_size[1], lb_z:lb_z + crop_size[2]]
-#         if seg is not None:
-#             seg_return = seg[:][:, lb_x:lb_x + crop_size[0], lb_y:lb_y + crop_size[1], lb_z:lb_z + crop_size[2]]
-#     else:
-#         raise ValueError("Invalid data/seg dimension")
-#     return data_return, seg_return
-
-
-# new_shp = np.max(np.vstack((np.array(tmp_data.shape[2:])[None], np.array(self.patch_size)[None])), 0)
-
 def fillup_pad(data, min_size, seg=None, pad_value_data=None, pad_value_seg=None):
     if isinstance(data, np.ndarray):
         data_shape = tuple(list(data.shape))  #
@@ -300,6 +246,7 @@ def fillup_pad(data, min_size, seg=None, pad_value_data=None, pad_value_seg=None
             new_shp = np.max(np.vstack((np.array(data_smpl.shape[1:])[None], np.array(min_size)[None])), 0)
 
             res_d, res_s = pad([data_smpl], new_shp, seg_smpl, pad_value_data=None, pad_value_seg=None)
+
             res_data.append(res_d[0])
             res_seg.append(res_s[0])
         return res_data, res_seg

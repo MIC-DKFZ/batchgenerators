@@ -14,11 +14,13 @@
 
 
 import abc
+
 import numpy as np
 
 
 class AbstractTransform(object):
     __metaclass__ = abc.ABCMeta
+
     @abc.abstractmethod
     def __call__(self, **data_dict):
         raise NotImplementedError("Abstract, so implement")
@@ -43,6 +45,7 @@ class RndTransform(AbstractTransform):
         ability to do cropping. If we want to not apply the spatial transformation we will still need to crop and
         therefore set the alternative_transform to an instance of RandomCropTransform of CenterCropTransform
     """
+
     def __init__(self, transform, prob=0.5, alternative_transform=None):
         self.alternative_transform = alternative_transform
         self.transform = transform

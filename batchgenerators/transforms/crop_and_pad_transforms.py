@@ -115,6 +115,7 @@ class PadTransform(AbstractTransform):
 
         data, seg = pad(data, self.new_size, seg, self.pad_value_data, self.pad_value_seg)
 
+        data_dict["data"] = data
         if seg is not None:
             data_dict["seg"] = seg
 
@@ -145,6 +146,7 @@ class FillupPadTransform(AbstractTransform):
 
         data, seg = fillup_pad(data, self.new_size, seg, self.pad_value_data, self.pad_value_seg)
 
+        data_dict["data"] = data
         if seg is not None:
             data_dict["seg"] = seg
 
