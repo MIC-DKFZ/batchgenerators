@@ -14,7 +14,7 @@
 
 
 from warnings import warn
-from abstract_transform import AbstractTransform
+from batchgenerators.transforms.abstract_transforms import AbstractTransform
 
 
 class DataChannelSelectionTransform(AbstractTransform):
