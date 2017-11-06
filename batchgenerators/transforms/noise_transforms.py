@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-from abstract_transform import AbstractTransform
+from batchgenerators.transforms.abstract_transforms import AbstractTransform
 from batchgenerators.augmentations.noise_augmentations import augment_gaussian_noise
 
 

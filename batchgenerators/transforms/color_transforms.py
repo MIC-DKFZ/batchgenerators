@@ -15,7 +15,7 @@
 
 from batchgenerators.augmentations.color_augmentations import augment_contrast, augment_brightness_additive, \
     augment_brightness_multiplicative, augment_gamma, augment_illumination, augment_PCA_shift
-from batchgenerators.transforms.abstract_transform import AbstractTransform
+from batchgenerators.transforms.abstract_transforms import AbstractTransform
 
 
 class ContrastAugmentationTransform(AbstractTransform):

@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-from abstract_transform import AbstractTransform
+from batchgenerators.transforms.abstract_transforms import AbstractTransform
 from batchgenerators.augmentations.normalizations import range_normalization, cut_off_outliers, \
     zero_mean_unit_variance_normalization
 
