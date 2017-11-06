@@ -26,13 +26,13 @@ class CenterCropTransform(AbstractTransform):
 
     """
 
-    def __init__(self, output_size):
-        self.output_size = output_size
+    def __init__(self, crop_size):
+        self.crop_size = crop_size
 
     def __call__(self, **data_dict):
         data = data_dict.get("data")
         seg = data_dict.get("seg")
-        data, seg = center_crop(data, self.output_size, seg)
+        data, seg = center_crop(data, self.crop_size, seg)
 
         data_dict["data"] = data
         if seg is not None:
