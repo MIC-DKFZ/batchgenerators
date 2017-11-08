@@ -13,9 +13,9 @@
 # limitations under the License.
 
 
+from batchgenerators.augmentations.crop_and_pad_augmentations import center_crop, center_crop_seg, fillup_pad, pad, \
+    pad_to_multiple, random_crop, pad_to_ratio_2d
 from batchgenerators.transforms.abstract_transforms import AbstractTransform
-from batchgenerators.augmentations.crop_and_pad_augmentations import center_crop, center_crop_seg, random_crop, pad, \
-    random_crop
 
 
 class CenterCropTransform(AbstractTransform):
@@ -145,6 +145,68 @@ class FillupPadTransform(AbstractTransform):
         seg = data_dict.get("seg")
 
         data, seg = fillup_pad(data, self.new_size, seg, self.pad_value_data, self.pad_value_seg)
+
+        data_dict["data"] = data
+        if seg is not None:
+            data_dict["seg"] = seg
+
+        return data_dict
+
+
+class PadToMultipleTransform(AbstractTransform):
+    """Pads data and seg to a multiple in each dimension of the given mutliple (e.g. if multiple is 2, makes W,H,Z even)
+
+    Args:
+        multiple (int): multiple
+
+        pad_value_data: constant value with which to pad data. If None it uses the image value of [0, 0(, 0)] for each
+        sample and channel
+
+        pad_value_seg: constant value with which to pad segIf None it uses the seg value of [0, 0(, 0)] for each sample
+        and channel
+    """
+
+    def __init__(self, multiple, pad_value_data=None, pad_value_seg=None):
+        self.pad_value_seg = pad_value_seg
+        self.pad_value_data = pad_value_data
+        self.multiple = multiple
+
+    def __call__(self, **data_dict):
+        data = data_dict.get("data")
+        seg = data_dict.get("seg")
+
+        data, seg = pad_to_multiple(data, self.multiple, seg, self.pad_value_data, self.pad_value_seg)
+
+        data_dict["data"] = data
+        if seg is not None:
+            data_dict["seg"] = seg
+
+        return data_dict
+
+
+class PadToRatioTransform(AbstractTransform):
+    """Pads data and seg to a ratio of w:h e.g. 16:9 == ratio = 16/9. and 1:2 == ratio 0.5
+
+    Args:
+        ratio (float): ratio
+
+        pad_value_data: constant value with which to pad data. If None it uses the image value of [0, 0(, 0)] for each
+        sample and channel
+
+        pad_value_seg: constant value with which to pad segIf None it uses the seg value of [0, 0(, 0)] for each sample
+        and channel
+    """
+
+    def __init__(self, ratio, pad_value_data=None, pad_value_seg=None):
+        self.pad_value_seg = pad_value_seg
+        self.pad_value_data = pad_value_data
+        self.ratio = ratio
+
+    def __call__(self, **data_dict):
+        data = data_dict.get("data")
+        seg = data_dict.get("seg")
+
+        data, seg = pad_to_ratio_2d(data, self.ratio, seg, self.pad_value_data, self.pad_value_seg)
 
         data_dict["data"] = data
         if seg is not None:

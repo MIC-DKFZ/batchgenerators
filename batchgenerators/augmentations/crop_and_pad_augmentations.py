@@ -18,7 +18,6 @@ import numpy as np
 
 
 def center_crop(data, crop_size, seg=None):
-
     if isinstance(data, np.ndarray):
         is_list = False
         data_shape = tuple(list(data.shape))
@@ -62,14 +61,17 @@ def center_crop(data, crop_size, seg=None):
             for i, data_smpl in enumerate(data):
                 center = np.array(data_smpl.shape[1:]) / 2
                 data_return[i,] = data_smpl[:,
-                                    int(center[0] - center_crop_size[0] / 2.):int(center[0] + center_crop_size[0] / 2.),
-                                    int(center[1] - center_crop_size[1] / 2.):int(center[1] + center_crop_size[1] / 2.),
-                                    int(center[2] - center_crop_size[2] / 2.):int(center[2] + center_crop_size[2] / 2.)]
+                                  int(center[0] - center_crop_size[0] / 2.):int(center[0] + center_crop_size[0] / 2.),
+                                  int(center[1] - center_crop_size[1] / 2.):int(center[1] + center_crop_size[1] / 2.),
+                                  int(center[2] - center_crop_size[2] / 2.):int(center[2] + center_crop_size[2] / 2.)]
                 if seg is not None:
                     seg_return[i,] = seg[i][:,
-                                 int(center[0] - center_crop_size[0] / 2.):int(center[0] + center_crop_size[0] / 2.),
-                                 int(center[1] - center_crop_size[1] / 2.):int(center[1] + center_crop_size[1] / 2.),
-                                 int(center[2] - center_crop_size[2] / 2.):int(center[2] + center_crop_size[2] / 2.)]
+                                     int(center[0] - center_crop_size[0] / 2.):int(
+                                         center[0] + center_crop_size[0] / 2.),
+                                     int(center[1] - center_crop_size[1] / 2.):int(
+                                         center[1] + center_crop_size[1] / 2.),
+                                     int(center[2] - center_crop_size[2] / 2.):int(
+                                         center[2] + center_crop_size[2] / 2.)]
     elif len(data_shape) == 4:
         if not is_list:
             data_return = data[:, :,
@@ -91,8 +93,10 @@ def center_crop(data, crop_size, seg=None):
                                   int(center[1] - center_crop_size[1] / 2.):int(center[1] + center_crop_size[1] / 2.)]
                 if seg is not None:
                     seg_return[i,] = seg[i][:,
-                                 int(center[0] - center_crop_size[0] / 2.):int(center[0] + center_crop_size[0] / 2.),
-                                 int(center[1] - center_crop_size[1] / 2.):int(center[1] + center_crop_size[1] / 2.)]
+                                     int(center[0] - center_crop_size[0] / 2.):int(
+                                         center[0] + center_crop_size[0] / 2.),
+                                     int(center[1] - center_crop_size[1] / 2.):int(
+                                         center[1] + center_crop_size[1] / 2.)]
     else:
         raise Exception(
             "Invalid dimension for seg. seg should be either [BATCH_SIZE, channels, x, y] or [BATCH_SIZE, channels, x, y, z]")
@@ -209,6 +213,77 @@ def random_crop(data, seg=None, crop_size=128, margins=[0, 0, 0]):
     else:
         raise ValueError("Invalid data/seg dimension")
     return data_return, seg_return
+
+
+def pad_to_multiple(data, multiple, seg=None, pad_value_data=None, pad_value_seg=None):
+    if isinstance(data, np.ndarray):
+        cur_size = data.shape[2:]
+        target_size = [i if i % multiple == 0 else (int(i // multiple) + 1) * multiple for i in cur_size]
+
+        return pad(data=data, new_size=target_size, seg=seg, pad_value_data=pad_value_data, pad_value_seg=pad_value_seg)
+
+    elif isinstance(data, (list, tuple)):
+        ret_data = []
+        ret_seg = []
+        for i, data_smpl in enumerate(data):
+            cur_size = data_smpl.shape[1:]
+            target_size = [i if i % multiple == 0 else (int(i // multiple) + 1) * multiple for i in cur_size]
+
+            seg_smpl = [seg[i]] if i < len(seg) else None
+
+            res_data, res_seg = pad([data_smpl], target_size, seg_smpl, pad_value_data=pad_value_data,
+                                    pad_value_seg=pad_value_seg)
+
+            ret_data.append(res_data)
+            ret_seg.append(res_seg)
+
+        return ret_data, ret_seg
+
+
+def pad_to_ratio_2d(data, ratio, seg=None, pad_value_data=None, pad_value_seg=None):
+
+    assert ratio != 0
+
+    if isinstance(data, np.ndarray):
+        cur_size = data.shape[2:]
+
+        size_1 = (int(cur_size[1] * ratio), int(cur_size[1]))
+        size_2 = (int(cur_size[0]), int(cur_size[0] * (1. / ratio)))
+        target_size = list(cur_size)
+
+        if size_1[0] > size_2[0]:
+            target_size[0:2] = size_1[:]
+        else:
+            target_size[0:2] = size_2[:]
+
+        return pad(data=data, new_size=target_size, seg=seg, pad_value_data=pad_value_data, pad_value_seg=pad_value_seg)
+
+    elif isinstance(data, (list, tuple)):
+        ret_data = []
+        ret_seg = []
+        for i, data_smpl in enumerate(data):
+            cur_size = data_smpl.shape[1:]
+
+            size_1 = (int(cur_size[1] * ratio), int(cur_size[1]))
+            size_2 = (int(cur_size[0]), int(cur_size[0] * (1. / ratio)))
+            target_size = list(cur_size)
+
+
+            if size_1[0] > size_2[0]:
+                target_size[0:2] = size_1[:]
+            else:
+                target_size[0:2] = size_2[:]
+
+            seg_smpl = [seg[i]] if i < len(seg) else None
+
+            res_data, res_seg = pad([data_smpl], target_size, seg_smpl, pad_value_data=pad_value_data,
+                                    pad_value_seg=pad_value_seg)
+
+            ret_data.append(res_data)
+            ret_seg.append(res_seg)
+
+        return ret_data, ret_seg
+
 
 
 def fillup_pad(data, min_size, seg=None, pad_value_data=None, pad_value_seg=None):
