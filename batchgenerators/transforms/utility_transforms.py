@@ -78,7 +78,7 @@ class ConvertSegToOnehotTransform(AbstractTransform):
             new_seg = np.zeros([seg.shape[0], len(self.classes)] + list(seg.shape[2:]), dtype=seg.dtype)
             for b in range(seg.shape[0]):
                 new_seg[b] = convert_seg_image_to_one_hot_encoding(seg[b, self.seg_channel], self.classes)
-            data_dict['seg'] = new_seg
+            data_dict[self.output_key] = new_seg
         else:
             from warnings import warn
             warn("calling ConvertSegToOnehotTransform but there is no segmentation")
