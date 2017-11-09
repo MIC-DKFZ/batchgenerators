@@ -24,14 +24,14 @@ def center_crop(data, crop_size, seg=None):
     elif isinstance(data, (list, tuple)):
         is_list = True
         assert len(data) > 0 and isinstance(data[0], np.ndarray)
-        data_shape = (len(data), *data[0].shape)
+        data_shape = tuple([len(data)] + list(data[0].shape))
     else:
         raise TypeError("Data has to be either a numpy array or a list")
     if isinstance(seg, np.ndarray):
         seg_shape = tuple(list(seg.shape))
     elif isinstance(seg, (list, tuple)):
         assert len(data) > 0 and isinstance(data[0], np.ndarray)
-        seg_shape = (len(seg), *seg[0].shape)
+        seg_shape = tuple([len(seg)] + list(seg[0].shape))
     else:
         raise TypeError("Data has to be either a numpy array or a list")
 
@@ -152,14 +152,14 @@ def random_crop(data, seg=None, crop_size=128, margins=[0, 0, 0]):
     elif isinstance(data, (list, tuple)):
         is_list = True
         assert len(data) > 0 and isinstance(data[0], np.ndarray)
-        data_shape = (len(data), *data[0].shape)
+        data_shape = tuple([len(data)] + list(data[0].shape))
     else:
         raise TypeError("Data has to be either a numpy array or a list")
     if isinstance(seg, np.ndarray):
         seg_shape = tuple(list(seg.shape))
     elif isinstance(seg, (list, tuple)):
         assert len(data) > 0 and isinstance(data[0], np.ndarray)
-        seg_shape = (len(seg), *seg[0].shape)
+        seg_shape = tuple([len(seg)] + list(seg[0].shape))
     else:
         raise TypeError("Data has to be either a numpy array or a list")
 
@@ -182,7 +182,7 @@ def random_crop(data, seg=None, crop_size=128, margins=[0, 0, 0]):
             if seg is not None:
                 seg_return = np.zeros([seg_shape[0], seg_shape[1]] + list(crop_size), dtype=data[0].dtype)
             for i, data_smpl in enumerate(data):
-                lb_x, lb_y = get_rnd_vals(crop_size, (1, *data_smpl.shape), margins)
+                lb_x, lb_y = get_rnd_vals(crop_size, tuple([1] + list(data_smpl.shape)), margins)
                 data_return[i,] = data_smpl[:, lb_x:lb_x + crop_size[0], lb_y:lb_y + crop_size[1]]
                 if seg is not None:
                     seg_return[i,] = seg[i][:, lb_x:lb_x + crop_size[0], lb_y:lb_y + crop_size[1]]
@@ -203,7 +203,7 @@ def random_crop(data, seg=None, crop_size=128, margins=[0, 0, 0]):
                 seg_return = np.zeros([seg_shape[0], seg_shape[1]] + list(crop_size), dtype=data[0].dtype)
 
             for i, data_smpl in enumerate(data):
-                lb_x, lb_y = get_rnd_vals(crop_size, (1, *data_smpl.shape), margins)
+                lb_x, lb_y = get_rnd_vals(crop_size, tuple([1] + list(data_smpl.shape)), margins)
                 data_return[i,] = data_smpl[:, lb_x:lb_x + crop_size[0], lb_y:lb_y + crop_size[1],
                                   lb_z:lb_z + crop_size[2]]
                 if seg is not None:
@@ -334,7 +334,7 @@ def pad(data, new_size, seg=None, pad_value_data=None, pad_value_seg=None):
         data_shape = tuple(list(data.shape))
     elif isinstance(data, (list, tuple)):
         assert len(data) > 0 and isinstance(data[0], np.ndarray)
-        data_shape = (len(data), *data[0].shape)
+        data_shape = tuple([len(data)] + list(data[0].shape))
     else:
         raise TypeError("Data has to be either a numpy array or a list")
 
@@ -342,7 +342,7 @@ def pad(data, new_size, seg=None, pad_value_data=None, pad_value_seg=None):
         seg_shape = tuple(list(seg.shape))
     elif isinstance(seg, (list, tuple)):
         assert len(data) > 0 and isinstance(data[0], np.ndarray)
-        seg_shape = (len(seg), *seg[0].shape)
+        seg_shape = tuple([len(seg)] + list(seg[0].shape))
     else:
         raise TypeError("Data has to be either a numpy array or a list")
 
