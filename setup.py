@@ -1,12 +1,12 @@
 from setuptools import setup
 
 setup(name='batchgenerators',
-      version='0.16',
-      description='Awesome stuff for dank learning',
-      url='http://github.com/storborg/funniest',
-      author='Fabian Isensee',
+      version='0.17',
+      description='Data augmentation toolkit',
+      url='https://github.com/MIC-DKFZ/batchgenerators',
+      author='Division of Medical Image Computing, German Cancer Research Center',
       author_email='f.isensee@dkfz-heidelberg.de',
-      license='MIT',
+      license='Apache License Version 2.0, January 2004',
       packages=['batchgenerators', 'batchgenerators.augmentations', 'batchgenerators.generators',
       'batchgenerators.examples', 'batchgenerators.transforms', 'batchgenerators.dataloading'],
       zip_safe=False)
