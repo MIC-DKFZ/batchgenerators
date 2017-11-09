@@ -48,6 +48,33 @@ def zero_mean_unit_variance_normalization(data, per_channel=True, epsilon=1e-7):
     return data
 
 
+def mean_std_normalization(data, mean, std, per_channel=True):
+    if isinstance(data, np.ndarray):
+        data_shape = tuple(list(data.shape))
+    elif isinstance(data, (list, tuple)):
+        assert len(data) > 0 and isinstance(data[0], np.ndarray)
+        data_shape = (len(data), *data[0].shape)
+    else:
+        raise TypeError("Data has to be either a numpy array or a list")
+
+    if per_channel and isinstance(mean, float) and isinstance(std, float):
+        mean = [mean] * data_shape[1]
+        std = [std] * data_shape[1]
+    elif per_channel and isinstance(mean, (tuple, list, np.ndarray)):
+        assert len(mean) == data_shape[1]
+    elif per_channel and isinstance(std, (tuple, list, np.ndarray)):
+        assert len(std) == data_shape[1]
+
+
+    for b in range(data_shape[0]):
+        if per_channel:
+            for c in range(data_shape[1]):
+                data[b][c] = (data[b][c] - mean[c]) / std[c]
+        else:
+            data[b] = (data[b] - mean) / std
+    return data
+
+
 def cut_off_outliers(data, percentile_lower=0.2, percentile_upper=99.8, per_channel=False):
     for b in range(len(data)):
         if not per_channel:

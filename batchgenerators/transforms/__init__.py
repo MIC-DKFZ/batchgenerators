@@ -1,8 +1,9 @@
-from .abstract_transforms import AbstractTransform, RndTransform, Compose
+from .abstract_transforms import AbstractTransform, Compose, RndTransform
 from .channel_selection_transforms import DataChannelSelectionTransform, SegChannelSelectionTransform
-from .color_transforms import ContrastAugmentationTransform, BrightnessTransform, BrightnessMultiplicativeTransform, GammaTransform, IlluminationTransform, FancyColorTransform
-from .crop_and_pad_transforms import CenterCropTransform, CenterCropSegTransform, RandomCropTransform, PadTransform
+from .color_transforms import BrightnessMultiplicativeTransform, BrightnessTransform, ContrastAugmentationTransform, \
+    FancyColorTransform, GammaTransform, IlluminationTransform
+from .crop_and_pad_transforms import CenterCropSegTransform, CenterCropTransform, PadTransform, RandomCropTransform
 from .noise_transforms import GaussianNoiseTransform
-from .sample_normalization_transforms import RangeTransform, CutOffOutliersTransform, ZeroMeanUnitVarianceTransform
-from .spatial_transforms import Mirror, ChannelTranslation, SpatialTransform
-from .utility_transforms import DictToTensor, ConvertSegToOnehotTransform
+from .sample_normalization_transforms import CutOffOutliersTransform, RangeTransform, ZeroMeanUnitVarianceTransform
+from .spatial_transforms import ChannelTranslation, Mirror, SpatialTransform
+from .utility_transforms import ConvertSegToOnehotTransform, ListToTensor, NumpyToTensor
