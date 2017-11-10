@@ -15,15 +15,25 @@
 
 from batchgenerators.transforms.abstract_transforms import AbstractTransform
 from batchgenerators.augmentations.noise_augmentations import augment_gaussian_noise
+from batchgenerators.augmentations.noise_augmentations import augment_rician_noise
 
 
-# class RicianNoiseTransform(AbstractTransform):
-#     def __init__(self, noise_variance=(0, 0.1)):
-#         self.noise_variance = noise_variance
-#
-#     def __call__(self, **data_dict):
-#         data_dict["data"] = augment_rician_noise(data_dict['data'], noise_variance=self.noise_variance)
-#         return data_dict
+class RicianNoiseTransform(AbstractTransform):
+    """Adds rician noise with the given variance.
+    The Noise of MRI data tends to have a rician distribution: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2254141/
+
+    Args:
+        noise_variance (tuple of float): samples variance of Gaussian distribution used to calculate
+        the rician distribution from this interval
+
+    CAREFUL: This transform will modify the value range of your data!
+    """
+    def __init__(self, noise_variance=(0, 0.1)):
+        self.noise_variance = noise_variance
+
+    def __call__(self, **data_dict):
+        data_dict["data"] = augment_rician_noise(data_dict['data'], noise_variance=self.noise_variance)
+        return data_dict
 
 
 class GaussianNoiseTransform(AbstractTransform):
