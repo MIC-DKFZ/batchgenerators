@@ -9,4 +9,10 @@ setup(name='batchgenerators',
       license='Apache License Version 2.0, January 2004',
       packages=['batchgenerators', 'batchgenerators.augmentations', 'batchgenerators.generators',
       'batchgenerators.examples', 'batchgenerators.transforms', 'batchgenerators.dataloading'],
+      install_requires=[
+            "numpy>=1.10.2",
+            "scipy",
+            "scikit-image",
+            "future"
+      ],
       zip_safe=False)

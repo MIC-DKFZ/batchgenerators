@@ -13,7 +13,6 @@
 # limitations under the License.
 
 
-import torch
 
 from batchgenerators.transforms.abstract_transforms import AbstractTransform
 from batchgenerators.augmentations.utils import convert_seg_image_to_one_hot_encoding
@@ -23,6 +22,7 @@ class NumpyToTensor(AbstractTransform):
     """Utility function for pytorch. Converts data (and seg) numpy ndarrays to pytorch tensors
     """
     def __call__(self, **data_dict):
+        import torch
 
         data = data_dict.get("data")
         seg = data_dict.get("seg")
@@ -39,6 +39,7 @@ class ListToTensor(AbstractTransform):
     """Utility function for pytorch. Converts data (and seg) numpy ndarrays to pytorch tensors
     """
     def __call__(self, **data_dict):
+        import torch
 
         data = data_dict.get("data")
         seg = data_dict.get("seg")
