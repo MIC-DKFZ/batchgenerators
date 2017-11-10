@@ -73,7 +73,7 @@ class MultiThreadedGenerator(object):
 
     def _start(self):
         if len(self._threads) == 0:
-            print("starting workers")
+            logging.debug("starting workers")
             self._queue_loop = 0
             self._end_ctr = 0
 
