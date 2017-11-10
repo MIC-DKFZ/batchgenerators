@@ -155,7 +155,9 @@ def random_crop(data, seg=None, crop_size=128, margins=[0, 0, 0]):
         data_shape = tuple([len(data)] + list(data[0].shape))
     else:
         raise TypeError("Data has to be either a numpy array or a list")
-    if isinstance(seg, np.ndarray):
+    if seg is None:
+        pass
+    elif isinstance(seg, np.ndarray):
         seg_shape = tuple(list(seg.shape))
     elif isinstance(seg, (list, tuple)):
         assert len(data) > 0 and isinstance(data[0], np.ndarray)

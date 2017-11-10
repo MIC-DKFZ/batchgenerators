@@ -61,7 +61,7 @@ def augment_linear_downsampling_nilearn(data, max_downsampling_factor=2, isotrop
             image3 = resample_to_img(image2, image, 'nearest')
 
         data[sample_idx, channel_idx] = np.squeeze(image3.get_data())
-        return data
+    return data
 
 
 def augment_linear_downsampling_scipy(data, zoom_range=(0.5, 1)):
@@ -72,7 +72,10 @@ def augment_linear_downsampling_scipy(data, zoom_range=(0.5, 1)):
     * Uses scipy zoom for resampling. A bit faster than nilearn.
     * Resamples all dimensions (channels, x, y, z) with same downsampling factor (like isotropic=True from linear_downsampling_generator_nilearn)
     '''
-    assert zoom_range[0] < zoom_range[1]
+    zoom_range = list(zoom_range)
+    zoom_range[1] += + 1e-6
+    if zoom_range[0] >= zoom_range[1]:
+        raise ValueError("First value of zoom_range must be smaller than second value.")
 
     dim = len(data.shape[2:])  # remove batch_size and nr_of_channels dimension
     for sample_idx in range(data.shape[0]):
@@ -107,4 +110,4 @@ def augment_linear_downsampling_scipy(data, zoom_range=(0.5, 1)):
             else:
                 raise ValueError("Invalid dimension size")
 
-        yield data
+    return data
