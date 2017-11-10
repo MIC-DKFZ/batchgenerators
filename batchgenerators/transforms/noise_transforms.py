@@ -48,9 +48,7 @@ class GaussianNoiseTransform(AbstractTransform):
         self.noise_variance = noise_variance
 
     def __call__(self, **data_dict):
-        data = data_dict.get("data")
-        data = augment_gaussian_noise(data, self.noise_variance)
-        data_dict["data"] = data
+        data_dict["data"] = augment_gaussian_noise(data_dict["data"], self.noise_variance)
         return data_dict
 
 
