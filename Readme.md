@@ -15,12 +15,14 @@ that was missing in most other frameworks).
   * elastic deformations
   * rotations
   * scaling
+  * resampling
 * **Color Augmentations**
   * brightness (additive, multiplivative)
   * contrast
   * gamma (like gamma correction in photo editing)
 * **Noise Augmentations**
   * Gaussian Noise
+  * Rician Noise
   * ...will be expanded in future commits
 * **Cropping**
   * random crop
