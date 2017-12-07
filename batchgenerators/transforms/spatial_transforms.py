@@ -140,13 +140,13 @@ class SpatialTransform(AbstractTransform):
 
         if self.patch_size is None:
             if len(data.shape) == 4:
-                self.patch_size = (data.shape[2], data.shape[3])
+                tmp_patch_size = (data.shape[2], data.shape[3])
             elif len(data.shape) ==5:
-                self.patch_size = (data.shape[2], data.shape[3], data.shape[4])
+                tmp_patch_size = (data.shape[2], data.shape[3], data.shape[4])
             else:
                 raise ValueError, "only support 2D/3D batch data."
 
-        ret_val = augment_spatial(data, seg, patch_size=self.patch_size,
+        ret_val = augment_spatial(data, seg, patch_size=tmp_patch_size,
                                   patch_center_dist_from_border=self.patch_center_dist_from_border,
                                   do_elastic_deform=self.do_elastic_deform, alpha=self.alpha, sigma=self.sigma,
                                   do_rotation=self.do_rotation, angle_x=self.angle_x, angle_y=self.angle_y,
