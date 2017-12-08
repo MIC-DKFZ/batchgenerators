@@ -15,7 +15,7 @@
 
 from batchgenerators.transforms.abstract_transforms import AbstractTransform
 from batchgenerators.augmentations.spatial_transformations import augment_spatial, augment_channel_translation, \
-    augment_mirroring
+    augment_mirroring, augment_transpose_axes
 import numpy as np
 
 
@@ -162,4 +162,19 @@ class SpatialTransform(AbstractTransform):
         if seg is not None:
             data_dict["seg"] = ret_val[1]
 
+        return data_dict
+
+
+class TransposeAxesTransform(AbstractTransform):
+    def __init__(self, transpose_any_of_these=(2, 3, 4)):
+        self.transpose_any_of_these = transpose_any_of_these
+
+    def __call__(self, **data_dict):
+        data = data_dict.get("data")
+        seg = data_dict.get("seg")
+
+        ret_val = augment_transpose_axes(data, seg, self.transpose_any_of_these)
+        data_dict["data"] = ret_val[0]
+        if seg is not None:
+            data_dict["seg"] = ret_val[1]
         return data_dict

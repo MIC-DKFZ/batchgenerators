@@ -6,4 +6,4 @@ from .crop_and_pad_transforms import CenterCropSegTransform, CenterCropTransform
 from .noise_transforms import GaussianNoiseTransform, GaussianBlurTransform
 from .sample_normalization_transforms import CutOffOutliersTransform, RangeTransform, ZeroMeanUnitVarianceTransform
 from .spatial_transforms import ChannelTranslation, Mirror, SpatialTransform
-from .utility_transforms import ConvertSegToOnehotTransform, ListToTensor, NumpyToTensor
+from .utility_transforms import ConvertSegToOnehotTransform, ListToTensor, NumpyToTensor, RenameTransform
