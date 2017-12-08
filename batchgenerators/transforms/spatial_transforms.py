@@ -101,7 +101,7 @@ class SpatialTransform(AbstractTransform):
 
         patch_center_dist_from_border (tuple/list/ndarray of int, or int): How far should the center pixel of the
         extracted patch be from the image border? Recommended to use patch_size//2.
-        This only applies when random_crop=False
+        This only applies when random_crop=True
 
         do_elastic_deform (bool): Whether or not to apply elastic deformation
 
@@ -164,7 +164,17 @@ class SpatialTransform(AbstractTransform):
         data = data_dict.get("data")
         seg = data_dict.get("seg")
 
-        ret_val = augment_spatial(data, seg, patch_size=self.patch_size,
+        if self.patch_size is None:
+            if len(data.shape) == 4:
+                patch_size = (data.shape[2], data.shape[3])
+            elif len(data.shape) ==5:
+                patch_size = (data.shape[2], data.shape[3], data.shape[4])
+            else:
+                raise ValueError, "only support 2D/3D batch data."
+        else:
+            patch_size = self.patch_size
+
+        ret_val = augment_spatial(data, seg, patch_size=patch_size,
                                   patch_center_dist_from_border=self.patch_center_dist_from_border,
                                   do_elastic_deform=self.do_elastic_deform, alpha=self.alpha, sigma=self.sigma,
                                   do_rotation=self.do_rotation, angle_x=self.angle_x, angle_y=self.angle_y,

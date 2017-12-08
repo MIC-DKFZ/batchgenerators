@@ -16,6 +16,7 @@
 from batchgenerators.transforms.abstract_transforms import AbstractTransform
 from batchgenerators.augmentations.noise_augmentations import augment_gaussian_noise
 from batchgenerators.augmentations.noise_augmentations import augment_rician_noise
+from batchgenerators.augmentations.noise_augmentations import augment_gaussian_blur
 
 
 class RicianNoiseTransform(AbstractTransform):
@@ -52,3 +53,10 @@ class GaussianNoiseTransform(AbstractTransform):
         return data_dict
 
 
+class GaussianBlurTransform(AbstractTransform):
+    def __init__(self, blur_sigma=(1, 5)):
+        self.blur_sigma = blur_sigma
+
+    def __call__(self, **data_dict):
+        data_dict['data'] = augment_gaussian_blur(data_dict['data'], self.blur_sigma)
+        return data_dict

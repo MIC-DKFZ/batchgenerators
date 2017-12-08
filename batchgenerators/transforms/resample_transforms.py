@@ -34,4 +34,3 @@ class ResampleTransform(AbstractTransform):
         data_dict['data'] = augment_linear_downsampling_scipy(data_dict['data'], zoom_range=self.zoom_range)
         return data_dict
 
-

@@ -15,6 +15,7 @@
 from builtins import range
 import numpy as np
 import random
+from scipy.ndimage import gaussian_filter
 
 def augment_rician_noise(data, noise_variance=(0, 0.1)):
     for sample_idx in range(data.shape[0]):
@@ -33,4 +34,15 @@ def augment_gaussian_noise(data, noise_variance=(0, 0.1)):
         else:
             variance = random.uniform(noise_variance[0], noise_variance[1])
         data[sample_idx] = data[sample_idx] + np.random.normal(0.0, variance, size=data[sample_idx].shape)
+    return data
+
+
+def augment_gaussian_blur(data, sigma_range, per_channel=True):
+    for sample_idx in range(data.shape[0]):
+        if not per_channel:
+            sigma = np.random.uniform(sigma_range[0], sigma_range[1])
+        for c in range(data.shape[1]):
+            if per_channel:
+                sigma = np.random.uniform(sigma_range[0], sigma_range[1])
+            data[sample_idx, c] = gaussian_filter(data[sample_idx, c], sigma, order=0)
     return data
