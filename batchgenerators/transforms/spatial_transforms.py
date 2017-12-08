@@ -170,7 +170,7 @@ class SpatialTransform(AbstractTransform):
             elif len(data.shape) ==5:
                 patch_size = (data.shape[2], data.shape[3], data.shape[4])
             else:
-                raise ValueError, "only support 2D/3D batch data."
+                raise ValueError("only support 2D/3D batch data.")
         else:
             patch_size = self.patch_size
 
