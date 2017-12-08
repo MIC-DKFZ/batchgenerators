@@ -21,6 +21,44 @@ from batchgenerators.augmentations.utils import create_zero_centered_coordinate_
     interpolate_img, \
     rotate_coords_2d, rotate_coords_3d, scale_coords
 
+from scipy.ndimage import zoom
+
+
+
+def augment_zoom(data, zoom_factors, order=3, seg=None):
+    if isinstance(data, np.ndarray):
+        is_list = False
+        data_shape = tuple(list(data.shape))
+    elif isinstance(data, (list, tuple)):
+        is_list = True
+        assert len(data) > 0 and isinstance(data[0], np.ndarray)
+        data_shape = tuple([len(data)] + list(data[0].shape))
+    else:
+        raise TypeError("Data has to be either a numpy array or a list")
+    if isinstance(seg, np.ndarray):
+        seg_shape = tuple(list(seg.shape))
+    elif isinstance(seg, (list, tuple)):
+        assert len(data) > 0 and isinstance(data[0], np.ndarray)
+        seg_shape = tuple([len(seg)] + list(seg[0].shape))
+    else:
+        raise TypeError("Data has to be either a numpy array or a list")
+
+    if not is_list:
+        data_return = zoom(data, zoom=zoom_factors, order=order)
+        seg_return = None
+        if seg is not None:
+            seg_return = zoom(seg, zoom=zoom_factors, order=order)
+    else:
+        data_return = []
+        seg_return = None
+        if seg is not None:
+            seg_return = []
+        for i, data_smpl in enumerate(data):
+            data_return.append(zoom(data_smpl, zoom=zoom_factors, order=order))
+            if seg is not None:
+                seg_return.append(zoom(seg[i], zoom=zoom_factors, order=order))
+
+    return data_return, seg_return
 
 def augment_mirroring(data, seg=None, axes=(2, 3, 4)):
     data = np.copy(data)
