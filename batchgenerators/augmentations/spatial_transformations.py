@@ -21,6 +21,44 @@ from batchgenerators.augmentations.utils import create_zero_centered_coordinate_
     interpolate_img, \
     rotate_coords_2d, rotate_coords_3d, scale_coords
 
+from scipy.ndimage import zoom
+
+
+
+def augment_zoom(data, zoom_factors, order=3, seg=None):
+    if isinstance(data, np.ndarray):
+        is_list = False
+        data_shape = tuple(list(data.shape))
+    elif isinstance(data, (list, tuple)):
+        is_list = True
+        assert len(data) > 0 and isinstance(data[0], np.ndarray)
+        data_shape = tuple([len(data)] + list(data[0].shape))
+    else:
+        raise TypeError("Data has to be either a numpy array or a list")
+    if isinstance(seg, np.ndarray):
+        seg_shape = tuple(list(seg.shape))
+    elif isinstance(seg, (list, tuple)):
+        assert len(data) > 0 and isinstance(data[0], np.ndarray)
+        seg_shape = tuple([len(seg)] + list(seg[0].shape))
+    else:
+        raise TypeError("Data has to be either a numpy array or a list")
+
+    if not is_list:
+        data_return = zoom(data, zoom=zoom_factors, order=order)
+        seg_return = None
+        if seg is not None:
+            seg_return = zoom(seg, zoom=zoom_factors, order=order)
+    else:
+        data_return = []
+        seg_return = None
+        if seg is not None:
+            seg_return = []
+        for i, data_smpl in enumerate(data):
+            data_return.append(zoom(data_smpl, zoom=zoom_factors, order=order))
+            if seg is not None:
+                seg_return.append(zoom(seg[i], zoom=zoom_factors, order=order))
+
+    return data_return, seg_return
 
 def augment_mirroring(data, seg=None, axes=(2, 3, 4)):
     data = np.copy(data)
@@ -166,3 +204,18 @@ def augment_spatial(data, seg, patch_size, patch_center_dist_from_border=30,
                 seg_result[sample_id, channel_id] = interpolate_img(seg[sample_id, channel_id], coords, order_seg,
                                                                     border_mode_seg, cval=border_cval_seg)
     return data_result, seg_result
+
+
+def augment_transpose_axes(data, seg, axes=(2, 3, 4)):
+    data_res = np.copy(data)
+    seg_res = None
+    if seg is not None:
+        seg_res = np.copy(seg)
+
+    assert np.max(axes) <= len(data), "axes must only contain valid axis ids"
+    for s in data.shape[0]:
+        a = np.random.choice(axes, 2, replace=False)
+        data_res[s, :] = data[s, :].transpose(a[0], a[1])
+        if seg is not None:
+            seg_res[s, :] = seg[s, :].transpose(a[0], a[1])
+    return data_res, seg_res

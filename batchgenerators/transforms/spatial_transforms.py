@@ -15,9 +15,35 @@
 
 from batchgenerators.transforms.abstract_transforms import AbstractTransform
 from batchgenerators.augmentations.spatial_transformations import augment_spatial, augment_channel_translation, \
-    augment_mirroring
+    augment_mirroring, augment_transpose_axes, augment_zoom
 import numpy as np
 
+
+
+class Zoom(AbstractTransform):
+    """ Zooms an array given the zoom factors for each dimension. If only a float is given, zooms all axis with the
+    same factor
+
+    Args:
+        axes (tuple of float or float): factors to zoom the dimensions. If only on float is given, zooms all axis
+        with the same factor
+        order (int): order of interpolation
+
+    """
+    def __init__(self, zoom_factors=1, order=3):
+        self.order = order
+        self.zoom_factors = zoom_factors
+
+    def __call__(self, **data_dict):
+        data = data_dict.get("data")
+        seg = data_dict.get("seg")
+
+        ret_val = augment_zoom(data=data, seg=seg, zoom_factors=self.zoom_factors, order=self.order)
+
+        data_dict["data"] = ret_val[0]
+        if seg is not None:
+            data_dict["seg"] = ret_val[1]
+        return data_dict
 
 class Mirror(AbstractTransform):
     """ Randomly mirrors data along specified axes. Mirroring is evenly distributed. Probability of mirroring along
@@ -144,7 +170,7 @@ class SpatialTransform(AbstractTransform):
             elif len(data.shape) ==5:
                 patch_size = (data.shape[2], data.shape[3], data.shape[4])
             else:
-                raise ValueError, "only support 2D/3D batch data."
+                raise ValueError("only support 2D/3D batch data.")
         else:
             patch_size = self.patch_size
 
@@ -162,4 +188,19 @@ class SpatialTransform(AbstractTransform):
         if seg is not None:
             data_dict["seg"] = ret_val[1]
 
+        return data_dict
+
+
+class TransposeAxesTransform(AbstractTransform):
+    def __init__(self, transpose_any_of_these=(2, 3, 4)):
+        self.transpose_any_of_these = transpose_any_of_these
+
+    def __call__(self, **data_dict):
+        data = data_dict.get("data")
+        seg = data_dict.get("seg")
+
+        ret_val = augment_transpose_axes(data, seg, self.transpose_any_of_these)
+        data_dict["data"] = ret_val[0]
+        if seg is not None:
+            data_dict["seg"] = ret_val[1]
         return data_dict

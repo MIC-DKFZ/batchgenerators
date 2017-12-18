@@ -3,7 +3,7 @@ from .channel_selection_transforms import DataChannelSelectionTransform, SegChan
 from .color_transforms import BrightnessMultiplicativeTransform, BrightnessTransform, ContrastAugmentationTransform, \
     FancyColorTransform, GammaTransform, IlluminationTransform
 from .crop_and_pad_transforms import CenterCropSegTransform, CenterCropTransform, PadTransform, RandomCropTransform
-from .noise_transforms import GaussianNoiseTransform
+from .noise_transforms import GaussianNoiseTransform, GaussianBlurTransform
 from .sample_normalization_transforms import CutOffOutliersTransform, RangeTransform, ZeroMeanUnitVarianceTransform
 from .spatial_transforms import ChannelTranslation, Mirror, SpatialTransform
-from .utility_transforms import ConvertSegToOnehotTransform, ListToTensor, NumpyToTensor
+from .utility_transforms import ConvertSegToOnehotTransform, ListToTensor, NumpyToTensor, RenameTransform

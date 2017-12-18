@@ -89,9 +89,20 @@ class ConvertSegToOnehotTransform(AbstractTransform):
 
 
 
+
 class ConvertSegToBoundingBoxCoordinates(AbstractTransform):
     """ Converts segmentation masks into bounding box coordinates. Works only for one object per image
     """
     def __call__(self, **data_dict):
         data_dict['bb_target'] = convert_seg_to_bounding_box_coordinates(data_dict['seg'], data_dict['patient_ids'])
+
+class RenameTransform(AbstractTransform):
+    def __init__(self, key, rename_to):
+        self.rename_to = rename_to
+        self.key = key
+
+    def __call__(self, **data_dict):
+        data_dict[self.rename_to] = data_dict[self.key]
+        _ = data_dict.pop(self.key)
+
         return data_dict
