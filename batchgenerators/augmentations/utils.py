@@ -428,3 +428,17 @@ def general_cc_var_num_channels(img, diff_order=0, mink_norm=1, sigma=1, mask_im
         output_img[output_img < minm] = minm
         output_img[output_img > maxm] = maxm
     return white_colors, output_img
+
+
+def convert_seg_to_bounding_box_coordinates(seg, pid):
+
+        bb_target = np.zeros((seg.shape[0], 4), dtype=np.float32)
+        for b in range(seg.shape[0]):
+            try:
+                seg_ixs = np.argwhere(seg[b] != 0)
+                bb_target[b] = [np.min(seg_ixs[:, 2]), np.min(seg_ixs[:, 1]), np.max(seg_ixs[:, 2]),
+                                 np.max(seg_ixs[:, 1])]
+            except:
+                print "fail: bb kicked out of image by data augmentation", np.sum(seg!=0), pid
+
+        return bb_target
