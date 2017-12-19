@@ -96,6 +96,9 @@ class ConvertSegToBoundingBoxCoordinates(AbstractTransform):
     def __call__(self, **data_dict):
         data_dict['bb_target'] = convert_seg_to_bounding_box_coordinates(data_dict['seg'], data_dict['patient_ids'])
 
+        return data_dict
+
+    
 class RenameTransform(AbstractTransform):
     def __init__(self, key, rename_to):
         self.rename_to = rename_to
