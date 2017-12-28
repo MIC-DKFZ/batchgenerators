@@ -17,6 +17,7 @@
 from batchgenerators.transforms.abstract_transforms import AbstractTransform
 from batchgenerators.augmentations.utils import convert_seg_image_to_one_hot_encoding
 from batchgenerators.augmentations.utils import convert_seg_to_bounding_box_coordinates
+from batchgenerators.augmentations.utils import transpose_channels
 import numpy as np
 
 class NumpyToTensor(AbstractTransform):
@@ -98,7 +99,18 @@ class ConvertSegToBoundingBoxCoordinates(AbstractTransform):
 
         return data_dict
 
-    
+class TransposeChannels(AbstractTransform):
+    """ Converts segmentation masks into bounding box coordinates. Works only for one object per image
+    """
+
+    def __call__(self, **data_dict):
+        data_dict['data'] = transpose_channels(data_dict['data'])
+        data_dict['seg'] = transpose_channels(data_dict['seg'])
+
+        return data_dict
+
+
+
 class RenameTransform(AbstractTransform):
     def __init__(self, key, rename_to):
         self.rename_to = rename_to
