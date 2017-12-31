@@ -448,6 +448,6 @@ def transpose_channels(batch):
     if len(batch.shape) == 4:
         return np.transpose(batch, axes=[0, 2, 3, 1])
     elif len(batch.shape) == 5:
-        return np.transpose(batch, axes=[0, 2, 3, 4, 1])
+        return np.transpose(batch, axes=[0, 4, 2, 3, 1])
     else:
         print "wrong dimensions in transpose_channel generator!"
