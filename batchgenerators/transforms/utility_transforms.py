@@ -110,14 +110,32 @@ class TransposeChannels(AbstractTransform):
         return data_dict
 
 
-
-class RenameTransform(AbstractTransform):
-    def __init__(self, key, rename_to):
-        self.rename_to = rename_to
-        self.key = key
+class RemoveLabelTransform(AbstractTransform):
+    '''
+    Replaces all pixels in data_dict[input_key] that have value remove_label with replace_with and saves the result to
+    data_dict[output_key]
+    '''
+    def __init__(self, remove_label, replace_with=0, input_key="seg", output_key="seg"):
+        self.output_key = output_key
+        self.input_key = input_key
+        self.replace_with = replace_with
+        self.remove_label = remove_label
 
     def __call__(self, **data_dict):
-        data_dict[self.rename_to] = data_dict[self.key]
-        _ = data_dict.pop(self.key)
+        seg = data_dict[self.input_key]
+        seg[seg == self.remove_label] = self.replace_with
+        data_dict[self.output_key] = seg
+        return data_dict
 
+
+class RenameTransform(AbstractTransform):
+    '''
+    Saves the value of data_dict[in_key] to data_dict[out_key]. Does not remove data_dict[in_key] from the dict.
+    '''
+    def __init__(self, in_key, out_key):
+        self.out_key = out_key
+        self.in_key = in_key
+
+    def __call__(self, **data_dict):
+        data_dict[self.out_key] = data_dict[self.in_key]
         return data_dict
