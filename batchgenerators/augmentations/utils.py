@@ -20,6 +20,7 @@ from copy import deepcopy
 from scipy.ndimage import map_coordinates
 from scipy.ndimage.filters import gaussian_filter, gaussian_gradient_magnitude
 from scipy.ndimage.morphology import grey_dilation
+from skimage.transform import resize
 
 
 def generate_elastic_transform_coordinates(shape, alpha, sigma):
@@ -451,3 +452,42 @@ def transpose_channels(batch):
         return np.transpose(batch, axes=[0, 4, 2, 3, 1])
     else:
         print "wrong dimensions in transpose_channel generator!"
+
+
+def resize_segmentation(segmentation, new_shape, order=3):
+    '''
+    Resizes a segmentation map. Supports all orders (see skimage documentation). Will transform segmentation map to one
+    hot encoding which is resized and transformed back to a segmentation map.
+    This prevents interpolation artifacts ([0, 0, 2] -> [0, 1, 2])
+    :param segmentation:
+    :param new_shape:
+    :param order:
+    :return:
+    '''
+    unique_labels = np.unique(segmentation)
+    assert len(segmentation.shape) == len(new_shape), "new shape must have same dimensionality as segmentation"
+    if order == 0:
+        return resize(segmentation, new_shape, order, mode="constant", cval=0, clip=True)
+    else:
+        reshaped_multihot = np.zeros([len(unique_labels)] + list(new_shape), dtype=float)
+        for i, c in enumerate(unique_labels):
+            reshaped_multihot[i] = np.round(
+                resize((segmentation == c).astype(float), new_shape, order, mode="constant", cval=0, clip=True))
+        reshaped = unique_labels[np.argmax(reshaped_multihot, 0)].astype(segmentation.dtype)
+        return reshaped
+
+
+def resize_softmax_output(softmax_output, new_shape, order=3):
+    '''
+    Resizes softmax output. Resizes each channel in c separately and fuses results back together
+
+    :param softmax_output: c x x x y x z
+    :param new_shape: x x y x z
+    :param order:
+    :return:
+    '''
+    new_shp = [softmax_output.shape[0]] + list(new_shape)
+    result = np.zeros(new_shp, dtype=softmax_output.dtype)
+    for i in range(softmax_output.shape[0]):
+        result[i] = resize(softmax_output[i].astype(float), new_shape, order, "constant", 0, True)
+    return result
