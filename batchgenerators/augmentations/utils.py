@@ -20,6 +20,7 @@ from copy import deepcopy
 from scipy.ndimage import map_coordinates
 from scipy.ndimage.filters import gaussian_filter, gaussian_gradient_magnitude
 from scipy.ndimage.morphology import grey_dilation
+from skimage.transform import resize
 
 
 def generate_elastic_transform_coordinates(shape, alpha, sigma):
@@ -428,3 +429,65 @@ def general_cc_var_num_channels(img, diff_order=0, mink_norm=1, sigma=1, mask_im
         output_img[output_img < minm] = minm
         output_img[output_img > maxm] = maxm
     return white_colors, output_img
+
+
+def convert_seg_to_bounding_box_coordinates(seg, pid):
+
+        bb_target = np.zeros((seg.shape[0], 4), dtype=np.float32)
+        for b in range(seg.shape[0]):
+            try:
+                seg_ixs = np.argwhere(seg[b] != 0)
+                bb_target[b] = [np.min(seg_ixs[:, 2]), np.min(seg_ixs[:, 1]), np.max(seg_ixs[:, 2]),
+                                 np.max(seg_ixs[:, 1])]
+            except:
+                print "fail: bb kicked out of image by data augmentation", np.sum(seg!=0), pid[b]
+
+        return bb_target
+
+
+def transpose_channels(batch):
+    if len(batch.shape) == 4:
+        return np.transpose(batch, axes=[0, 2, 3, 1])
+    elif len(batch.shape) == 5:
+        return np.transpose(batch, axes=[0, 4, 2, 3, 1])
+    else:
+        print "wrong dimensions in transpose_channel generator!"
+
+
+def resize_segmentation(segmentation, new_shape, order=3):
+    '''
+    Resizes a segmentation map. Supports all orders (see skimage documentation). Will transform segmentation map to one
+    hot encoding which is resized and transformed back to a segmentation map.
+    This prevents interpolation artifacts ([0, 0, 2] -> [0, 1, 2])
+    :param segmentation:
+    :param new_shape:
+    :param order:
+    :return:
+    '''
+    unique_labels = np.unique(segmentation)
+    assert len(segmentation.shape) == len(new_shape), "new shape must have same dimensionality as segmentation"
+    if order == 0:
+        return resize(segmentation, new_shape, order, mode="constant", cval=0, clip=True)
+    else:
+        reshaped_multihot = np.zeros([len(unique_labels)] + list(new_shape), dtype=float)
+        for i, c in enumerate(unique_labels):
+            reshaped_multihot[i] = np.round(
+                resize((segmentation == c).astype(float), new_shape, order, mode="constant", cval=0, clip=True))
+        reshaped = unique_labels[np.argmax(reshaped_multihot, 0)].astype(segmentation.dtype)
+        return reshaped
+
+
+def resize_softmax_output(softmax_output, new_shape, order=3):
+    '''
+    Resizes softmax output. Resizes each channel in c separately and fuses results back together
+
+    :param softmax_output: c x x x y x z
+    :param new_shape: x x y x z
+    :param order:
+    :return:
+    '''
+    new_shp = [softmax_output.shape[0]] + list(new_shape)
+    result = np.zeros(new_shp, dtype=softmax_output.dtype)
+    for i in range(softmax_output.shape[0]):
+        result[i] = resize(softmax_output[i].astype(float), new_shape, order, "constant", 0, True)
+    return result

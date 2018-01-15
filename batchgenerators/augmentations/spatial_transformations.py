@@ -204,3 +204,18 @@ def augment_spatial(data, seg, patch_size, patch_center_dist_from_border=30,
                 seg_result[sample_id, channel_id] = interpolate_img(seg[sample_id, channel_id], coords, order_seg,
                                                                     border_mode_seg, cval=border_cval_seg)
     return data_result, seg_result
+
+
+def augment_transpose_axes(data, seg, axes=(2, 3, 4)):
+    data_res = np.copy(data)
+    seg_res = None
+    if seg is not None:
+        seg_res = np.copy(seg)
+
+    assert np.max(axes) <= len(data), "axes must only contain valid axis ids"
+    for s in data.shape[0]:
+        a = np.random.choice(axes, 2, replace=False)
+        data_res[s, :] = data[s, :].transpose(a[0], a[1])
+        if seg is not None:
+            seg_res[s, :] = seg[s, :].transpose(a[0], a[1])
+    return data_res, seg_res
