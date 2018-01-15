@@ -32,7 +32,7 @@ def center_crop(data, crop_size, seg=None):
     elif isinstance(seg, (list, tuple)):
         assert len(data) > 0 and isinstance(data[0], np.ndarray)
         seg_shape = tuple([len(seg)] + list(seg[0].shape))
-    else:
+    elif seg is not None:
         raise TypeError("Data has to be either a numpy array or a list")
 
     seg_return = None
@@ -330,7 +330,10 @@ def fillup_pad(data, min_size, seg=None, pad_value_data=None, pad_value_seg=None
             res_d, res_s = pad([data_smpl], new_shp, seg_smpl, pad_value_data=None, pad_value_seg=None)
 
             res_data.append(res_d[0])
-            res_seg.append(res_s[0])
+            if seg is not None:
+                res_seg.append(res_s[0])
+            else:
+                res_seg = None
         return res_data, res_seg
     else:
         raise TypeError("Data has to be either a numpy array or a list")
@@ -350,7 +353,7 @@ def pad(data, new_size, seg=None, pad_value_data=None, pad_value_seg=None):
     elif isinstance(seg, (list, tuple)):
         assert len(data) > 0 and isinstance(data[0], np.ndarray)
         seg_shape = tuple([len(seg)] + list(seg[0].shape))
-    else:
+    elif seg is not None:
         raise TypeError("Data has to be either a numpy array or a list")
 
     if type(new_size) not in (tuple, list, np.ndarray):
