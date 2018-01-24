@@ -40,7 +40,7 @@ def augment_zoom(data, zoom_factors, order=3, seg=None):
     elif isinstance(seg, (list, tuple)):
         assert len(data) > 0 and isinstance(data[0], np.ndarray)
         seg_shape = tuple([len(seg)] + list(seg[0].shape))
-    else:
+    elif seg is not None:
         raise TypeError("Data has to be either a numpy array or a list")
 
     if not is_list:
