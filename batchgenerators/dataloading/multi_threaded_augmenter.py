@@ -38,7 +38,7 @@ class MultiThreadedAugmenter(object):
         a dict that complies with our data structure
 
         transform (Transform instance): Any of our transformations. If you want to use multiple transformations then
-        use our Compose transform!
+        use our Compose transform! Can be None (in that case no transform will be applied)
 
         num_processes (int): number of processes
 
@@ -100,7 +100,8 @@ class MultiThreadedAugmenter(object):
 
             def producer(queue, data_loader, transform):
                 for item in data_loader:
-                    item = transform(**item)
+                    if transform is not None:
+                        item = transform(**item)
                     queue.put(item)
                 queue.put("end")
 
