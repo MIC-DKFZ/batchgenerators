@@ -13,10 +13,9 @@
 # limitations under the License.
 
 
+from batchgenerators.augmentations.noise_augmentations import augment_blank_square_noise, augment_gaussian_blur, \
+    augment_gaussian_noise, augment_rician_noise
 from batchgenerators.transforms.abstract_transforms import AbstractTransform
-from batchgenerators.augmentations.noise_augmentations import augment_gaussian_noise
-from batchgenerators.augmentations.noise_augmentations import augment_rician_noise
-from batchgenerators.augmentations.noise_augmentations import augment_gaussian_blur
 
 
 class RicianNoiseTransform(AbstractTransform):
@@ -29,6 +28,7 @@ class RicianNoiseTransform(AbstractTransform):
 
     CAREFUL: This transform will modify the value range of your data!
     """
+
     def __init__(self, noise_variance=(0, 0.1)):
         self.noise_variance = noise_variance
 
@@ -45,6 +45,7 @@ class GaussianNoiseTransform(AbstractTransform):
 
     CAREFUL: This transform will modify the value range of your data!
     """
+
     def __init__(self, noise_variance=(0, 0.1)):
         self.noise_variance = noise_variance
 
@@ -59,4 +60,16 @@ class GaussianBlurTransform(AbstractTransform):
 
     def __call__(self, **data_dict):
         data_dict['data'] = augment_gaussian_blur(data_dict['data'], self.blur_sigma)
+        return data_dict
+
+
+class BlankSquareNoiseTransform(AbstractTransform):
+    def __init__(self, squre_size=20, n_squres=1, noise_val=(0, 0)):
+        self.noise_val = noise_val
+        self.n_squres = n_squres
+        self.squre_size = squre_size
+
+    def __call__(self, **data_dict):
+        data_dict['data'] = augment_blank_square_noise(data_dict['data'], self.squre_size, self.n_squres,
+                                                       self.noise_val)
         return data_dict
