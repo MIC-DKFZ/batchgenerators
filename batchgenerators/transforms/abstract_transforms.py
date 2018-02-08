@@ -16,7 +16,7 @@
 import abc
 
 import numpy as np
-
+import copy
 
 class AbstractTransform(object):
     __metaclass__ = abc.ABCMeta
@@ -108,8 +108,11 @@ class Rename(AbstractTransform):
         for key, val in data_dict.items():
             if key in self.re_dict:
                 new_dict[self.re_dict[key]] = val
-            if self.copy or key not in self.re_dict:
+            if key not in self.re_dict:
                 new_dict[key] = val
+
+            if self.copy:
+                new_dict[key] = copy.deepcopy(val)
 
         return new_dict
 

@@ -14,6 +14,7 @@
 
 
 from builtins import range, zip
+import random
 
 import numpy as np
 from copy import deepcopy
@@ -491,3 +492,22 @@ def resize_softmax_output(softmax_output, new_shape, order=3):
     for i in range(softmax_output.shape[0]):
         result[i] = resize(softmax_output[i].astype(float), new_shape, order, "constant", 0, True)
     return result
+
+
+def get_range_val(value, rnd_type="uniform"):
+    if isinstance(value, (list, tuple, np.ndarray)):
+        if len(value) == 2:
+            if value[0] == value[1]:
+                n_val = value[0]
+            else:
+                orig_type = type(value[0])
+                if rnd_type == "uniform":
+                    n_val = random.uniform(value[0], value[1])
+                elif rnd_type == "normal":
+                    n_val = random.normalvariate(value[0], value[1])
+                n_val = orig_type(n_val)
+        elif len(value) == 1:
+            n_val = value[0]
+        return n_val
+    else:
+        return value

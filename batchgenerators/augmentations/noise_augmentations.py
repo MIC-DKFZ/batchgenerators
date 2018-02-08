@@ -16,6 +16,7 @@ import random
 from builtins import range
 
 import numpy as np
+from batchgenerators.augmentations.utils import get_range_val
 from scipy.ndimage import gaussian_filter
 
 
@@ -80,10 +81,9 @@ def augment_blank_square_noise(data, square_size, n_squares, noise_val=(0, 0)):
 
     for sample_idx in range(data.shape[0]):
 
-        if noise_val[0] == noise_val[1]:
-            n_val = noise_val[0]
-        else:
-            n_val = random.uniform(noise_val[0], noise_val[1])
+        n_val = get_range_val(noise_val)
+        square_size = get_range_val(square_size)
+        n_squares = get_range_val(n_squares)
 
         data[sample_idx] = mask_random_squares(data[sample_idx], square_size=square_size, n_squares=n_squares,
                                                n_val=n_val)
