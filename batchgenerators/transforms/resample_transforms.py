@@ -27,10 +27,11 @@ class ResampleTransform(AbstractTransform):
         zoom_range (tuple of float): Random downscaling factor in this range. (e.g.: 0.5 halfs the resolution)
     '''
 
-    def __init__(self, zoom_range=(0.5, 1)):
+    def __init__(self, zoom_range=(0.5, 1), data_key="data"):
+        self.data_key = data_key
         self.zoom_range = zoom_range
 
     def __call__(self, **data_dict):
-        data_dict['data'] = augment_linear_downsampling_scipy(data_dict['data'], zoom_range=self.zoom_range)
+        data_dict[self.data_key] = augment_linear_downsampling_scipy(data_dict[self.data_key], zoom_range=self.zoom_range)
         return data_dict
 

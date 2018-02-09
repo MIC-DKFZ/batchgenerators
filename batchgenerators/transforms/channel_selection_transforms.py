@@ -24,11 +24,12 @@ class DataChannelSelectionTransform(AbstractTransform):
         channels (list of int): List of channels to be kept.
 
     """
-    def __init__(self, channels):
+    def __init__(self, channels, data_key="data"):
+        self.data_key = data_key
         self.channels = channels
 
     def __call__(self, **data_dict):
-        data_dict["data"] = data_dict["data"][:, self.channels]
+        data_dict[self.data_key] = data_dict[self.data_key][:, self.channels]
         return data_dict
 
 
@@ -39,12 +40,13 @@ class SegChannelSelectionTransform(AbstractTransform):
         channels (list of int): List of channels to be kept.
 
     """
-    def __init__(self, channels, keep_discarded_seg=False):
+    def __init__(self, channels, keep_discarded_seg=False, label_key="seg"):
+        self.label_key = label_key
         self.channels = channels
         self.keep_discarded = keep_discarded_seg
 
     def __call__(self, **data_dict):
-        seg = data_dict.get("seg")
+        seg = data_dict.get(self.label_key)
 
         if seg is None:
             warn("You used SegChannelSelectionTransform but there is no 'seg' key in your data_dict, returning data_dict unmodified", Warning)
@@ -52,5 +54,5 @@ class SegChannelSelectionTransform(AbstractTransform):
             if self.keep_discarded:
                 discarded_seg_idx = [i for i in range(len(seg[0])) if i not in self.channels]
                 data_dict['discarded_seg'] = seg[:, discarded_seg_idx]
-            data_dict["seg"] = seg[:, self.channels]
+            data_dict[self.label_key] = seg[:, self.channels]
         return data_dict

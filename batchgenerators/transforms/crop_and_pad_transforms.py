@@ -26,17 +26,19 @@ class CenterCropTransform(AbstractTransform):
 
     """
 
-    def __init__(self, crop_size):
+    def __init__(self, crop_size, data_key="data", label_key="seg"):
+        self.data_key = data_key
+        self.label_key = label_key
         self.crop_size = crop_size
 
     def __call__(self, **data_dict):
-        data = data_dict.get("data")
-        seg = data_dict.get("seg")
+        data = data_dict.get(self.data_key)
+        seg = data_dict.get(self.label_key)
         data, seg = center_crop(data, self.crop_size, seg)
 
-        data_dict["data"] = data
+        data_dict[self.data_key] = data
         if seg is not None:
-            data_dict["seg"] = seg
+            data_dict[self.label_key] = seg
 
         return data_dict
 
@@ -50,14 +52,16 @@ class CenterCropSegTransform(AbstractTransform):
 
     """
 
-    def __init__(self, output_size):
+    def __init__(self, output_size, data_key="data", label_key="seg"):
+        self.data_key = data_key
+        self.label_key = label_key
         self.output_size = output_size
 
     def __call__(self, **data_dict):
-        seg = data_dict.get("seg")
+        seg = data_dict.get(self.label_key)
 
         if seg is not None:
-            data_dict["seg"] = center_crop_seg(seg, self.output_size)
+            data_dict[self.label_key] = center_crop_seg(seg, self.output_size)
         else:
             from warnings import warn
             warn("You shall not pass data_dict without seg: Used CenterCropSegTransform, but there is no seg", Warning)
@@ -74,19 +78,21 @@ class RandomCropTransform(AbstractTransform):
 
     """
 
-    def __init__(self, crop_size=128, margins=(0, 0, 0)):
+    def __init__(self, crop_size=128, margins=(0, 0, 0), data_key="data", label_key="seg"):
+        self.data_key = data_key
+        self.label_key = label_key
         self.margins = margins
         self.crop_size = crop_size
 
     def __call__(self, **data_dict):
-        data = data_dict.get("data")
-        seg = data_dict.get("seg")
+        data = data_dict.get(self.data_key)
+        seg = data_dict.get(self.label_key)
 
         data, seg = random_crop(data, seg, self.crop_size, self.margins)
 
-        data_dict["data"] = data
+        data_dict[self.data_key] = data
         if seg is not None:
-            data_dict["seg"] = seg
+            data_dict[self.label_key] = seg
 
         return data_dict
 
@@ -104,20 +110,22 @@ class PadTransform(AbstractTransform):
         and channel
     """
 
-    def __init__(self, new_size, pad_value_data=None, pad_value_seg=None):
+    def __init__(self, new_size, pad_value_data=None, pad_value_seg=None, data_key="data", label_key="seg"):
+        self.data_key = data_key
+        self.label_key = label_key
         self.pad_value_seg = pad_value_seg
         self.pad_value_data = pad_value_data
         self.new_size = new_size
 
     def __call__(self, **data_dict):
-        data = data_dict.get("data")
-        seg = data_dict.get("seg")
+        data = data_dict.get(self.data_key)
+        seg = data_dict.get(self.label_key)
 
         data, seg = pad(data, self.new_size, seg, self.pad_value_data, self.pad_value_seg)
 
-        data_dict["data"] = data
+        data_dict[self.data_key] = data
         if seg is not None:
-            data_dict["seg"] = seg
+            data_dict[self.label_key] = seg
 
         return data_dict
 
@@ -135,20 +143,22 @@ class FillupPadTransform(AbstractTransform):
         and channel
     """
 
-    def __init__(self, min_size, pad_value_data=None, pad_value_seg=None):
+    def __init__(self, min_size, pad_value_data=None, pad_value_seg=None, data_key="data", label_key="seg"):
+        self.data_key = data_key
+        self.label_key = label_key
         self.pad_value_seg = pad_value_seg
         self.pad_value_data = pad_value_data
         self.new_size = min_size
 
     def __call__(self, **data_dict):
-        data = data_dict.get("data")
-        seg = data_dict.get("seg")
+        data = data_dict.get(self.data_key)
+        seg = data_dict.get(self.label_key)
 
         data, seg = fillup_pad(data, self.new_size, seg, self.pad_value_data, self.pad_value_seg)
 
-        data_dict["data"] = data
+        data_dict[self.data_key] = data
         if seg is not None:
-            data_dict["seg"] = seg
+            data_dict[self.label_key] = seg
 
         return data_dict
 
@@ -166,20 +176,22 @@ class PadToMultipleTransform(AbstractTransform):
         and channel
     """
 
-    def __init__(self, multiple, pad_value_data=None, pad_value_seg=None):
+    def __init__(self, multiple, pad_value_data=None, pad_value_seg=None, data_key="data", label_key="seg"):
+        self.data_key = data_key
+        self.label_key = label_key
         self.pad_value_seg = pad_value_seg
         self.pad_value_data = pad_value_data
         self.multiple = multiple
 
     def __call__(self, **data_dict):
-        data = data_dict.get("data")
-        seg = data_dict.get("seg")
+        data = data_dict.get(self.data_key)
+        seg = data_dict.get(self.label_key)
 
         data, seg = pad_to_multiple(data, self.multiple, seg, self.pad_value_data, self.pad_value_seg)
 
-        data_dict["data"] = data
+        data_dict[self.data_key] = data
         if seg is not None:
-            data_dict["seg"] = seg
+            data_dict[self.label_key] = seg
 
         return data_dict
 
@@ -197,19 +209,21 @@ class PadToRatioTransform(AbstractTransform):
         and channel
     """
 
-    def __init__(self, ratio, pad_value_data=None, pad_value_seg=None):
+    def __init__(self, ratio, pad_value_data=None, pad_value_seg=None, data_key="data", label_key="seg"):
+        self.data_key = data_key
+        self.label_key = label_key
         self.pad_value_seg = pad_value_seg
         self.pad_value_data = pad_value_data
         self.ratio = ratio
 
     def __call__(self, **data_dict):
-        data = data_dict.get("data")
-        seg = data_dict.get("seg")
+        data = data_dict.get(self.data_key)
+        seg = data_dict.get(self.label_key)
 
         data, seg = pad_to_ratio_2d(data, self.ratio, seg, self.pad_value_data, self.pad_value_seg)
 
-        data_dict["data"] = data
+        data_dict[self.data_key] = data
         if seg is not None:
-            data_dict["seg"] = seg
+            data_dict[self.label_key] = seg
 
         return data_dict
