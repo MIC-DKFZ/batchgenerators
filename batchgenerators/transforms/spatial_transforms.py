@@ -15,7 +15,7 @@
 
 from batchgenerators.transforms.abstract_transforms import AbstractTransform
 from batchgenerators.augmentations.spatial_transformations import augment_spatial, augment_channel_translation, \
-    augment_mirroring, augment_transpose_axes, augment_zoom
+    augment_mirroring, augment_transpose_axes, augment_zoom, augment_resize
 import numpy as np
 
 
@@ -44,6 +44,33 @@ class Zoom(AbstractTransform):
         if seg is not None:
             data_dict["seg"] = ret_val[1]
         return data_dict
+
+
+class Resize(AbstractTransform):
+    """ Zooms an array given the zoom factors for each dimension. If only a float is given, zooms all axis with the
+    same factor
+
+    Args:
+        axes (tuple of float or float): factors to zoom the dimensions. If only on float is given, zooms all axis
+        with the same factor
+        order (int): order of interpolation
+
+    """
+    def __init__(self, target_size, order=3):
+        self.order = order
+        self.target_size = target_size
+
+    def __call__(self, **data_dict):
+        data = data_dict.get("data")
+        seg = data_dict.get("seg")
+
+        ret_val = augment_resize(data=data, seg=seg, target_size=self.target_size, order=self.order)
+
+        data_dict["data"] = ret_val[0]
+        if seg is not None:
+            data_dict["seg"] = ret_val[1]
+        return data_dict
+
 
 class Mirror(AbstractTransform):
     """ Randomly mirrors data along specified axes. Mirroring is evenly distributed. Probability of mirroring along

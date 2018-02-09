@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+import copy
 
 from batchgenerators.transforms.abstract_transforms import AbstractTransform
 from batchgenerators.augmentations.utils import convert_seg_image_to_one_hot_encoding
@@ -138,3 +138,35 @@ class RenameTransform(AbstractTransform):
     def __call__(self, **data_dict):
         data_dict[self.out_key] = data_dict[self.in_key]
         return data_dict
+
+
+class CopyTransform(AbstractTransform):
+    """Renames some attributes of the data_dict (e. g. transformations can be applied on different dict items).
+
+    Args:
+        re_dict: Dict with the key=origin name, val=new name.
+        copy: Copy (and not move (cp vs mv)) to new target val and leave the old ones in place
+
+    Example:
+        >>> transforms.CopyTransform({"data": "data2", "seg": "seg2"})
+    """
+
+    def __init__(self, re_dict, copy=False):
+        self.re_dict = re_dict
+        self.copy = copy
+
+    def __call__(self, **data_dict):
+        new_dict = {}
+        for key, val in data_dict.items():
+            if key in self.re_dict:
+                new_dict[self.re_dict[key]] = val
+            if key not in self.re_dict:
+                new_dict[key] = val
+
+            if self.copy:
+                new_dict[key] = copy.deepcopy(val)
+
+        return new_dict
+
+    def __repr__(self):
+        return str(type(self).__name__) + " ( " + repr(self.transforms) + " )"
