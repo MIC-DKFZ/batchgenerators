@@ -81,10 +81,11 @@ def augment_blank_square_noise(data, square_size, n_squares, noise_val=(0, 0)):
 
     for sample_idx in range(data.shape[0]):
 
-        n_val = get_range_val(noise_val)
-        square_size = get_range_val(square_size)
-        n_squares = get_range_val(n_squares)
+        rnd_n_val = get_range_val(noise_val)
+        rnd_square_size = get_range_val(square_size)
+        rnd_n_squares = get_range_val(n_squares)
 
-        data[sample_idx] = mask_random_squares(data[sample_idx], square_size=square_size, n_squares=n_squares,
-                                               n_val=n_val)
+        data[sample_idx] = mask_random_squares(data[sample_idx], square_size=rnd_square_size, n_squares=rnd_n_squares,
+                                               n_val=rnd_n_val)
+
     return data
