@@ -438,8 +438,8 @@ def convert_seg_to_bounding_box_coordinates(seg, pid):
         for b in range(seg.shape[0]):
             try:
                 seg_ixs = np.argwhere(seg[b] != 0)
-                bb_target[b] = [np.min(seg_ixs[:, 2]), np.min(seg_ixs[:, 1]), np.max(seg_ixs[:, 2]),
-                                 np.max(seg_ixs[:, 1])]
+                bb_target[b] = [np.min(seg_ixs[:, 2]), np.min(seg_ixs[:, 1]), np.max(seg_ixs[:, 2])+1,
+                                 np.max(seg_ixs[:, 1])+1]
             except:
                 print("fail: bb kicked out of image by data augmentation", np.sum(seg!=0), pid[b])
 
