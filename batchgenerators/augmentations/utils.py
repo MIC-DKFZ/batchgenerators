@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+from __future__ import print_function
 from builtins import range, zip
 import random
 
@@ -438,8 +438,8 @@ def convert_seg_to_bounding_box_coordinates(seg, pid):
         for b in range(seg.shape[0]):
             try:
                 seg_ixs = np.argwhere(seg[b] != 0)
-                bb_target[b] = [np.min(seg_ixs[:, 2]), np.min(seg_ixs[:, 1]), np.max(seg_ixs[:, 2]),
-                                 np.max(seg_ixs[:, 1])]
+                bb_target[b] = [np.min(seg_ixs[:, 2]), np.min(seg_ixs[:, 1]), np.max(seg_ixs[:, 2])+1,
+                                 np.max(seg_ixs[:, 1])+1]
             except:
                 print("fail: bb kicked out of image by data augmentation", np.sum(seg!=0), pid[b])
 
@@ -452,7 +452,7 @@ def transpose_channels(batch):
     elif len(batch.shape) == 5:
         return np.transpose(batch, axes=[0, 4, 2, 3, 1])
     else:
-        print("wrong dimensions in transpose_channel generator!")
+        raise ValueError("wrong dimensions in transpose_channel generator!")
 
 
 def resize_segmentation(segmentation, new_shape, order=3):
@@ -511,3 +511,6 @@ def get_range_val(value, rnd_type="uniform"):
         return n_val
     else:
         return value
+
+
+
