@@ -44,10 +44,10 @@ def augment_gaussian_noise(data, noise_variance=(0, 0.1)):
 def augment_gaussian_blur(data, sigma_range, per_channel=True):
     for sample_idx in range(data.shape[0]):
         if not per_channel:
-            sigma = np.random.uniform(sigma_range[0], sigma_range[1])
+            sigma = get_range_val(sigma_range)
         for c in range(data.shape[1]):
             if per_channel:
-                sigma = np.random.uniform(sigma_range[0], sigma_range[1])
+                sigma = get_range_val(sigma_range)
             data[sample_idx, c] = gaussian_filter(data[sample_idx, c], sigma, order=0)
     return data
 
