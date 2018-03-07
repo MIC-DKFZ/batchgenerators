@@ -13,10 +13,10 @@
 # limitations under the License.
 
 import random
-from builtins import range
 
 import numpy as np
 from batchgenerators.augmentations.utils import get_range_val
+from builtins import range
 from scipy.ndimage import gaussian_filter
 
 
@@ -52,8 +52,9 @@ def augment_gaussian_blur(data, sigma_range, per_channel=True):
     return data
 
 
-def augment_blank_square_noise(data, square_size, n_squares, noise_val=(0, 0)):
-    def mask_random_square(img, square_size, n_val):
+def augment_blank_square_noise(data, square_size, n_squares, noise_val=(0, 0), channel_wise_n_val=False,
+                               square_pos=None):
+    def mask_random_square(img, square_size, n_val, channel_wise_n_val=False, square_pos=None):
         """Masks (sets = 0) a random square in an image"""
 
         img_h = img.shape[-2]
@@ -61,31 +62,50 @@ def augment_blank_square_noise(data, square_size, n_squares, noise_val=(0, 0)):
 
         img = img.copy()
 
-        w_start = np.random.randint(0, img_w - square_size)
-        h_start = np.random.randint(0, img_h - square_size)
+        if square_pos is None:
+            w_start = np.random.randint(0, img_w - square_size)
+            h_start = np.random.randint(0, img_h - square_size)
+        else:
+            pos_wh = square_pos[np.random.randint(0, len(square_pos))]
+            w_start = pos_wh[0]
+            h_start = pos_wh[1]
 
         if img.ndim == 2:
-            img[h_start:(h_start + square_size), w_start:(w_start + square_size)] = n_val
+            rnd_n_val = get_range_val(n_val)
+            img[h_start:(h_start + square_size), w_start:(w_start + square_size)] = rnd_n_val
         elif img.ndim == 3:
-            img[:, h_start:(h_start + square_size), w_start:(w_start + square_size)] = n_val
+            if channel_wise_n_val:
+                for i in range(img.shape[0]):
+                    rnd_n_val = get_range_val(n_val)
+                    img[i, h_start:(h_start + square_size), w_start:(w_start + square_size)] = rnd_n_val
+            else:
+                rnd_n_val = get_range_val(n_val)
+                img[:, h_start:(h_start + square_size), w_start:(w_start + square_size)] = rnd_n_val
         elif img.ndim == 4:
-            img[:, :, h_start:(h_start + square_size), w_start:(w_start + square_size)] = n_val
+            if channel_wise_n_val:
+                for i in range(img.shape[0]):
+                    rnd_n_val = get_range_val(n_val)
+                    img[:, i, h_start:(h_start + square_size), w_start:(w_start + square_size)] = rnd_n_val
+            else:
+                rnd_n_val = get_range_val(n_val)
+                img[:, :, h_start:(h_start + square_size), w_start:(w_start + square_size)] = rnd_n_val
 
         return img
 
-    def mask_random_squares(img, square_size, n_squares, n_val):
+    def mask_random_squares(img, square_size, n_squares, n_val, channel_wise_n_val=False, square_pos=None):
         """Masks a given number of squares in an image"""
         for i in range(n_squares):
-            img = mask_random_square(img, square_size, n_val)
+            img = mask_random_square(img, square_size, n_val, channel_wise_n_val=channel_wise_n_val,
+                                     square_pos=square_pos)
         return img
 
     for sample_idx in range(data.shape[0]):
-
-        rnd_n_val = get_range_val(noise_val)
+        # rnd_n_val = get_range_val(noise_val)
         rnd_square_size = get_range_val(square_size)
         rnd_n_squares = get_range_val(n_squares)
 
         data[sample_idx] = mask_random_squares(data[sample_idx], square_size=rnd_square_size, n_squares=rnd_n_squares,
-                                               n_val=rnd_n_val)
+                                               n_val=noise_val, channel_wise_n_val=channel_wise_n_val,
+                                               square_pos=square_pos)
 
     return data

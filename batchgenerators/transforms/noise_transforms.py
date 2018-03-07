@@ -70,14 +70,18 @@ class GaussianBlurTransform(AbstractTransform):
 
 
 class BlankSquareNoiseTransform(AbstractTransform):
-    def __init__(self, squre_size=20, n_squres=1, noise_val=(0, 0), data_key="data", label_key="seg"):
+    def __init__(self, squre_size=20, n_squres=1, noise_val=(0, 0), channel_wise_n_val=False, square_pos=None,
+                 data_key="data", label_key="seg"):
+
         self.data_key = data_key
         self.label_key = label_key
         self.noise_val = noise_val
         self.n_squres = n_squres
         self.squre_size = squre_size
+        self.channel_wise_n_val = channel_wise_n_val
+        self.square_pos = square_pos
 
     def __call__(self, **data_dict):
         data_dict[self.data_key] = augment_blank_square_noise(data_dict[self.data_key], self.squre_size, self.n_squres,
-                                                       self.noise_val)
+                                                              self.noise_val, self.channel_wise_n_val, self.square_pos)
         return data_dict
