@@ -13,10 +13,9 @@
 # limitations under the License.
 
 
+from batchgenerators.augmentations.noise_augmentations import augment_blank_square_noise, augment_gaussian_blur, \
+    augment_gaussian_noise, augment_rician_noise
 from batchgenerators.transforms.abstract_transforms import AbstractTransform
-from batchgenerators.augmentations.noise_augmentations import augment_gaussian_noise
-from batchgenerators.augmentations.noise_augmentations import augment_rician_noise
-from batchgenerators.augmentations.noise_augmentations import augment_gaussian_blur
 
 
 class RicianNoiseTransform(AbstractTransform):
@@ -29,11 +28,14 @@ class RicianNoiseTransform(AbstractTransform):
 
     CAREFUL: This transform will modify the value range of your data!
     """
-    def __init__(self, noise_variance=(0, 0.1)):
+
+    def __init__(self, noise_variance=(0, 0.1), data_key="data", label_key="seg"):
+        self.data_key = data_key
+        self.label_key = label_key
         self.noise_variance = noise_variance
 
     def __call__(self, **data_dict):
-        data_dict["data"] = augment_rician_noise(data_dict['data'], noise_variance=self.noise_variance)
+        data_dict[self.data_key] = augment_rician_noise(data_dict[self.data_key], noise_variance=self.noise_variance)
         return data_dict
 
 
@@ -45,18 +47,41 @@ class GaussianNoiseTransform(AbstractTransform):
 
     CAREFUL: This transform will modify the value range of your data!
     """
-    def __init__(self, noise_variance=(0, 0.1)):
+
+    def __init__(self, noise_variance=(0, 0.1), data_key="data", label_key="seg"):
+        self.data_key = data_key
+        self.label_key = label_key
         self.noise_variance = noise_variance
 
     def __call__(self, **data_dict):
-        data_dict["data"] = augment_gaussian_noise(data_dict["data"], self.noise_variance)
+        data_dict[self.data_key] = augment_gaussian_noise(data_dict[self.data_key], self.noise_variance)
         return data_dict
 
 
 class GaussianBlurTransform(AbstractTransform):
-    def __init__(self, blur_sigma=(1, 5)):
+    def __init__(self, blur_sigma=(1, 5), data_key="data", label_key="seg"):
+        self.data_key = data_key
+        self.label_key = label_key
         self.blur_sigma = blur_sigma
 
     def __call__(self, **data_dict):
-        data_dict['data'] = augment_gaussian_blur(data_dict['data'], self.blur_sigma)
+        data_dict[self.data_key] = augment_gaussian_blur(data_dict[self.data_key], self.blur_sigma)
+        return data_dict
+
+
+class BlankSquareNoiseTransform(AbstractTransform):
+    def __init__(self, squre_size=20, n_squres=1, noise_val=(0, 0), channel_wise_n_val=False, square_pos=None,
+                 data_key="data", label_key="seg"):
+
+        self.data_key = data_key
+        self.label_key = label_key
+        self.noise_val = noise_val
+        self.n_squres = n_squres
+        self.squre_size = squre_size
+        self.channel_wise_n_val = channel_wise_n_val
+        self.square_pos = square_pos
+
+    def __call__(self, **data_dict):
+        data_dict[self.data_key] = augment_blank_square_noise(data_dict[self.data_key], self.squre_size, self.n_squres,
+                                                              self.noise_val, self.channel_wise_n_val, self.square_pos)
         return data_dict

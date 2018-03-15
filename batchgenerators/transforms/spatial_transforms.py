@@ -15,7 +15,7 @@
 
 from batchgenerators.transforms.abstract_transforms import AbstractTransform
 from batchgenerators.augmentations.spatial_transformations import augment_spatial, augment_channel_translation, \
-    augment_mirroring, augment_transpose_axes, augment_zoom
+    augment_mirroring, augment_transpose_axes, augment_zoom, augment_resize
 import numpy as np
 
 
@@ -30,20 +30,51 @@ class Zoom(AbstractTransform):
         order (int): order of interpolation
 
     """
-    def __init__(self, zoom_factors=1, order=3):
+    def __init__(self, zoom_factors=1, order=3, data_key="data", label_key="seg"):
+        self.data_key = data_key
+        self.label_key = label_key
         self.order = order
         self.zoom_factors = zoom_factors
 
     def __call__(self, **data_dict):
-        data = data_dict.get("data")
-        seg = data_dict.get("seg")
+        data = data_dict.get(self.data_key)
+        seg = data_dict.get(self.label_key)
 
         ret_val = augment_zoom(data=data, seg=seg, zoom_factors=self.zoom_factors, order=self.order)
 
-        data_dict["data"] = ret_val[0]
+        data_dict[self.data_key] = ret_val[0]
         if seg is not None:
-            data_dict["seg"] = ret_val[1]
+            data_dict[self.label_key] = ret_val[1]
         return data_dict
+
+
+class Resize(AbstractTransform):
+    """ Zooms an array given the zoom factors for each dimension. If only a float is given, zooms all axis with the
+    same factor
+
+    Args:
+        axes (tuple of float or float): factors to zoom the dimensions. If only on float is given, zooms all axis
+        with the same factor
+        order (int): order of interpolation
+
+    """
+    def __init__(self, target_size, order=3, data_key="data", label_key="seg"):
+        self.data_key = data_key
+        self.label_key = label_key
+        self.order = order
+        self.target_size = target_size
+
+    def __call__(self, **data_dict):
+        data = data_dict.get(self.data_key)
+        seg = data_dict.get(self.label_key)
+
+        ret_val = augment_resize(data=data, seg=seg, target_size=self.target_size, order=self.order)
+
+        data_dict[self.data_key] = ret_val[0]
+        if seg is not None:
+            data_dict[self.label_key] = ret_val[1]
+        return data_dict
+
 
 class Mirror(AbstractTransform):
     """ Randomly mirrors data along specified axes. Mirroring is evenly distributed. Probability of mirroring along
@@ -53,17 +84,20 @@ class Mirror(AbstractTransform):
         axes (tuple of int): axes along which to mirror
 
     """
-    def __init__(self, axes=(2, 3, 4)):
+    def __init__(self, axes=(2, 3, 4), data_key="data", label_key="seg"):
+        self.data_key = data_key
+        self.label_key = label_key
         self.axes = axes
 
     def __call__(self, **data_dict):
-        data = data_dict.get("data")
-        seg = data_dict.get("seg")
+        data = data_dict.get(self.data_key)
+        seg = data_dict.get(self.label_key)
+
         ret_val = augment_mirroring(data=data, seg=seg, axes=self.axes)
 
-        data_dict["data"] = ret_val[0]
+        data_dict[self.data_key] = ret_val[0]
         if seg is not None:
-            data_dict["seg"] = ret_val[1]
+            data_dict[self.label_key] = ret_val[1]
 
         return data_dict
 
@@ -77,15 +111,18 @@ class ChannelTranslation(AbstractTransform):
         max_shifts (dict {'x':2, 'y':2, 'z':2}): How many pixels should be shifted for each channel?
 
     """
-    def __init__(self, const_channel=0, max_shifts=None):
+    def __init__(self, const_channel=0, max_shifts=None, data_key="data", label_key="seg"):
+        self.data_key = data_key
+        self.label_key = label_key
         self.max_shift = max_shifts
         self.const_channel = const_channel
 
     def __call__(self, **data_dict):
-        data = data_dict.get("data")
+        data = data_dict.get(self.data_key)
+
         ret_val = augment_channel_translation(data=data, const_channel=self.const_channel, max_shifts=self.max_shift)
 
-        data_dict["data"] = ret_val[0]
+        data_dict[self.data_key] = ret_val[0]
 
         return data_dict
 
@@ -140,7 +177,9 @@ class SpatialTransform(AbstractTransform):
                  do_elastic_deform=True, alpha=(0., 1000.), sigma=(10., 13.),
                  do_rotation=True, angle_x=(0, 2 * np.pi), angle_y=(0, 2 * np.pi), angle_z=(0, 2 * np.pi),
                  do_scale=True, scale=(0.75, 1.25), border_mode_data='nearest', border_cval_data=0, order_data=3,
-                 border_mode_seg='constant', border_cval_seg=0, order_seg=0, random_crop=True):
+                 border_mode_seg='constant', border_cval_seg=0, order_seg=0, random_crop=True, data_key="data", label_key="seg"):
+        self.data_key = data_key
+        self.label_key = label_key
         self.patch_size = patch_size
         self.patch_center_dist_from_border = patch_center_dist_from_border
         self.do_elastic_deform = do_elastic_deform
@@ -161,13 +200,13 @@ class SpatialTransform(AbstractTransform):
         self.random_crop = random_crop
 
     def __call__(self, **data_dict):
-        data = data_dict.get("data")
-        seg = data_dict.get("seg")
+        data = data_dict.get(self.data_key)
+        seg = data_dict.get(self.label_key)
 
         if self.patch_size is None:
             if len(data.shape) == 4:
                 patch_size = (data.shape[2], data.shape[3])
-            elif len(data.shape) ==5:
+            elif len(data.shape) == 5:
                 patch_size = (data.shape[2], data.shape[3], data.shape[4])
             else:
                 raise ValueError("only support 2D/3D batch data.")
@@ -184,23 +223,26 @@ class SpatialTransform(AbstractTransform):
                                   border_mode_seg=self.border_mode_seg, border_cval_seg=self.border_cval_seg,
                                   order_seg=self.order_seg, random_crop=self.random_crop)
 
-        data_dict["data"] = ret_val[0]
+        data_dict[self.data_key] = ret_val[0]
         if seg is not None:
-            data_dict["seg"] = ret_val[1]
+            data_dict[self.label_key] = ret_val[1]
 
         return data_dict
 
 
 class TransposeAxesTransform(AbstractTransform):
-    def __init__(self, transpose_any_of_these=(2, 3, 4)):
+    def __init__(self, transpose_any_of_these=(2, 3, 4), data_key="data", label_key="seg"):
+        self.data_key = data_key
+        self.label_key = label_key
         self.transpose_any_of_these = transpose_any_of_these
 
     def __call__(self, **data_dict):
-        data = data_dict.get("data")
-        seg = data_dict.get("seg")
+        data = data_dict.get(self.data_key)
+        seg = data_dict.get(self.label_key)
 
         ret_val = augment_transpose_axes(data, seg, self.transpose_any_of_these)
-        data_dict["data"] = ret_val[0]
+
+        data_dict[self.data_key] = ret_val[0]
         if seg is not None:
-            data_dict["seg"] = ret_val[1]
+            data_dict[self.label_key] = ret_val[1]
         return data_dict

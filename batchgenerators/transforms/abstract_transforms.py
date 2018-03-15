@@ -16,7 +16,7 @@
 import abc
 
 import numpy as np
-
+import copy
 
 class AbstractTransform(object):
     __metaclass__ = abc.ABCMeta
@@ -86,3 +86,4 @@ class Compose(AbstractTransform):
 
     def __repr__(self):
         return str(type(self).__name__) + " ( " + repr(self.transforms) + " )"
+

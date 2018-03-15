@@ -29,12 +29,15 @@ class RangeTransform(AbstractTransform):
 
     '''
 
-    def __init__(self, rnge=(0, 1), per_channel=True):
+    def __init__(self, rnge=(0, 1), per_channel=True, data_key="data", label_key="seg"):
+        self.data_key = data_key
+        self.label_key = label_key
         self.per_channel = per_channel
         self.rnge = rnge
 
     def __call__(self, **data_dict):
-        data_dict['data'] = range_normalization(data_dict['data'], self.rnge, per_channel=self.per_channel)
+        data_dict[self.data_key] = range_normalization(data_dict[self.data_key], self.rnge,
+                                                       per_channel=self.per_channel)
         return data_dict
 
 
@@ -49,14 +52,18 @@ class CutOffOutliersTransform(AbstractTransform):
         per_channel (bool): determines whether percentiles are computed for each color channel separately
     """
 
-    def __init__(self, percentile_lower=0.2, percentile_upper=99.8, per_channel=False):
+    def __init__(self, percentile_lower=0.2, percentile_upper=99.8, per_channel=False, data_key="data",
+                 label_key="seg"):
+        self.data_key = data_key
+        self.label_key = label_key
         self.per_channel = per_channel
         self.percentile_upper = percentile_upper
         self.percentile_lower = percentile_lower
 
     def __call__(self, **data_dict):
-        data_dict['data'] = cut_off_outliers(data_dict['data'], self.percentile_lower, self.percentile_upper,
-                                             per_channel=self.per_channel)
+        data_dict[self.data_key] = cut_off_outliers(data_dict[self.data_key], self.percentile_lower,
+                                                    self.percentile_upper,
+                                                    per_channel=self.per_channel)
         return data_dict
 
 
@@ -70,12 +77,15 @@ class ZeroMeanUnitVarianceTransform(AbstractTransform):
         epsilon (float): prevent nan if std is zero, keep at 1e-7
     """
 
-    def __init__(self, per_channel=True, epsilon=1e-7):
+    def __init__(self, per_channel=True, epsilon=1e-7, data_key="data", label_key="seg"):
+        self.data_key = data_key
+        self.label_key = label_key
         self.epsilon = epsilon
         self.per_channel = per_channel
 
     def __call__(self, **data_dict):
-        data_dict['data'] = zero_mean_unit_variance_normalization(data_dict["data"], self.per_channel, self.epsilon)
+        data_dict[self.data_key] = zero_mean_unit_variance_normalization(data_dict[self.data_key], self.per_channel,
+                                                                         self.epsilon)
         return data_dict
 
 
@@ -89,11 +99,14 @@ class MeanStdNormalizationTransform(AbstractTransform):
         epsilon (float): prevent nan if std is zero, keep at 1e-7
     """
 
-    def __init__(self, mean, std, per_channel=True):
+    def __init__(self, mean, std, per_channel=True, data_key="data", label_key="seg"):
+        self.data_key = data_key
+        self.label_key = label_key
         self.std = std
         self.mean = mean
         self.per_channel = per_channel
 
     def __call__(self, **data_dict):
-        data_dict['data'] = mean_std_normalization(data_dict["data"], self.mean, self.std, self.per_channel)
+        data_dict[self.data_key] = mean_std_normalization(data_dict[self.data_key], self.mean, self.std,
+                                                          self.per_channel)
         return data_dict

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+import copy
 
 from batchgenerators.transforms.abstract_transforms import AbstractTransform
 from batchgenerators.augmentations.utils import convert_seg_image_to_one_hot_encoding
@@ -26,14 +26,20 @@ class NumpyToTensor(AbstractTransform):
     def __call__(self, **data_dict):
         import torch
 
-        data = data_dict.get("data")
-        seg = data_dict.get("seg")
+        for key, val in data_dict.items():
+            if isinstance(val, np.ndarray):
+                data_dict[key] = torch.from_numpy(val)
 
-        assert isinstance(data, np.ndarray)
+        return data_dict
 
-        data_dict["data"] = torch.from_numpy(data)
-        if seg is not None:
-            data_dict["seg"] = torch.from_numpy(seg)
+class ListToNumpy(AbstractTransform):
+    """Utility function for pytorch. Converts data (and seg) numpy ndarrays to pytorch tensors
+    """
+    def __call__(self, **data_dict):
+
+        for key, val in data_dict.items():
+            if isinstance(val, (list, tuple)):
+                data_dict[key] = np.asarray(val)
 
         return data_dict
 
@@ -43,16 +49,9 @@ class ListToTensor(AbstractTransform):
     def __call__(self, **data_dict):
         import torch
 
-        data = data_dict.get("data")
-        seg = data_dict.get("seg")
-
-        assert isinstance(data, (list, tuple))
-
-        data_ret = [torch.from_numpy(data_smpl) for data_smpl in data]
-        data_dict["data"] = data_ret
-        if seg is not None:
-            seg_ret = [torch.from_numpy(seg_smpl) for seg_smpl in seg]
-            data_dict["seg"] = seg_ret
+        for key, val in data_dict.items():
+            if isinstance(val, (list, tuple)):
+                data_dict[key] = [torch.from_numpy(smpl) for smpl in val]
 
         return data_dict
 
@@ -139,3 +138,46 @@ class RenameTransform(AbstractTransform):
     def __call__(self, **data_dict):
         data_dict[self.out_key] = data_dict[self.in_key]
         return data_dict
+
+
+class CopyTransform(AbstractTransform):
+    """Renames some attributes of the data_dict (e. g. transformations can be applied on different dict items).
+
+    Args:
+        re_dict: Dict with the key=origin name, val=new name.
+        copy: Copy (and not move (cp vs mv)) to new target val and leave the old ones in place
+
+    Example:
+        >>> transforms.CopyTransform({"data": "data2", "seg": "seg2"})
+    """
+
+    def __init__(self, re_dict, copy=False):
+        self.re_dict = re_dict
+        self.copy = copy
+
+    def __call__(self, **data_dict):
+        new_dict = {}
+        for key, val in data_dict.items():
+            if key in self.re_dict:
+                n_key = self.re_dict[key]
+                if isinstance(n_key, (tuple, list)):
+                    for k in n_key:
+                        if self.copy:
+                            new_dict[k] = copy.deepcopy(val)
+                        else:
+                            new_dict[k] = val
+                else:
+                    if self.copy:
+                        new_dict[n_key] = copy.deepcopy(val)
+                    else:
+                        new_dict[n_key] = val
+            if key not in self.re_dict:
+                new_dict[key] = val
+
+            if self.copy:
+                    new_dict[key] = copy.deepcopy(val)
+
+        return new_dict
+
+    def __repr__(self):
+        return str(type(self).__name__) + " ( " + repr(self.transforms) + " )"

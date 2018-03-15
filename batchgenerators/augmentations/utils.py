@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+from __future__ import print_function
 from builtins import range, zip
+import random
 
 import numpy as np
 from copy import deepcopy
@@ -437,8 +438,8 @@ def convert_seg_to_bounding_box_coordinates(seg, pid):
         for b in range(seg.shape[0]):
             try:
                 seg_ixs = np.argwhere(seg[b] != 0)
-                bb_target[b] = [np.min(seg_ixs[:, 2]), np.min(seg_ixs[:, 1]), np.max(seg_ixs[:, 2]),
-                                 np.max(seg_ixs[:, 1])]
+                bb_target[b] = [np.min(seg_ixs[:, 2]), np.min(seg_ixs[:, 1]), np.max(seg_ixs[:, 2])+1,
+                                 np.max(seg_ixs[:, 1])+1]
             except:
                 print("fail: bb kicked out of image by data augmentation", np.sum(seg!=0), pid[b])
 
@@ -451,7 +452,7 @@ def transpose_channels(batch):
     elif len(batch.shape) == 5:
         return np.transpose(batch, axes=[0, 4, 2, 3, 1])
     else:
-        print("wrong dimensions in transpose_channel generator!")
+        raise ValueError("wrong dimensions in transpose_channel generator!")
 
 
 def resize_segmentation(segmentation, new_shape, order=3):
@@ -491,3 +492,25 @@ def resize_softmax_output(softmax_output, new_shape, order=3):
     for i in range(softmax_output.shape[0]):
         result[i] = resize(softmax_output[i].astype(float), new_shape, order, "constant", 0, True)
     return result
+
+
+def get_range_val(value, rnd_type="uniform"):
+    if isinstance(value, (list, tuple, np.ndarray)):
+        if len(value) == 2:
+            if value[0] == value[1]:
+                n_val = value[0]
+            else:
+                orig_type = type(value[0])
+                if rnd_type == "uniform":
+                    n_val = random.uniform(value[0], value[1])
+                elif rnd_type == "normal":
+                    n_val = random.normalvariate(value[0], value[1])
+                n_val = orig_type(n_val)
+        elif len(value) == 1:
+            n_val = value[0]
+        return n_val
+    else:
+        return value
+
+
+
