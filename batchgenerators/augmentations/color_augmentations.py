@@ -92,7 +92,7 @@ def augment_gamma(data, gamma_range=(0.5, 2), invert_image=False, epsilon=1e-7, 
             rnge = data[sample].max() - minm
             data[sample] = np.power(((data[sample] - minm) / float(rnge + epsilon)), gamma) * rnge + minm
         else:
-            for c in data.shape[1]:
+            for c in range(data.shape[1]):
                 if np.random.random() < 0.5 and gamma_range[0] < 1:
                     gamma = np.random.uniform(gamma_range[0], 1)
                 else:

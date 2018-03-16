@@ -8,6 +8,7 @@ from .sample_normalization_transforms import CutOffOutliersTransform, RangeTrans
 
 from .utility_transforms import ConvertSegToOnehotTransform, ListToTensor, NumpyToTensor, RenameTransform
 from .spatial_transforms import ChannelTranslation, Mirror, SpatialTransform, Zoom, TransposeAxesTransform
+from .resample_transforms import ResampleTransform
 
 transform_list = [
     AbstractTransform, Compose, RndTransform, DataChannelSelectionTransform,
