@@ -181,3 +181,31 @@ class CopyTransform(AbstractTransform):
 
     def __repr__(self):
         return str(type(self).__name__) + " ( " + repr(self.transforms) + " )"
+
+
+class ReshapeTransform(AbstractTransform):
+
+    def __init__(self, new_shape, key="data"):
+        self.key = key
+        self.new_shape = new_shape
+
+    def __call__(self, **data_dict):
+
+        data_arr = data_dict[self.key]
+        data_shape = data_arr.shape
+        c, h, w = data_shape[-3:]
+
+        target_shape = []
+        for val in self.new_shape:
+            if val == "c":
+                target_shape.append(c)
+            elif val == "h":
+                target_shape.append(h)
+            elif val == "w":
+                target_shape.append(w)
+            else:
+                target_shape.append(val)
+
+        data_dict[self.key] = np.reshape(data_dict[self.key], target_shape)
+
+        return data_dict
