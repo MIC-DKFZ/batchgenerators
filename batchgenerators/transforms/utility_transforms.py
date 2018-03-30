@@ -163,14 +163,53 @@ class CopyTransform(AbstractTransform):
         new_dict = {}
         for key, val in data_dict.items():
             if key in self.re_dict:
-                new_dict[self.re_dict[key]] = val
+                n_key = self.re_dict[key]
+                if isinstance(n_key, (tuple, list)):
+                    for k in n_key:
+                        if self.copy:
+                            new_dict[k] = copy.deepcopy(val)
+                        else:
+                            new_dict[k] = val
+                else:
+                    if self.copy:
+                        new_dict[n_key] = copy.deepcopy(val)
+                    else:
+                        new_dict[n_key] = val
             if key not in self.re_dict:
                 new_dict[key] = val
 
             if self.copy:
-                new_dict[key] = copy.deepcopy(val)
+                    new_dict[key] = copy.deepcopy(val)
 
         return new_dict
 
     def __repr__(self):
         return str(type(self).__name__) + " ( " + repr(self.transforms) + " )"
+
+
+class ReshapeTransform(AbstractTransform):
+
+    def __init__(self, new_shape, key="data"):
+        self.key = key
+        self.new_shape = new_shape
+
+    def __call__(self, **data_dict):
+
+        data_arr = data_dict[self.key]
+        data_shape = data_arr.shape
+        c, h, w = data_shape[-3:]
+
+        target_shape = []
+        for val in self.new_shape:
+            if val == "c":
+                target_shape.append(c)
+            elif val == "h":
+                target_shape.append(h)
+            elif val == "w":
+                target_shape.append(w)
+            else:
+                target_shape.append(val)
+
+        data_dict[self.key] = np.reshape(data_dict[self.key], target_shape)
+
+        return data_dict

@@ -79,17 +79,27 @@ def augment_brightness_multiplicative(data, multiplier_range=(0.5, 2), per_chann
     return data
 
 
-def augment_gamma(data, gamma_range=(0.5, 2), invert_image=False, epsilon=1e-7):
+def augment_gamma(data, gamma_range=(0.5, 2), invert_image=False, epsilon=1e-7, per_channel=False):
     for sample in range(data.shape[0]):
         if invert_image:
             data = - data
-        if np.random.random() < 0.5 and gamma_range[0] < 1:
-            gamma = np.random.uniform(gamma_range[0], 1)
+        if not per_channel:
+            if np.random.random() < 0.5 and gamma_range[0] < 1:
+                gamma = np.random.uniform(gamma_range[0], 1)
+            else:
+                gamma = np.random.uniform(max(gamma_range[0], 1), gamma_range[1])
+            minm = data[sample].min()
+            rnge = data[sample].max() - minm
+            data[sample] = np.power(((data[sample] - minm) / float(rnge + epsilon)), gamma) * rnge + minm
         else:
-            gamma = np.random.uniform(max(gamma_range[0], 1), gamma_range[1])
-        minm = data[sample].min()
-        rnge = data[sample].max() - minm
-        data[sample] = np.power(((data[sample] - minm) / float(rnge + epsilon)), gamma) * rnge + minm
+            for c in range(data.shape[1]):
+                if np.random.random() < 0.5 and gamma_range[0] < 1:
+                    gamma = np.random.uniform(gamma_range[0], 1)
+                else:
+                    gamma = np.random.uniform(max(gamma_range[0], 1), gamma_range[1])
+                minm = data[sample][c].min()
+                rnge = data[sample][c].max() - minm
+                data[sample][c] = np.power(((data[sample][c] - minm) / float(rnge + epsilon)), gamma) * rnge + minm
     return data
 
 

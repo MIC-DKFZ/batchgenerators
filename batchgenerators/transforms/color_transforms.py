@@ -105,13 +105,15 @@ class GammaTransform(AbstractTransform):
         invert_image: whether to invert the image before applying gamma augmentation
 
     """
-    def __init__(self, gamma_range=(0.5, 2), invert_image=False, data_key="data"):
+
+    def __init__(self, gamma_range=(0.5, 2), invert_image=False, per_channel=False, data_key="data"):
+        self.per_channel = per_channel
         self.data_key = data_key
         self.gamma_range = gamma_range
         self.invert_image = invert_image
 
     def __call__(self, **data_dict):
-        data_dict[self.data_key] = augment_gamma(data_dict[self.data_key], self.gamma_range, self.invert_image)
+        data_dict[self.data_key] = augment_gamma(data_dict[self.data_key], self.gamma_range, self.invert_image, per_channel=self.per_channel)
         return data_dict
 
 
