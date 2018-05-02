@@ -18,6 +18,7 @@ from batchgenerators.transforms.abstract_transforms import AbstractTransform
 from batchgenerators.augmentations.utils import convert_seg_image_to_one_hot_encoding
 from batchgenerators.augmentations.utils import convert_seg_to_bounding_box_coordinates
 from batchgenerators.augmentations.utils import transpose_channels
+
 import numpy as np
 
 class NumpyToTensor(AbstractTransform):
@@ -98,7 +99,7 @@ class ConvertSegToBoundingBoxCoordinates(AbstractTransform):
         self.dim = dim
 
     def __call__(self, **data_dict):
-        data_dict['bb_target'] = convert_seg_to_bounding_box_coordinates(data_dict['seg'], data_dict['patient_ids'], self.dim)
+        data_dict['bb_target'] = convert_seg_to_bounding_box_coordinates(data_dict['seg'], data_dict['pid'], self.dim)
 
         return data_dict
 
