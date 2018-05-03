@@ -22,6 +22,7 @@ from scipy.ndimage import map_coordinates
 from scipy.ndimage.filters import gaussian_filter, gaussian_gradient_magnitude
 from scipy.ndimage.morphology import grey_dilation
 from skimage.transform import resize
+from scipy.ndimage.measurements import label as lb
 
 
 def generate_elastic_transform_coordinates(shape, alpha, sigma):
@@ -432,23 +433,31 @@ def general_cc_var_num_channels(img, diff_order=0, mink_norm=1, sigma=1, mask_im
     return white_colors, output_img
 
 
-def convert_seg_to_bounding_box_coordinates(seg, pid, dim):
+def convert_seg_to_bounding_box_coordinates(seg, pid, dim): #TODO WRITE WITH CCA FOR MUTLIPLE BOXES # CAN I RETURN A LIST HERE?
 
-        bb_target = np.zeros((seg.shape[0], dim*2), dtype=np.float32)
+        bb_target = []
         for b in range(seg.shape[0]):
             try:
-                seg_ixs = np.argwhere(seg[b] != 0)
-                coord_list = [np.min(seg_ixs[:, 2])-1, np.min(seg_ixs[:, 1])-1, np.max(seg_ixs[:, 2])+1,
-                                 np.max(seg_ixs[:, 1])+1]
-                if dim == 3:
+                clusters, n_cands = lb(seg[b])
+                rois = np.array([(clusters == ii) * 1 for ii in range(1, n_cands + 1)])  # separate clusters and concat
+                print("ROIS", rois.shape, [np.sum(ii) for ii in rois], np.sum(seg), seg.shape, pid)
+                boxes = np.zeros((rois.shape[0], dim * 2), dtype=np.float32)
+                for rix, r in enumerate(rois):
+                    seg_ixs = np.argwhere(r != 0)
+                    coord_list = [np.min(seg_ixs[:, 2])-1, np.min(seg_ixs[:, 1])-1, np.max(seg_ixs[:, 2])+1,
+                                     np.max(seg_ixs[:, 1])+1]
+                    if dim == 3:
 
-                    coord_list.extend([np.min(seg_ixs[:, 3])-1, np.max(seg_ixs[:, 3])+1])
+                        coord_list.extend([np.min(seg_ixs[:, 3])-1, np.max(seg_ixs[:, 3])+1])
+                    boxes[rix] = coord_list
 
-                bb_target[b] = coord_list
+                bb_target.append(boxes)
 
             except:
+                bb_target.append(np.zeros((1, dim * 2), dtype=np.float32))
                 print("fail: bb kicked out of image by data augmentation", np.sum(seg!=0), pid[b])
 
+        print("CHECK BBTARGET", bb_target)
         return bb_target
 
 
