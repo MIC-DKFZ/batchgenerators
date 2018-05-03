@@ -104,16 +104,21 @@ class GammaTransform(AbstractTransform):
 
         invert_image: whether to invert the image before applying gamma augmentation
 
+        retain_stats: Gamma transformation will alter the mean and std of the data in the patch. If retain_stats=True,
+        the data will be transformed to match the mean and standard deviation before gamma augmentation
+
     """
 
-    def __init__(self, gamma_range=(0.5, 2), invert_image=False, per_channel=False, data_key="data"):
+    def __init__(self, gamma_range=(0.5, 2), invert_image=False, per_channel=False, data_key="data", retain_stats=False):
+        self.retain_stats = retain_stats
         self.per_channel = per_channel
         self.data_key = data_key
         self.gamma_range = gamma_range
         self.invert_image = invert_image
 
     def __call__(self, **data_dict):
-        data_dict[self.data_key] = augment_gamma(data_dict[self.data_key], self.gamma_range, self.invert_image, per_channel=self.per_channel)
+        data_dict[self.data_key] = augment_gamma(data_dict[self.data_key], self.gamma_range, self.invert_image,
+                                                 per_channel=self.per_channel, retain_stats=self.retain_stats)
         return data_dict
 
 
