@@ -75,10 +75,6 @@ class DataLoaderBase(object):
         self._batches_generated += 1
         return minibatch
 
-    def reset():
-        self._iter_initialized = False
-        self._batches_generated = 0
-
     @abstractmethod
     def generate_train_batch(self):
         '''override this'''
