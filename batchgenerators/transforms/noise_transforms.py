@@ -59,13 +59,25 @@ class GaussianNoiseTransform(AbstractTransform):
 
 
 class GaussianBlurTransform(AbstractTransform):
-    def __init__(self, blur_sigma=(1, 5), data_key="data", label_key="seg"):
+    def __init__(self, blur_sigma=(1, 5), data_key="data", label_key="seg", different_sigma_per_channel=True, p_per_channel=1):
+        """
+
+        :param blur_sigma:
+        :param data_key:
+        :param label_key:
+        :param different_sigma_per_channel: whether to sample a sigma for each channel or all channels at once
+        :param p_per_channel: probability of applying gaussian blur for each channel. Default = 1 (all channels are
+        blurred with prob 1)
+        """
+        self.different_sigma_per_channel = different_sigma_per_channel
+        self.p_per_channel = p_per_channel
         self.data_key = data_key
         self.label_key = label_key
         self.blur_sigma = blur_sigma
 
     def __call__(self, **data_dict):
-        data_dict[self.data_key] = augment_gaussian_blur(data_dict[self.data_key], self.blur_sigma)
+        data_dict[self.data_key] = augment_gaussian_blur(data_dict[self.data_key], self.blur_sigma,
+                                                         self.different_sigma_per_channel, self.p_per_channel)
         return data_dict
 
 

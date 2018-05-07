@@ -17,6 +17,8 @@ from __future__ import print_function
 
 from future import standard_library
 
+from batchgenerators.transforms import AbstractTransform
+
 standard_library.install_aliases()
 from builtins import range
 from builtins import object
@@ -26,6 +28,9 @@ import numpy as np
 import sys
 import logging
 from multiprocessing import Pool
+from time import sleep
+from collections import deque
+import multiprocessing
 
 
 class MultiThreadedAugmenter(object):
@@ -54,7 +59,7 @@ class MultiThreadedAugmenter(object):
         if seeds is not None:
             assert len(seeds) == num_processes
         else:
-            seeds = [None] * num_processes
+            seeds = list(range(num_processes))
         self.seeds = seeds
         self.generator = data_loader
         self.num_processes = num_processes
@@ -136,6 +141,20 @@ class MultiThreadedAugmenter(object):
         self._finish()
 
 
+class TransformAdapter(object):
+    def __init__(self, transform):
+        self.transform = transform
+
+    def __call__(self, data_dict):
+        return self.transform(**data_dict)
+
+
+class ProcessTerminateOnJoin(Process):
+    def join(self, timeout=None):
+        self.terminate()
+        super(ProcessTerminateOnJoin, self).join(0.01)
+
+
 class ProperMultiThreadedAugmenter(object):
     def __init__(self, dataloader, num_processes, num_cached, batch_size, transform, seeds=None):
         raise NotImplementedError("Work in progress, do not use! It does not work")
@@ -150,57 +169,55 @@ class ProperMultiThreadedAugmenter(object):
         assert self.dataloader.BATCH_SIZE == 1, "batch size of dataloader must be 1!"
         self.sample_generating_process = None
         self.transformed_queue_filler = None
+        self.was_started = False
 
     def start(self):
-        def sample_producer(queue, data_loader):
-            try:
-                for item in data_loader:
-                    queue.put(item)
-                queue.put("end")
-            except KeyboardInterrupt:
-                queue.put("end")
+        print("started")
 
-        self.sample_queue = MPQueue(self.num_cached)
-        self.sample_generating_process = Process(target=sample_producer, args=(self.sample_queue, self.dataloader))
-        self.sample_generating_process.start()
-
-        self.transformed_queue = MPQueue(self.num_cached)
-
-        def fill_transform_queue(sample_queue, transform, target_queue, batch_size, num_processes):
+        def produce(target_queue, data_loader, transform, num_processes):
+            print("producer started")
             pool = Pool(num_processes)
             try:
-                stop = False
-                while not stop:
-                    items = []
-                    for i in range(batch_size):
-                        item = sample_queue.get()
-                        if item == "end":
-                            stop = True
-                            target_queue.put("end")
-                            break
-                        items.append(item)
-                    if stop:
-                        target_queue.put("end")
-                        continue
-                    transformed = [pool.apply(transform, kwds=items[i]) for i in range(batch_size)]
-                    target_queue.put(transformed)
-            except Exception:
+                results = deque()
+                for i in range(num_processes):
+                    print("initial: loading item")
+                    item = next(data_loader)
+                    print("initial: putting item into pool")
+                    results.append(pool.apply_async(transform, kwds=item))
+                while True:
+                    successful = False
+                    while not successful:
+                        if not target_queue.full():
+                            target_queue.put(results.popleft().get())
+                            successful = True
+                        else:
+                            sleep(0.1)
+                    print("loading item")
+                    item = next(data_loader)
+                    print("putting item into pool")
+                    results.append(pool.apply_async(transform, kwds=item))
+            except KeyboardInterrupt:
+                """print("terminating pool...")
                 pool.terminate()
-                raise Exception
+                pool.join()"""
+                raise KeyboardInterrupt
 
-        self.transformed_queue_filler = Process(target=fill_transform_queue, args=(self.sample_queue, self.transform,
-                                                                                   self.transformed_queue,
-                                                                                   self.batch_size, self.num_processes))
-        self.transformed_queue_filler.start()
+
+        self.sample_queue = MPQueue(self.num_cached)
+        self.sample_generating_process = ProcessTerminateOnJoin(target=produce, args=(self.sample_queue, self.dataloader,
+                                                                       self.transform, self.num_processes))
+        self.sample_generating_process.daemon = False
+        self.sample_generating_process.start()
+
+        self.was_started = True
 
     def __next__(self):
-        if not (isinstance(self.transformed_queue_filler, Process) and self.transformed_queue_filler.is_alive() and
-                isinstance(self.sample_generating_process, Process) and self.sample_generating_process.is_alive()):
+        if not self.was_started:
             self.start()
-        item = self.transformed_queue.get()
-        if item == "end":
-            raise StopIteration
-        return self.dataloader.join(item)
+        items = []
+        for _ in range(self.batch_size):
+            items.append(self.sample_queue.get())
+        return self.dataloader.join(items)
 
 
 if __name__ == "__main__":
@@ -222,10 +239,17 @@ if __name__ == "__main__":
 
     class Transform():
         def __call__(self, **dct):
+            sleep(2)
             dct['ctr'] /= 10
             return dct
 
-    dl = Dataloader()
-    tr = Transform()
-    mt = ProperMultiThreadedAugmenter(dl, 2, 2, 3, tr, None)
+    # ignore this code. this is work in progress
+    from Datasets.Brain_Tumor_450k_new import load_dataset_noCutOff, BatchGenerator3D_random_sampling
+    from batchgenerators.transforms import GaussianBlurTransform
+    a = load_dataset_noCutOff()
+    dl = BatchGenerator3D_random_sampling(a, 1, None, None)
+    mt = ProperMultiThreadedAugmenter(dl, 1, 1, 1, GaussianBlurTransform(), None)
+    b = next(mt)
+
+    #mt.cleanup()
 
