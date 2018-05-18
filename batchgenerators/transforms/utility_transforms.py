@@ -99,8 +99,9 @@ class ConvertSegToBoundingBoxCoordinates(AbstractTransform):
         self.dim = dim
 
     def __call__(self, **data_dict):
-        data_dict['bb_target'] = convert_seg_to_bounding_box_coordinates(data_dict['seg'], data_dict['pid'], self.dim)
-
+        data_dict['bb_target'], data_dict['roi_masks'], data_dict['roi_class_ids'] = convert_seg_to_bounding_box_coordinates(data_dict['seg'], data_dict['class_target'], data_dict['pid'], self.dim)
+        data_dict['patient_target'] = data_dict['class_target'] + 1 # add background class
+        data_dict['class_target'] = [data_dict['roi_class_ids'], data_dict['roi_masks']]
         return data_dict
 
 class TransposeChannels(AbstractTransform):

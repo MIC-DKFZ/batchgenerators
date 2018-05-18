@@ -433,15 +433,18 @@ def general_cc_var_num_channels(img, diff_order=0, mink_norm=1, sigma=1, mask_im
     return white_colors, output_img
 
 
-def convert_seg_to_bounding_box_coordinates(seg, pid, dim): #TODO WRITE WITH CCA FOR MUTLIPLE BOXES # CAN I RETURN A LIST HERE?
+def convert_seg_to_bounding_box_coordinates(seg, class_target, pid, dim, n_max_gt=3):
 
-        bb_target = []
+        bb_target = np.zeros((seg.shape[0], n_max_gt, dim*2)) #for whole batch or single patient?
+        roi_masks = np.zeros((seg.shape[0], n_max_gt, *seg.shape[2:]))
+        roi_class_ids = np.zeros((seg.shape[0], n_max_gt, 1))
         for b in range(seg.shape[0]):
-            try:
+
+            if np.sum(seg!=0) > 0:
                 clusters, n_cands = lb(seg[b])
                 rois = np.array([(clusters == ii) * 1 for ii in range(1, n_cands + 1)])  # separate clusters and concat
-                print("ROIS", rois.shape, [np.sum(ii) for ii in rois], np.sum(seg), seg.shape, pid)
-                boxes = np.zeros((rois.shape[0], dim * 2), dtype=np.float32)
+                rois = rois[:n_max_gt] #cut clutter out to save memory
+                print("Rois in transformer", rois.shape, pid[b])
                 for rix, r in enumerate(rois):
                     seg_ixs = np.argwhere(r != 0)
                     coord_list = [np.min(seg_ixs[:, 2])-1, np.min(seg_ixs[:, 1])-1, np.max(seg_ixs[:, 2])+1,
@@ -449,16 +452,17 @@ def convert_seg_to_bounding_box_coordinates(seg, pid, dim): #TODO WRITE WITH CCA
                     if dim == 3:
 
                         coord_list.extend([np.min(seg_ixs[:, 3])-1, np.max(seg_ixs[:, 3])+1])
-                    boxes[rix] = coord_list
 
-                bb_target.append(boxes)
+                    bb_target[b, rix] = coord_list
+                    roi_masks[b, rix] = r
+                    roi_class_ids[b, rix] = class_target[b] + 1 # add background class
 
-            except:
-                bb_target.append(np.zeros((1, dim * 2), dtype=np.float32))
-                print("fail: bb kicked out of image by data augmentation", np.sum(seg!=0), pid[b])
 
-        print("CHECK BBTARGET", bb_target)
-        return bb_target
+            else:
+                print("fail: bb kicked out of image by data augmentation", np.sum(seg!=0), pid[b], class_target)
+
+        # print("CHECK BBTARGET", bb_target, roi_masks.shape, roi_class_ids)
+        return bb_target, roi_masks, roi_class_ids
 
 
 def transpose_channels(batch):
