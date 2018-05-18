@@ -16,7 +16,6 @@
 from __future__ import print_function
 import matplotlib.pyplot as plt
 
-from Datasets.custom_transforms import SpatialTransform
 from future import standard_library
 
 from batchgenerators.transforms import AbstractTransform, Compose
