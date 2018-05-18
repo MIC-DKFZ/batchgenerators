@@ -79,11 +79,14 @@ def augment_brightness_multiplicative(data, multiplier_range=(0.5, 2), per_chann
     return data
 
 
-def augment_gamma(data, gamma_range=(0.5, 2), invert_image=False, epsilon=1e-7, per_channel=False):
+def augment_gamma(data, gamma_range=(0.5, 2), invert_image=False, epsilon=1e-7, per_channel=False, retain_stats=False):
     for sample in range(data.shape[0]):
         if invert_image:
             data = - data
         if not per_channel:
+            if retain_stats:
+                mn = data[sample].mean()
+                sd = data[sample].std()
             if np.random.random() < 0.5 and gamma_range[0] < 1:
                 gamma = np.random.uniform(gamma_range[0], 1)
             else:
@@ -91,8 +94,14 @@ def augment_gamma(data, gamma_range=(0.5, 2), invert_image=False, epsilon=1e-7, 
             minm = data[sample].min()
             rnge = data[sample].max() - minm
             data[sample] = np.power(((data[sample] - minm) / float(rnge + epsilon)), gamma) * rnge + minm
+            if retain_stats:
+                data[sample] = data[sample] - data[sample].mean() + mn
+                data[sample] = data[sample] / data[sample].std() * sd
         else:
             for c in range(data.shape[1]):
+                if retain_stats:
+                    mn = data[sample][c].mean()
+                    sd = data[sample][c].std()
                 if np.random.random() < 0.5 and gamma_range[0] < 1:
                     gamma = np.random.uniform(gamma_range[0], 1)
                 else:
@@ -100,6 +109,9 @@ def augment_gamma(data, gamma_range=(0.5, 2), invert_image=False, epsilon=1e-7, 
                 minm = data[sample][c].min()
                 rnge = data[sample][c].max() - minm
                 data[sample][c] = np.power(((data[sample][c] - minm) / float(rnge + epsilon)), gamma) * rnge + minm
+                if retain_stats:
+                    data[sample][c] = data[sample][c] - data[sample][c].mean() + mn
+                    data[sample][c] = data[sample][c] / data[sample][c].std() * sd
     return data
 
 

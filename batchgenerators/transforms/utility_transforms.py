@@ -135,14 +135,17 @@ class RemoveLabelTransform(AbstractTransform):
 
 class RenameTransform(AbstractTransform):
     '''
-    Saves the value of data_dict[in_key] to data_dict[out_key]. Does not remove data_dict[in_key] from the dict.
+    Saves the value of data_dict[in_key] to data_dict[out_key]. Optionally removes data_dict[in_key] from the dict.
     '''
-    def __init__(self, in_key, out_key):
+    def __init__(self, in_key, out_key, delete_old=False):
+        self.delete_old = delete_old
         self.out_key = out_key
         self.in_key = in_key
 
     def __call__(self, **data_dict):
         data_dict[self.out_key] = data_dict[self.in_key]
+        if self.delete_old:
+            del data_dict[self.in_key]
         return data_dict
 
 
