@@ -444,7 +444,7 @@ def convert_seg_to_bounding_box_coordinates(seg, class_target, pid, dim, n_max_g
                 clusters, n_cands = lb(seg[b])
                 rois = np.array([(clusters == ii) * 1 for ii in range(1, n_cands + 1)])  # separate clusters and concat
                 rois = rois[:n_max_gt] #cut clutter out to save memory
-                print("Rois in transformer", rois.shape, pid[b])
+                # print("Rois in transformer", rois.shape, pid[b])
                 for rix, r in enumerate(rois):
                     seg_ixs = np.argwhere(r != 0)
                     coord_list = [np.min(seg_ixs[:, 2])-1, np.min(seg_ixs[:, 1])-1, np.max(seg_ixs[:, 2])+1,
@@ -457,11 +457,11 @@ def convert_seg_to_bounding_box_coordinates(seg, class_target, pid, dim, n_max_g
                     roi_masks[b, rix] = r
                     roi_class_ids[b, rix] = class_target[b] + 1 # add background class
 
-
+                # print("CHECK BBTARGET", bb_target[b], roi_masks[b].shape, roi_class_ids[b], pid[b])
             else:
                 print("fail: bb kicked out of image by data augmentation", np.sum(seg!=0), pid[b], class_target)
 
-        # print("CHECK BBTARGET", bb_target, roi_masks.shape, roi_class_ids)
+
         return bb_target, roi_masks, roi_class_ids
 
 
