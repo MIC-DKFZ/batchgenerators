@@ -14,6 +14,12 @@
 
 import copy
 
+
+from batchgenerators.transforms.abstract_transforms import AbstractTransform
+from batchgenerators.augmentations.utils import convert_seg_image_to_one_hot_encoding
+from batchgenerators.augmentations.utils import convert_seg_to_bounding_box_coordinates
+from batchgenerators.augmentations.utils import transpose_channels
+
 import numpy as np
 
 from batchgenerators.augmentations.utils import convert_seg_image_to_one_hot_encoding, \
@@ -98,9 +104,13 @@ class ConvertSegToBoundingBoxCoordinates(AbstractTransform):
     """ Converts segmentation masks into bounding box coordinates. Works only for one object per image
     """
 
-    def __call__(self, **data_dict):
-        data_dict['bb_target'] = convert_seg_to_bounding_box_coordinates(data_dict['seg'], data_dict['patient_ids'])
+    def __init__(self, dim):
+        self.dim = dim
 
+    def __call__(self, **data_dict):
+        data_dict['bb_target'], data_dict['roi_masks'], data_dict['roi_class_ids'] = convert_seg_to_bounding_box_coordinates(data_dict['seg'], data_dict['class_target'], data_dict['pid'], self.dim)
+        data_dict['patient_target'] = data_dict['class_target'] + 1 # add background class
+        data_dict['class_target'] = [data_dict['roi_class_ids'], data_dict['roi_masks']]
         return data_dict
 
 
@@ -136,15 +146,18 @@ class RemoveLabelTransform(AbstractTransform):
 
 class RenameTransform(AbstractTransform):
     '''
-    Saves the value of data_dict[in_key] to data_dict[out_key]. Does not remove data_dict[in_key] from the dict.
+    Saves the value of data_dict[in_key] to data_dict[out_key]. Optionally removes data_dict[in_key] from the dict.
     '''
 
-    def __init__(self, in_key, out_key):
+    def __init__(self, in_key, out_key, delete_old=False):
+        self.delete_old = delete_old
         self.out_key = out_key
         self.in_key = in_key
 
     def __call__(self, **data_dict):
         data_dict[self.out_key] = data_dict[self.in_key]
+        if self.delete_old:
+            del data_dict[self.in_key]
         return data_dict
 
 
