@@ -20,7 +20,7 @@ import numpy as np
 
 
 
-class Zoom(AbstractTransform):
+class ZoomTransform(AbstractTransform):
     """ Zooms an array given the zoom factors for each dimension. If only a float is given, zooms all axis with the
     same factor
 
@@ -48,7 +48,7 @@ class Zoom(AbstractTransform):
         return data_dict
 
 
-class Resize(AbstractTransform):
+class ResizeTransform(AbstractTransform):
     """ Zooms an array given the zoom factors for each dimension. If only a float is given, zooms all axis with the
     same factor
 
@@ -76,7 +76,7 @@ class Resize(AbstractTransform):
         return data_dict
 
 
-class Mirror(AbstractTransform):
+class MirrorTransform(AbstractTransform):
     """ Randomly mirrors data along specified axes. Mirroring is evenly distributed. Probability of mirroring along
     each axis is 0.5
 

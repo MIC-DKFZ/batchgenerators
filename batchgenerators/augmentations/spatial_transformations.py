@@ -40,6 +40,9 @@ def augment_resize(data, target_size, order=3, seg=None):
     elif seg is not None:
         raise TypeError("Data has to be either a numpy array or a list")
 
+    if isinstance(target_size, (list, tuple)):
+        target_size = [1] * (len(data_shape)-1-len(target_size)) + list(target_size)
+
     if not is_list:
         zoom_factors = np.concatenate((data.shape[:1], np.asarray(data.shape[1:]) / target_size))
         data_return = zoom(data, zoom=zoom_factors, order=order)
@@ -52,7 +55,7 @@ def augment_resize(data, target_size, order=3, seg=None):
         if seg is not None:
             seg_return = []
         for i, data_smpl in enumerate(data):
-            zoom_factors = np.asarray(data_smpl.shape) / target_size
+            zoom_factors = 1. / (np.asarray(data_smpl.shape) / target_size)
             data_return.append(zoom(data_smpl, zoom=zoom_factors, order=order))
             if seg is not None:
                 seg_return.append(zoom(seg[i], zoom=zoom_factors, order=order))
