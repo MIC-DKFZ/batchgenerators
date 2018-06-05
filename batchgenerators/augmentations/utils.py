@@ -436,7 +436,10 @@ def general_cc_var_num_channels(img, diff_order=0, mink_norm=1, sigma=1, mask_im
 def convert_seg_to_bounding_box_coordinates(seg, class_target, pid, dim, n_max_gt=3):
 
         bb_target = np.zeros((seg.shape[0], n_max_gt, dim*2)) #for whole batch or single patient?
-        roi_masks = np.zeros((seg.shape[0], n_max_gt, *seg.shape[2:]))
+        roi_shape = [seg.shape[0], n_max_gt, seg.shape[2], seg.shape[3]]
+        if dim == 3:
+            roi_shape.append(seg.shape[4])
+        roi_masks = np.zeros(roi_shape)
         roi_class_ids = np.zeros((seg.shape[0], n_max_gt, 1))
         for b in range(seg.shape[0]):
 
