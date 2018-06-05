@@ -7,7 +7,7 @@ from .noise_transforms import GaussianBlurTransform, GaussianNoiseTransform
 from .sample_normalization_transforms import CutOffOutliersTransform, RangeTransform, ZeroMeanUnitVarianceTransform
 
 from .utility_transforms import ConvertSegToOnehotTransform, ListToTensor, NumpyToTensor, RenameTransform
-from .spatial_transforms import ChannelTranslation, Mirror, SpatialTransform, Zoom, TransposeAxesTransform
+from .spatial_transforms import ChannelTranslation, MirrorTransform, SpatialTransform, ZoomTransform, TransposeAxesTransform
 from .resample_transforms import ResampleTransform
 
 transform_list = [
@@ -16,7 +16,7 @@ transform_list = [
     ContrastAugmentationTransform, FancyColorTransform, GammaTransform, IlluminationTransform,
     CenterCropSegTransform, CenterCropTransform, PadTransform, RandomCropTransform,
     GaussianNoiseTransform, GaussianBlurTransform, CutOffOutliersTransform, RangeTransform,
-    ZeroMeanUnitVarianceTransform, ChannelTranslation, Mirror, SpatialTransform, Zoom,
+    ZeroMeanUnitVarianceTransform, ChannelTranslation, MirrorTransform, SpatialTransform, ZoomTransform,
     ConvertSegToOnehotTransform, ListToTensor, NumpyToTensor
 ]
 

@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import numpy as np
 
 from batchgenerators.augmentations.color_augmentations import augment_contrast, augment_brightness_additive, \
     augment_brightness_multiplicative, augment_gamma, augment_illumination, augment_PCA_shift
@@ -143,6 +144,19 @@ class FancyColorTransform(AbstractTransform):
 
     def __call__(self, **data_dict):
         data_dict[self.data_key] = augment_PCA_shift(data_dict[self.data_key], self.U, self.s, self.sigma)
+        return data_dict
+
+
+
+class ColorClipTransform(AbstractTransform):
+    """Do not use this for now"""
+    def __init__(self, min=None, max=None, data_key="data"):
+        self.data_key = data_key
+        self.min = min
+        self.max = max
+
+    def __call__(self, **data_dict):
+        data_dict[self.data_key] = np.clip(data_dict[self.data_key], self.min, self.max)
         return data_dict
 
 

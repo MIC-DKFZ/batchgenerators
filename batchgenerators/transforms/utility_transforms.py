@@ -14,6 +14,7 @@
 
 import copy
 
+
 from batchgenerators.transforms.abstract_transforms import AbstractTransform
 from batchgenerators.augmentations.utils import convert_seg_image_to_one_hot_encoding
 from batchgenerators.augmentations.utils import convert_seg_to_bounding_box_coordinates
@@ -21,9 +22,15 @@ from batchgenerators.augmentations.utils import transpose_channels
 
 import numpy as np
 
+from batchgenerators.augmentations.utils import convert_seg_image_to_one_hot_encoding, \
+    convert_seg_to_bounding_box_coordinates, transpose_channels
+from batchgenerators.transforms.abstract_transforms import AbstractTransform
+
+
 class NumpyToTensor(AbstractTransform):
     """Utility function for pytorch. Converts data (and seg) numpy ndarrays to pytorch tensors
     """
+
     def __call__(self, **data_dict):
         import torch
 
@@ -33,9 +40,11 @@ class NumpyToTensor(AbstractTransform):
 
         return data_dict
 
+
 class ListToNumpy(AbstractTransform):
     """Utility function for pytorch. Converts data (and seg) numpy ndarrays to pytorch tensors
     """
+
     def __call__(self, **data_dict):
 
         for key, val in data_dict.items():
@@ -44,9 +53,11 @@ class ListToNumpy(AbstractTransform):
 
         return data_dict
 
+
 class ListToTensor(AbstractTransform):
     """Utility function for pytorch. Converts data (and seg) numpy ndarrays to pytorch tensors
     """
+
     def __call__(self, **data_dict):
         import torch
 
@@ -55,7 +66,6 @@ class ListToTensor(AbstractTransform):
                 data_dict[key] = [torch.from_numpy(smpl) for smpl in val]
 
         return data_dict
-
 
 
 class ConvertSegToOnehotTransform(AbstractTransform):
@@ -70,6 +80,7 @@ class ConvertSegToOnehotTransform(AbstractTransform):
         other existing seg channels. Therefore you have the option to change that. BEWARE: Any non-'seg' segmentations
         will not be augmented anymore. Use this only at the very end of your pipeline!
     """
+
     def __init__(self, classes, seg_channel=0, output_key="seg"):
         self.output_key = output_key
         self.seg_channel = seg_channel
@@ -89,8 +100,6 @@ class ConvertSegToOnehotTransform(AbstractTransform):
         return data_dict
 
 
-
-
 class ConvertSegToBoundingBoxCoordinates(AbstractTransform):
     """ Converts segmentation masks into bounding box coordinates. Works only for one object per image
     """
@@ -99,9 +108,11 @@ class ConvertSegToBoundingBoxCoordinates(AbstractTransform):
         self.dim = dim
 
     def __call__(self, **data_dict):
-        data_dict['bb_target'] = convert_seg_to_bounding_box_coordinates(data_dict['seg'], data_dict['pid'], self.dim)
-
+        data_dict['bb_target'], data_dict['roi_masks'], data_dict['roi_class_ids'] = convert_seg_to_bounding_box_coordinates(data_dict['seg'], data_dict['class_target'], data_dict['pid'], self.dim)
+        data_dict['patient_target'] = data_dict['class_target'] + 1 # add background class
+        data_dict['class_target'] = [data_dict['roi_class_ids'], data_dict['roi_masks']]
         return data_dict
+
 
 class TransposeChannels(AbstractTransform):
     """ Converts segmentation masks into bounding box coordinates. Works only for one object per image
@@ -119,6 +130,7 @@ class RemoveLabelTransform(AbstractTransform):
     Replaces all pixels in data_dict[input_key] that have value remove_label with replace_with and saves the result to
     data_dict[output_key]
     '''
+
     def __init__(self, remove_label, replace_with=0, input_key="seg", output_key="seg"):
         self.output_key = output_key
         self.input_key = input_key
@@ -136,6 +148,7 @@ class RenameTransform(AbstractTransform):
     '''
     Saves the value of data_dict[in_key] to data_dict[out_key]. Optionally removes data_dict[in_key] from the dict.
     '''
+
     def __init__(self, in_key, out_key, delete_old=False):
         self.delete_old = delete_old
         self.out_key = out_key
@@ -183,7 +196,7 @@ class CopyTransform(AbstractTransform):
                 new_dict[key] = val
 
             if self.copy:
-                    new_dict[key] = copy.deepcopy(val)
+                new_dict[key] = copy.deepcopy(val)
 
         return new_dict
 
@@ -216,4 +229,20 @@ class ReshapeTransform(AbstractTransform):
 
         data_dict[self.key] = np.reshape(data_dict[self.key], target_shape)
 
+        return data_dict
+
+
+class AddToDictTransform(AbstractTransform):
+    '''
+    Add a value of data_dict[key].
+    '''
+
+    def __init__(self, in_key, in_val, strict=False):
+        self.strict = strict
+        self.in_val = in_val
+        self.in_key = in_key
+
+    def __call__(self, **data_dict):
+        if self.in_key not in data_dict or self.strict:
+            data_dict[self.in_key] = self.in_val
         return data_dict
