@@ -488,17 +488,18 @@ def resize_segmentation(segmentation, new_shape, order=3):
     :param order:
     :return:
     '''
+    tpe = segmentation.dtype
     unique_labels = np.unique(segmentation)
     assert len(segmentation.shape) == len(new_shape), "new shape must have same dimensionality as segmentation"
     if order == 0:
-        return resize(segmentation, new_shape, order, mode="constant", cval=0, clip=True)
+        return resize(segmentation, new_shape, order, mode="constant", cval=0, clip=True).astype(tpe)
     else:
         reshaped_multihot = np.zeros([len(unique_labels)] + list(new_shape), dtype=float)
         for i, c in enumerate(unique_labels):
             reshaped_multihot[i] = np.round(
                 resize((segmentation == c).astype(float), new_shape, order, mode="constant", cval=0, clip=True))
         reshaped = unique_labels[np.argmax(reshaped_multihot, 0)].astype(segmentation.dtype)
-        return reshaped
+        return reshaped.astype(tpe)
 
 
 def resize_softmax_output(softmax_output, new_shape, order=3):
@@ -510,11 +511,12 @@ def resize_softmax_output(softmax_output, new_shape, order=3):
     :param order:
     :return:
     '''
+    tpe = softmax_output.dtype
     new_shp = [softmax_output.shape[0]] + list(new_shape)
     result = np.zeros(new_shp, dtype=softmax_output.dtype)
     for i in range(softmax_output.shape[0]):
         result[i] = resize(softmax_output[i].astype(float), new_shape, order, "constant", 0, True)
-    return result
+    return result.astype(tpe)
 
 
 def get_range_val(value, rnd_type="uniform"):
