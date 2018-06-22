@@ -461,7 +461,8 @@ def convert_seg_to_bounding_box_coordinates(seg, class_target, pid, dim, n_max_g
                     roi_class_ids[b, rix] = class_target[b] + 1 # add background class
 
                 # print("CHECK BBTARGET", bb_target[b], roi_masks[b].shape, roi_class_ids[b], pid[b])
-            else:
+
+            elif class_target[b] > -1:
                 print("fail: bb kicked out of image by data augmentation", np.sum(seg!=0), pid[b], class_target)
 
 
