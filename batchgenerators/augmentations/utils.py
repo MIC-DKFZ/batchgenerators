@@ -433,37 +433,41 @@ def general_cc_var_num_channels(img, diff_order=0, mink_norm=1, sigma=1, mask_im
     return white_colors, output_img
 
 
-def convert_seg_to_bounding_box_coordinates(seg, class_target, pid, dim, n_max_gt=3):
+def convert_seg_to_bounding_box_coordinates(seg, class_target, pid, dim):
 
-        bb_target = np.zeros((seg.shape[0], n_max_gt, dim*2)) #for whole batch or single patient?
-        roi_shape = [seg.shape[0], n_max_gt, seg.shape[2], seg.shape[3]]
-        if dim == 3:
-            roi_shape.append(seg.shape[4])
-        roi_masks = np.zeros(roi_shape)
-        roi_class_ids = np.zeros((seg.shape[0], n_max_gt, 1))
+        bb_target = []
+        roi_masks = []
+        roi_class_ids = []
+
         for b in range(seg.shape[0]):
 
+            p_coords_list = []
+            p_roi_masks_list = []
+            p_roi_class_ids_list = []
             if np.sum(seg!=0) > 0:
                 clusters, n_cands = lb(seg[b])
                 rois = np.array([(clusters == ii) * 1 for ii in range(1, n_cands + 1)])  # separate clusters and concat
-                rois = rois[:n_max_gt] #cut clutter out to save memory
+                # rois = rois[:n_max_gt] #cut clutter out to save memory
                 # print("Rois in transformer", rois.shape, pid[b])
                 for rix, r in enumerate(rois):
                     seg_ixs = np.argwhere(r != 0)
-                    coord_list = [np.min(seg_ixs[:, 2])-1, np.min(seg_ixs[:, 1])-1, np.max(seg_ixs[:, 2])+1,
-                                     np.max(seg_ixs[:, 1])+1]
+                    coord_list = [np.min(seg_ixs[:, 1])-1, np.min(seg_ixs[:, 2])-1, np.max(seg_ixs[:, 1])+1,
+                                     np.max(seg_ixs[:, 2])+1]
                     if dim == 3:
 
                         coord_list.extend([np.min(seg_ixs[:, 3])-1, np.max(seg_ixs[:, 3])+1])
 
-                    bb_target[b, rix] = coord_list
-                    roi_masks[b, rix] = r
-                    roi_class_ids[b, rix] = class_target[b] + 1 # add background class
+                    p_coords_list.append(coord_list)
+                    p_roi_masks_list.append(r)
+                    p_roi_class_ids_list.append(class_target[b] + 1)
 
+                bb_target.append(np.array(p_coords_list))
+                roi_masks.append(np.array(p_roi_masks_list))
+                roi_class_ids.append(np.array(p_roi_class_ids_list))
                 # print("CHECK BBTARGET", bb_target[b], roi_masks[b].shape, roi_class_ids[b], pid[b])
-            else:
-                print("fail: bb kicked out of image by data augmentation", np.sum(seg!=0), pid[b], class_target)
 
+            elif class_target[b] > -1:
+                print("fail: bb kicked out of image by data augmentation", np.sum(seg!=0), pid[b], class_target)
 
         return bb_target, roi_masks, roi_class_ids
 
