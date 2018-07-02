@@ -477,7 +477,7 @@ def transpose_channels(batch):
         raise ValueError("wrong dimensions in transpose_channel generator!")
 
 
-def resize_segmentation(segmentation, new_shape, order=3):
+def resize_segmentation(segmentation, new_shape, order=3, cval=0):
     '''
     Resizes a segmentation map. Supports all orders (see skimage documentation). Will transform segmentation map to one
     hot encoding which is resized and transformed back to a segmentation map.
@@ -491,12 +491,12 @@ def resize_segmentation(segmentation, new_shape, order=3):
     unique_labels = np.unique(segmentation)
     assert len(segmentation.shape) == len(new_shape), "new shape must have same dimensionality as segmentation"
     if order == 0:
-        return resize(segmentation, new_shape, order, mode="constant", cval=0, clip=True).astype(tpe)
+        return resize(segmentation, new_shape, order, mode="constant", cval=cval, clip=True).astype(tpe)
     else:
         reshaped_multihot = np.zeros([len(unique_labels)] + list(new_shape), dtype=float)
         for i, c in enumerate(unique_labels):
             reshaped_multihot[i] = np.round(
-                resize((segmentation == c).astype(float), new_shape, order, mode="constant", cval=0, clip=True))
+                resize((segmentation == c).astype(float), new_shape, order, mode="constant", cval=cval, clip=True))
         reshaped = unique_labels[np.argmax(reshaped_multihot, 0)].astype(segmentation.dtype)
         return reshaped.astype(tpe)
 
