@@ -438,13 +438,16 @@ def convert_seg_to_bounding_box_coordinates(seg, class_target, pid, dim):
         bb_target = []
         roi_masks = []
         roi_class_ids = []
+        patient_target = []
 
         for b in range(seg.shape[0]):
 
             p_coords_list = []
             p_roi_masks_list = []
             p_roi_class_ids_list = []
-            if np.sum(seg!=0) > 0:
+            patient_target.append(np.max(class_target[b]) + 1)
+
+            if np.sum(seg[b]!=0) > 0:
                 clusters, n_cands = lb(seg[b])
                 rois = np.array([(clusters == ii) * 1 for ii in range(1, n_cands + 1)])  # separate clusters and concat
                 # rois = rois[:n_max_gt] #cut clutter out to save memory
@@ -465,11 +468,18 @@ def convert_seg_to_bounding_box_coordinates(seg, class_target, pid, dim):
                 roi_masks.append(np.array(p_roi_masks_list))
                 roi_class_ids.append(np.array(p_roi_class_ids_list))
                 # print("CHECK BBTARGET", bb_target[b], roi_masks[b].shape, roi_class_ids[b], pid[b])
+            elif class_target[b] == -1:
+                bb_target.append([])
+                roi_masks.append(np.zeros_like(seg[b])[None])
+                roi_class_ids.append(np.array([-1]))
 
-            elif class_target[b] > -1:
+            else:
                 print("fail: bb kicked out of image by data augmentation", np.sum(seg!=0), pid[b], class_target)
+                bb_target.append([])
+                roi_masks.append(np.zeros_like(seg[b])[None])
+                roi_class_ids.append(np.array([-1]))
 
-        return bb_target, roi_masks, roi_class_ids
+        return bb_target, roi_masks, roi_class_ids, np.array(patient_target)
 
 
 def transpose_channels(batch):
