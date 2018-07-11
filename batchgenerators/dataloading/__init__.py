@@ -1,3 +1,3 @@
 from .data_loader import DataLoaderBase
-from .multi_threaded_augmenter import MultiThreadedAugmenter, ProperMultiThreadedAugmenter
+from .multi_threaded_augmenter import MultiThreadedAugmenter, AlternativeMultiThreadedAugmenter
 from .single_threaded_augmenter import SingleThreadedAugmenter
