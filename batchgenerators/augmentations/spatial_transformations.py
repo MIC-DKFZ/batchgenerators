@@ -18,12 +18,12 @@ from builtins import range
 import numpy as np
 from batchgenerators.augmentations.utils import create_zero_centered_coordinate_mesh, elastic_deform_coordinates, \
     interpolate_img, \
-    rotate_coords_2d, rotate_coords_3d, scale_coords
+    rotate_coords_2d, rotate_coords_3d, scale_coords, resize_segmentation
 from scipy.ndimage import zoom
 from skimage.transform import resize
 
 
-def augment_resize(data, target_size, order=3, seg=None, concatenate_list=False):
+def augment_resize(data, target_size, order=3, order_seg=1, cval_seg=0, seg=None, concatenate_list=False):
     """
     Reshapes data (and seg) to target_size
     :param data: np.ndarray or list/tuple of np.ndarrays, must be (b, c, x, y(, z))) (if list/tuple then each entry
@@ -31,7 +31,7 @@ def augment_resize(data, target_size, order=3, seg=None, concatenate_list=False)
     :param target_size: int or list/tuple of int
     :param order:
     :param seg: can be None, if not None then it will also be resampled to target_size. Can also be list/tuple of
-    np.ndarray (just like data)
+    np.ndarray (just like data). Must also be (b, c, x, y(, z))
     :param concatenate_list: if you give list/tuple of data/seg and set concatenate_list=True then the result will be
     concatenated into one large ndarray (once again b, c, x, y(, z))
     :return:
@@ -93,7 +93,7 @@ def augment_resize(data, target_size, order=3, seg=None, concatenate_list=False)
                 result_this_sample = []
                 for c in range(seg[i].shape[1]):
                     result_this_sample.append(
-                        resize(seg[i][b, c].astype(float), target_size_here, order).astype(seg[i].dtype)[None])
+                        resize_segmentation(seg[i][b, c].astype(float), target_size_here, order_seg, cvla_seg)[None])
                 result_this_sample = np.vstack(result_this_sample)
                 result_this_seg.append(result_this_sample[None])
             result_this_seg = np.vstack(result_this_seg)
