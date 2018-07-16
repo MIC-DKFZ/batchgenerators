@@ -433,7 +433,7 @@ def general_cc_var_num_channels(img, diff_order=0, mink_norm=1, sigma=1, mask_im
     return white_colors, output_img
 
 
-def convert_seg_to_bounding_box_coordinates(seg, class_target, pid, dim):
+def convert_seg_to_bounding_box_coordinates(seg, class_target, pid, dim, is_validation=False):
 
         bb_target = []
         roi_masks = []
@@ -468,13 +468,13 @@ def convert_seg_to_bounding_box_coordinates(seg, class_target, pid, dim):
                 roi_masks.append(np.array(p_roi_masks_list))
                 roi_class_ids.append(np.array(p_roi_class_ids_list))
 
-            elif class_target[b] == -1:
+            elif class_target[b] == -1 or is_validation:
                 bb_target.append([])
                 roi_masks.append(np.zeros_like(seg[b])[None])
                 roi_class_ids.append(np.array([-1]))
 
             else:
-                print("fail: no seg in non-empty image", np.sum(seg!=0), pid[b], class_target, seg.shape)
+                print("fail: no seg in slice during training", np.sum(seg!=0), pid[b], class_target, seg.shape)
                 bb_target.append([])
                 roi_masks.append(np.zeros_like(seg[b])[None])
                 roi_class_ids.append(np.array([-1]))
