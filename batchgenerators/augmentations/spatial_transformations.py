@@ -25,11 +25,15 @@ from skimage.transform import resize
 
 def augment_resize(data, target_size, order=3, seg=None, concatenate_list=False):
     """
-
-    :param data:
-    :param target_size:
+    Reshapes data (and seg) to target_size
+    :param data: np.ndarray or list/tuple of np.ndarrays, must be (b, c, x, y(, z))) (if list/tuple then each entry
+    must be of this shape!)
+    :param target_size: int or list/tuple of int
     :param order:
-    :param seg:
+    :param seg: can be None, if not None then it will also be resampled to target_size. Can also be list/tuple of
+    np.ndarray (just like data)
+    :param concatenate_list: if you give list/tuple of data/seg and set concatenate_list=True then the result will be
+    concatenated into one large ndarray (once again b, c, x, y(, z))
     :return:
     """
     if isinstance(data, np.ndarray):
