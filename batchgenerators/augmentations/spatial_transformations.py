@@ -19,7 +19,6 @@ import numpy as np
 from batchgenerators.augmentations.utils import create_zero_centered_coordinate_mesh, elastic_deform_coordinates, \
     interpolate_img, \
     rotate_coords_2d, rotate_coords_3d, scale_coords, resize_segmentation
-from scipy.ndimage import zoom
 from skimage.transform import resize
 
 
