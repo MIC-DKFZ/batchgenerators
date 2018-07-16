@@ -93,7 +93,7 @@ def augment_resize(data, target_size, order=3, order_seg=1, cval_seg=0, seg=None
                 result_this_sample = []
                 for c in range(seg[i].shape[1]):
                     result_this_sample.append(
-                        resize_segmentation(seg[i][b, c].astype(float), target_size_here, order_seg, cvla_seg)[None])
+                        resize_segmentation(seg[i][b, c].astype(float), target_size_here, order_seg, cval_seg)[None])
                 result_this_sample = np.vstack(result_this_sample)
                 result_this_seg.append(result_this_sample[None])
             result_this_seg = np.vstack(result_this_seg)
