@@ -304,7 +304,7 @@ def fillup_pad(data, min_size, seg=None, pad_value_data=None, pad_value_seg=None
                 data_shape) - 2, "If you provide a list/tuple as center crop make sure it has the same dimension as your " \
                                  "data (2d/3d)"
 
-        if np.min(data_shape[2:] - min_size) < 0:
+        if np.min(np.asarray(data_shape[2:]) - np.asarray(min_size)) < 0:
             return pad(data, min_size, seg, pad_value_data, pad_value_seg)
         else:
             return data, seg
