@@ -30,7 +30,9 @@ class ZoomTransform(AbstractTransform):
         order (int): order of interpolation
 
     """
-    def __init__(self, zoom_factors=1, order=3, data_key="data", label_key="seg"):
+    def __init__(self, zoom_factors=1, order=3, order_seg=1, cval_seg=0, data_key="data", label_key="seg"):
+        self.cval_seg = cval_seg
+        self.order_seg = order_seg
         self.data_key = data_key
         self.label_key = label_key
         self.order = order
@@ -40,7 +42,7 @@ class ZoomTransform(AbstractTransform):
         data = data_dict.get(self.data_key)
         seg = data_dict.get(self.label_key)
 
-        ret_val = augment_zoom(data=data, seg=seg, zoom_factors=self.zoom_factors, order=self.order)
+        ret_val = augment_zoom(data=data, seg=seg, zoom_factors=self.zoom_factors, order=self.order, order_seg=self.order_seg, cval_seg=self.cval_seg)
 
         data_dict[self.data_key] = ret_val[0]
         if seg is not None:
@@ -58,7 +60,9 @@ class ResizeTransform(AbstractTransform):
         order (int): order of interpolation
 
     """
-    def __init__(self, target_size, order=3, data_key="data", label_key="seg"):
+    def __init__(self, target_size, order=3, order_seg=1, cval_seg=0, data_key="data", label_key="seg"):
+        self.cval_seg = cval_seg
+        self.order_seg = order_seg
         self.data_key = data_key
         self.label_key = label_key
         self.order = order
@@ -68,7 +72,7 @@ class ResizeTransform(AbstractTransform):
         data = data_dict.get(self.data_key)
         seg = data_dict.get(self.label_key)
 
-        ret_val = augment_resize(data=data, seg=seg, target_size=self.target_size, order=self.order)
+        ret_val = augment_resize(data=data, seg=seg, target_size=self.target_size, order=self.order, order_seg=self.order_seg, cval_seg=self.cval_seg)
 
         data_dict[self.data_key] = ret_val[0]
         if seg is not None:
