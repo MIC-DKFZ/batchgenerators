@@ -28,7 +28,9 @@ def augment_resize(data, target_size, order=3, order_seg=1, cval_seg=0, seg=None
     :param data: np.ndarray or list/tuple of np.ndarrays, must be (b, c, x, y(, z))) (if list/tuple then each entry
     must be of this shape!)
     :param target_size: int or list/tuple of int
-    :param order:
+    :param order: interpolation order for data (see skimage.transform.resize)
+    :param order_seg: interpolation order for seg (see skimage.transform.resize)
+    :param cval_seg: cval for segmentation (see skimage.transform.resize)
     :param seg: can be None, if not None then it will also be resampled to target_size. Can also be list/tuple of
     np.ndarray (just like data). Must also be (b, c, x, y(, z))
     :param concatenate_list: if you give list/tuple of data/seg and set concatenate_list=True then the result will be
@@ -107,6 +109,20 @@ def augment_resize(data, target_size, order=3, order_seg=1, cval_seg=0, seg=None
 
 
 def augment_zoom(data, zoom_factors, order=3, order_seg=1, cval_seg=0, seg=None, concatenate_list=False):
+    """
+    zooms data (and seg) by factor zoom_factors
+    :param data: np.ndarray or list/tuple of np.ndarrays, must be (b, c, x, y(, z))) (if list/tuple then each entry
+    must be of this shape!)
+    :param zoom_factors: int or list/tuple of int
+    :param order: interpolation order for data (see skimage.transform.resize)
+    :param order_seg: interpolation order for seg (see skimage.transform.resize)
+    :param cval_seg: cval for segmentation (see skimage.transform.resize)
+    :param seg: can be None, if not None then it will also be zoomed by zoom_factors. Can also be list/tuple of
+    np.ndarray (just like data). Must also be (b, c, x, y(, z))
+    :param concatenate_list: if you give list/tuple of data/seg and set concatenate_list=True then the result will be
+    concatenated into one large ndarray (once again b, c, x, y(, z))
+    :return:
+    """
     if isinstance(data, np.ndarray):
         is_list = False
     elif isinstance(data, (list, tuple)):

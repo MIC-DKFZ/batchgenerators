@@ -21,16 +21,21 @@ import numpy as np
 
 
 class ZoomTransform(AbstractTransform):
-    """ Zooms an array given the zoom factors for each dimension. If only a float is given, zooms all axis with the
-    same factor
-
-    Args:
-        axes (tuple of float or float): factors to zoom the dimensions. If only on float is given, zooms all axis
-        with the same factor
-        order (int): order of interpolation
-
-    """
     def __init__(self, zoom_factors=1, order=3, order_seg=1, cval_seg=0, data_key="data", label_key="seg"):
+        """
+        Zooms 'data' (and 'seg') by zoom_factors
+        :param zoom_factors: int or list/tuple of int
+        :param order: interpolation order for data (see skimage.transform.resize)
+        :param order_seg: interpolation order for seg (see skimage.transform.resize)
+        :param cval_seg: cval for segmentation (see skimage.transform.resize)
+        :param seg: can be None, if not None then it will also be zoomed by zoom_factors. Can also be list/tuple of
+        np.ndarray (just like data). Must also be (b, c, x, y(, z))
+        :param concatenate_list: if you give list/tuple of data/seg and set concatenate_list=True then the result will be
+        concatenated into one large ndarray (once again b, c, x, y(, z))
+        :param data_key:
+        :param label_key:
+
+        """
         self.cval_seg = cval_seg
         self.order_seg = order_seg
         self.data_key = data_key
@@ -51,16 +56,23 @@ class ZoomTransform(AbstractTransform):
 
 
 class ResizeTransform(AbstractTransform):
-    """ Zooms an array given the zoom factors for each dimension. If only a float is given, zooms all axis with the
-    same factor
 
-    Args:
-        axes (tuple of float or float): factors to zoom the dimensions. If only on float is given, zooms all axis
-        with the same factor
-        order (int): order of interpolation
+    def __init__(self, target_size, order=3, order_seg=1, cval_seg=0, concatenate_list=False, data_key="data", label_key="seg"):
+        """
+        Reshapes 'data' (and 'seg') to target_size
+        :param target_size: int or list/tuple of int
+        :param order: interpolation order for data (see skimage.transform.resize)
+        :param order_seg: interpolation order for seg (see skimage.transform.resize)
+        :param cval_seg: cval for segmentation (see skimage.transform.resize)
+        :param seg: can be None, if not None then it will also be resampled to target_size. Can also be list/tuple of
+        np.ndarray (just like data). Must also be (b, c, x, y(, z))
+        :param concatenate_list: if you give list/tuple of data/seg and set concatenate_list=True then the result will be
+        concatenated into one large ndarray (once again b, c, x, y(, z))
+        :param data_key:
+        :param label_key:
 
-    """
-    def __init__(self, target_size, order=3, order_seg=1, cval_seg=0, data_key="data", label_key="seg"):
+        """
+        self.concatenate_list = concatenate_list
         self.cval_seg = cval_seg
         self.order_seg = order_seg
         self.data_key = data_key
@@ -72,7 +84,9 @@ class ResizeTransform(AbstractTransform):
         data = data_dict.get(self.data_key)
         seg = data_dict.get(self.label_key)
 
-        ret_val = augment_resize(data=data, seg=seg, target_size=self.target_size, order=self.order, order_seg=self.order_seg, cval_seg=self.cval_seg)
+        ret_val = augment_resize(data=data, seg=seg, target_size=self.target_size, order=self.order,
+                                 order_seg=self.order_seg, cval_seg=self.cval_seg,
+                                 concatenate_list=self.concatenate_list)
 
         data_dict[self.data_key] = ret_val[0]
         if seg is not None:
@@ -158,7 +172,8 @@ class SpatialTransform(AbstractTransform):
 
         do_scale (bool): Whether or not to apply scaling
 
-        scale (tuple of float): scale range ; scale is randomly sampled from interval
+        scale (tuple of float): scale range ; scale is randomly sampled from interval.
+        Scale < 1 will zoom in, scale > 1 will zoom out! Example: Scale=0.2 means zooming in by factor 5
 
         border_mode_data: How to treat border pixels in data? see scipy.ndimage.map_coordinates
 
