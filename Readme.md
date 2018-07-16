@@ -62,7 +62,7 @@ pip install numpy scipy nilearn matplotlib scikit-image nibabel
 Install batchgenerators
 ```
 git clone https://github.com/MIC-DKFZ/batchgenerators
-cd dldabg
+cd batchgenerators
 pip install -e .
 ```
 

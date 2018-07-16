@@ -17,7 +17,7 @@ from __future__ import print_function
 
 from future import standard_library
 
-from batchgenerators.transforms import AbstractTransform, Compose
+from batchgenerators.transforms import SpatialTransform
 
 standard_library.install_aliases()
 from builtins import range
@@ -27,10 +27,6 @@ from multiprocessing import Queue as MPQueue
 import numpy as np
 import sys
 import logging
-from multiprocessing import Pool
-from time import sleep
-from collections import deque
-import multiprocessing
 
 
 class MultiThreadedAugmenter(object):
@@ -155,539 +151,214 @@ class ProcessTerminateOnJoin(Process):
         super(ProcessTerminateOnJoin, self).join(0.01)
 
 
-class ProperMultiThreadedAugmenter(object):
-    def __init__(self, dataloader, num_processes, num_cached, batch_size, transform, seeds=None):
-        #raise NotImplementedError("Work in progress, do not use! It does not work")
+def default_joiner(items):
+    keys = items[0].keys()
+    res = {}
+    for k in keys:
+        c = []
+        for i in items:
+            c.append(i[k])
+        if isinstance(items[0][k], np.ndarray):
+            res[k] = np.vstack(c)
+        elif isinstance(items[0][k], list):
+            res[k] = c
+        elif isinstance(items[0][k], tuple):
+            res[k] = tuple(c)
+        else:
+            raise ValueError("don't know how to join instances of %s to a batch"%str(type(items[0][k])))
+    return res
+
+
+class AlternativeMultiThreadedAugmenter(object):
+    def __init__(self, dataloader, num_processes, num_raw_cached, num_transformed_cached, batch_size, transform, batch_joiner=default_joiner, seeds=None, verbose=False):
+        """
+        This one has two advantages and two disadvantages over the MultiThreadedAugmenter. Whereas the 'old'
+        MultiThreadedAugmenter copies the entire data augmentation pipeline (including the dataloader) for the
+        processes, this one holds only one instance instance of the dataloader in a background process. That enables
+        you to better control what samples are pushed through the pipeline (for example if you want to iterate once
+        over your dataset). Also, this augmenter will process samples separately and therefore has better synergy with
+        SpatialTransform which will either deform all samples in a batch or no samples at all.
+        Advantages:
+        1) you can better control what samples go through the pipeline (iterate once over your training data)
+        2) samples are processed one at a time: SpatialTransform etc are not applied to either all of no samples within
+        a batch
+        Disatvantage:
+        1) is is slower (sometimes substantially!)
+        2) if you dataloader is slow, the entire Pipeline will be slow. Make sure your dataloader is lightning fast!!
+        :param dataloader: must have batch size 1, batch size is controlled via AlternativeMultiThreadedAugmenter
+        :param num_processes:
+        :param num_raw_cached:
+        :param num_transformed_cached:
+        :param batch_size:
+        :param transform:
+        :param batch_joiner: this function needs to fuse samples back together into a batch. See default_joiner for an
+        example
+        :param seeds:
+        :param verbose:
+        """
+        self.verbose = verbose
+        self.batch_joiner = batch_joiner
+        self.num_transformed_cached = num_transformed_cached
+        self.num_raw_cached = num_raw_cached
         self.transform = transform
         self.batch_size = batch_size
-        self.num_cached = num_cached
         self.dataloader = dataloader
         self.num_processes = num_processes
         if seeds is None:
             seeds = [np.random.randint(999999) for i in range(num_processes)]
         self.seeds = seeds # TODO
         assert self.dataloader.BATCH_SIZE == 1, "batch size of dataloader must be 1!"
-        self.sample_generating_process = None
-        self.transformed_queue_filler = None
         self.was_started = False
+        self.sample_queues = self.sample_generating_process = self.ready_queues = self.transformed_queues = None
+        self.joiners = None
+        self.q_ctr = None
+        self.transformers = None
+        self.joining_process = None
 
     def start(self):
         print("started")
 
-        def produce(target_queue, data_loader, transform, num_processes):
-            #print("producer started")
-            pool = Pool(num_processes)
-            try:
-                results = deque()
-                for i in range(num_processes):
-                    #print("initial: loading item")
-                    item = next(data_loader)
-                    #print("initial: putting item into pool")
-                    results.append(pool.apply_async(transform, kwds=item))
-                while True:
-                    successful = False
-                    while not successful:
-                        if not target_queue.full():
-                            target_queue.put(results.popleft().get())
-                            successful = True
-                        else:
-                            sleep(0.1)
-                    #print("loading item")
-                    item = next(data_loader)
-                    #print("putting item into pool")
-                    results.append(pool.apply_async(transform, kwds=item))
-            except KeyboardInterrupt:
-                """print("terminating pool...")
-                pool.terminate()
-                pool.join()"""
-                raise KeyboardInterrupt
+        def producer(target_queues, data_loader):
+            num_queues = len(target_queues)
+            ctr = 0
+            for item in data_loader:
+                q = ctr % num_queues
+                target_queues[q].put(item)
+                ctr += 1
+            [target_queue.put("end") for target_queue in target_queues]
 
-
-        self.sample_queue = MPQueue(self.num_cached)
-        self.sample_generating_process = ProcessTerminateOnJoin(target=produce, args=(self.sample_queue, self.dataloader,
-                                                                       self.transform, self.num_processes))
-        self.sample_generating_process.daemon = False
-        self.sample_generating_process.start()
-
-        self.was_started = True
-
-    def __next__(self):
-        if not self.was_started:
-            self.start()
-        items = []
-        for _ in range(self.batch_size):
-            items.append(self.sample_queue.get())
-        return self.dataloader.join(items)
-
-    def __del__(self):
-        self.sample_generating_process.join()
-
-class ProperMultiThreadedAugmenterv2(object):
-    def __init__(self, dataloader, num_processes, num_cached, batch_size, transform, seeds=None):
-        #raise NotImplementedError("Work in progress, do not use! It does not work")
-        self.transform = transform
-        self.batch_size = batch_size
-        self.num_cached = num_cached
-        self.dataloader = dataloader
-        self.num_processes = num_processes
-        if seeds is None:
-            seeds = [np.random.randint(999999) for i in range(num_processes)]
-        self.seeds = seeds # TODO
-        assert self.dataloader.BATCH_SIZE == 1, "batch size of dataloader must be 1!"
-        self.sample_generating_process = None
-        self.transformed_queue_filler = None
-        self.was_started = False
-        self.deque = deque()
-
-    def start(self):
-        print("started")
-
-        def producer(target_queue, data_loader):
-            try:
-                for item in data_loader:
-                    target_queue.put(item)
-                target_queue.put("end")
-            except KeyboardInterrupt:
-                """print("terminating pool...")
-                pool.terminate()
-                pool.join()"""
-                raise KeyboardInterrupt
-
-
-        self.sample_queue = MPQueue(self.num_cached)
-        self.sample_generating_process = ProcessTerminateOnJoin(target=producer, args=(self.sample_queue, self.dataloader))
-        self.sample_generating_process.daemon = True
-        self.sample_generating_process.start()
-
-        self.was_started = True
-
-        self.adapter = TransformAdapter(self.transform)
-        self.pool = Pool(self.num_processes)
-        for _ in range(self.num_processes):
-            self.deque.append(self.pool.apply_async(self.transform, kwds=self.sample_queue.get()))
-
-    def __next__(self):
-        if not self.was_started:
-            self.start()
-        items = []
-        for _ in range(self.batch_size):
-            items.append(self.deque.popleft().get())
-            print(self.sample_queue.qsize())
-            self.deque.append(self.pool.apply_async(self.transform, kwds=self.sample_queue.get()))
-        return self.dataloader.join(items)
-
-    def __del__(self):
-        self.sample_generating_process.join()
-
-
-class ProperMultiThreadedAugmenterv3(object):
-    def __init__(self, dataloader, num_processes, num_cached, batch_size, transform, seeds=None):
-        #raise NotImplementedError("Work in progress, do not use! It does not work")
-        self.transform = transform
-        self.batch_size = batch_size
-        self.num_cached = num_cached
-        self.dataloader = dataloader
-        self.num_processes = num_processes
-        if seeds is None:
-            seeds = [np.random.randint(999999) for i in range(num_processes)]
-        self.seeds = seeds # TODO
-        assert self.dataloader.BATCH_SIZE == 1, "batch size of dataloader must be 1!"
-        self.transformed_queue_filler = None
-        self.was_started = False
-        self.deque = deque()
-
-    def start(self):
-        print("started")
-
-        self.was_started = True
-
-        self.adapter = TransformAdapter(self.transform)
-        self.pool = Pool(self.num_processes)
-        for _ in range(self.num_processes):
-            self.deque.append(self.pool.apply_async(self.transform, kwds=next(self.dataloader)))
-
-    def __next__(self):
-        if not self.was_started:
-            self.start()
-        items = []
-        for _ in range(self.batch_size):
-            items.append(self.deque.popleft().get())
-            self.deque.append(self.pool.apply_async(self.transform, kwds=next(self.dataloader)))
-        return self.dataloader.join(items)
-
-
-class ProperMultiThreadedAugmenterv4(object):
-    def __init__(self, dataloader, num_processes, num_cached, batch_size, transform, seeds=None):
-        #raise NotImplementedError("Work in progress, do not use! It does not work")
-        self.transform = transform
-        self.batch_size = batch_size
-        self.num_cached = num_cached
-        self.dataloader = dataloader
-        self.num_processes = num_processes
-        if seeds is None:
-            seeds = [np.random.randint(999999) for i in range(num_processes)]
-        self.seeds = seeds # TODO
-        assert self.dataloader.BATCH_SIZE == 1, "batch size of dataloader must be 1!"
-        self.sample_generating_process = None
-        self.transformed_queue_filler = None
-        self.was_started = False
-        self.deque = deque()
-
-    def start(self):
-        print("started")
-
-        def producer(target_queue, data_loader):
-            try:
-                for item in data_loader:
-                    target_queue.put(item)
-                target_queue.put("end")
-            except KeyboardInterrupt:
-                """print("terminating pool...")
-                pool.terminate()
-                pool.join()"""
-                raise KeyboardInterrupt
-
-
-        self.sample_queue = MPQueue(self.num_cached)
-        self.processes = []
-        for _ in range(4):
-            self.sample_generating_process = ProcessTerminateOnJoin(target=producer, args=(self.sample_queue, self.dataloader))
-            self.sample_generating_process.daemon = True
-            self.sample_generating_process.start()
-            self.processes.append(self.sample_generating_process)
-
-        self.was_started = True
-
-        self.adapter = TransformAdapter(self.transform)
-        self.pool = Pool(self.num_processes)
-        for _ in range(self.num_processes):
-            self.deque.append(self.pool.apply_async(self.transform, kwds=self.sample_queue.get()))
-
-    def __next__(self):
-        if not self.was_started:
-            self.start()
-        items = []
-        for _ in range(self.batch_size):
-            items.append(self.deque.popleft().get())
-            print(self.sample_queue.qsize())
-            self.deque.append(self.pool.apply_async(self.transform, kwds=self.sample_queue.get()))
-        return self.dataloader.join(items)
-
-    def __del__(self):
-        [i.join() for i in self.processes]
-
-
-
-class ProperMultiThreadedAugmenterv5(object):
-    def __init__(self, dataloader, num_processes, num_cached, batch_size, transform, seeds=None):
-        #raise NotImplementedError("Work in progress, do not use! It does not work")
-        self.transform = transform
-        self.batch_size = batch_size
-        self.num_cached = num_cached
-        self.dataloader = dataloader
-        self.num_processes = num_processes
-        if seeds is None:
-            seeds = [np.random.randint(999999) for i in range(num_processes)]
-        self.seeds = seeds # TODO
-        assert self.dataloader.BATCH_SIZE == 1, "batch size of dataloader must be 1!"
-        self.sample_generating_process = None
-        self.was_started = False
-
-    def start(self):
-        print("started")
-
-        def producer(target_queue, data_loader):
-            try:
-                for item in data_loader:
-                    target_queue.put(item)
-                target_queue.put("end")
-            except KeyboardInterrupt:
-                """print("terminating pool...")
-                pool.terminate()
-                pool.join()"""
-                raise KeyboardInterrupt
-
-        def transformer(target_queue, source_queue, transform):
+        def transformer(target_queue, source_queue, transform, seed):
+            np.random.seed(seed)
             item = source_queue.get()
             while item != "end":
                 target_queue.put(transform(**item))
                 item = source_queue.get()
-            target_queue.put(item)
+            target_queue.put("end")
 
-        self.sample_queue = MPQueue(self.num_cached)
-        self.transformed_queue = MPQueue(self.num_cached)
-        self.sample_generating_process = ProcessTerminateOnJoin(target=producer, args=(self.sample_queue, self.dataloader))
+        def joiner(transformed_queues, ready_queues, join_method, batch_size):
+            # collects and joins samples to batches
+            stop = False
+            num_queues = len(transformed_queues)
+            ctr = 0
+            num_rdy = len(ready_queues)
+            rdy_ctr = 0
+            while not stop:
+                items = []
+                for _ in range(batch_size):
+                    q = ctr % num_queues
+                    item = transformed_queues[q].get()
+                    ctr += 1
+                    if item == "end":
+                        stop = True
+                        break
+                    items.append(item)
+                if stop:
+                    break
+                else:
+                    joined = join_method(items)
+                    rdy_q = rdy_ctr % num_rdy
+                    ready_queues[rdy_q].put(joined)
+                    rdy_ctr += 1
+            [ready_queue.put("end") for ready_queue in ready_queues]
+
+        self.sample_queues = [MPQueue(self.num_raw_cached) for i in range(self.num_processes)]
+        self.transformed_queues = [MPQueue(self.num_transformed_cached) for i in range(self.num_processes)]
+        self.ready_queues = [MPQueue(2) for i in range(2)]
+
+        self.sample_generating_process = ProcessTerminateOnJoin(target=producer, args=(self.sample_queues, self.dataloader))
         self.sample_generating_process.daemon = True
         self.sample_generating_process.start()
 
+        self.joining_process = ProcessTerminateOnJoin(target=joiner, args=(self.transformed_queues, self.ready_queues, self.batch_joiner, self.batch_size))
+        self.joining_process.daemon = True
+        self.joining_process.start()
+
+        self.q_ctr = 0
+
         self.transformers = []
-        for _ in range(self.num_processes):
-            p = ProcessTerminateOnJoin(target=transformer, args=(self.transformed_queue, self.sample_queue, self.transform))
+        for i in range(self.num_processes):
+            p = ProcessTerminateOnJoin(target=transformer, args=(self.transformed_queues[i], self.sample_queues[i], self.transform, self.seeds[i]))
+            p.daemon = True
             p.start()
             self.transformers.append(p)
 
         self.was_started = True
 
-
     def __next__(self):
         if not self.was_started:
             self.start()
-        items = []
-        for _ in range(self.batch_size):
-            items.append(self.transformed_queue.get())
-            print(self.sample_queue.qsize(), self.transformed_queue.qsize())
-        return self.dataloader.join(items)
+        if self.verbose:
+            print("sample_queues", [i.qsize() for i in self.sample_queues])
+            print("transformed_queues", [i.qsize() for i in self.transformed_queues])
+            print("ready_queues", [i.qsize() for i in self.ready_queues])
+        item = self.ready_queues[self.q_ctr % len(self.ready_queues)].get()
+        self.q_ctr += 1
+        if item == "end":
+            raise StopIteration
+        return item
 
     def __del__(self):
         self.sample_generating_process.join()
+        self.joining_process.join()
         [i.join() for i in self.transformers]
-
-
-class ProperMultiThreadedAugmenterv6(object):
-    def __init__(self, dataloader, num_processes, num_cached, batch_size, transform, seeds=None):
-        #raise NotImplementedError("Work in progress, do not use! It does not work")
-        self.transform = transform
-        self.batch_size = batch_size
-        self.num_cached = num_cached
-        self.dataloader = dataloader
-        self.num_processes = num_processes
-        if seeds is None:
-            seeds = [np.random.randint(999999) for i in range(num_processes)]
-        self.seeds = seeds # TODO
-        assert self.dataloader.BATCH_SIZE == 1, "batch size of dataloader must be 1!"
-        self.sample_generating_process = None
-        self.was_started = False
-
-    def start(self):
-        print("started")
-
-        def producer(target_queue, data_loader):
-            try:
-                for item in data_loader:
-                    target_queue.put(item)
-                target_queue.put("end")
-            except KeyboardInterrupt:
-                """print("terminating pool...")
-                pool.terminate()
-                pool.join()"""
-                raise KeyboardInterrupt
-
-        def transformer(target_queue, source_queue, transform):
-            item = source_queue.get()
-            while item != "end":
-                target_queue.put(transform(**item))
-                item = source_queue.get()
-            target_queue.put(item)
-
-        self.sample_queue = MPQueue(self.num_cached)
-        self.transformed_queue = MPQueue(self.num_cached)
-        self.processes = []
-        for _ in range(8):
-            self.sample_generating_process = ProcessTerminateOnJoin(target=producer, args=(self.sample_queue, self.dataloader))
-            self.sample_generating_process.daemon = True
-            self.sample_generating_process.start()
-            self.processes.append(self.sample_generating_process)
-
-        self.transformers = []
-        for _ in range(self.num_processes):
-            p = ProcessTerminateOnJoin(target=transformer, args=(self.transformed_queue, self.sample_queue, self.transform))
-            p.start()
-            self.transformers.append(p)
-
-        self.was_started = True
-
-
-    def __next__(self):
-        if not self.was_started:
-            self.start()
-        items = []
-        for _ in range(self.batch_size):
-            items.append(self.transformed_queue.get())
-            print(self.sample_queue.qsize(), self.transformed_queue.qsize())
-        return self.dataloader.join(items)
-
-    def __del__(self):
-        [i.join() for i in self.transformers]
-        [i.join() for i in self.processes]
-
-
 
 
 if __name__ == "__main__":
-    class Dataloader(object):
-        def __init__(self):
-            self.BATCH_SIZE = 1
-            self.ctr = 0
-
-        def __next__(self):
-            self.ctr += 1
-            return {"ctr":self.ctr}
-
-        def __iter__(self):
-            return self
-
-        @staticmethod
-        def join(items):
-            return {"ctrs":[i['ctr'] for i in items]}
-
-    class Transform():
-        def __call__(self, **dct):
-            sleep(2)
-            dct['ctr'] /= 10
-            return dct
-
     # ignore this code. this is work in progress
-    from Datasets.Brain_Tumor_450k_new import load_dataset_noCutOff, BatchGenerator3D_random_sampling
-    from batchgenerators.transforms import GaussianBlurTransform
-    dataset = load_dataset_noCutOff()
-    dl = BatchGenerator3D_random_sampling(dataset, 1, None, None)
-    tr = SpatialTransform((128, 128, 128), (64, 64, 64), True, do_rotation=True, do_scale=True)
+    from BraTS2018.dataset_loading.load_dataset import load_dataset
+    from meddec.dataloading.dataset_loading import DataLoader3D
+    import matplotlib.pyplot as plt
+    import os
+    dataset = load_dataset(os.path.join(os.environ['BraTS_2018_BASE'], "BraTS2018"))
+    dl = DataLoader3D(dataset, (128, 128, 128), (64, 64, 64), 2)
+    #tr = GaussianBlurTransform(3)
+    tr = SpatialTransform((128, 128, 128), (64, 64, 64), False, do_rotation=False, do_scale=True, scale=(0.6, 0.60000001))
     from time import time
+    num_batches = 10
+    num_threads = 8
 
-    mt = ProperMultiThreadedAugmenter(dl, 8, 8, 2, tr, None)
-    # warm up
-    warm_up_times_new = []
-    for _ in range(10):
-        a = time()
-        b = next(mt)
-        warm_up_times_new.append(time() - a)
-
-    start = time()
-    times_new = []
-    for _ in range(20):
-        a = time()
-        b = next(mt)
-        times_new.append(time() - a)
-    end = time()
-    time_new = end - start
-
-    dl = BatchGenerator3D_random_sampling(dataset, 2, None, None)
-    mt = MultiThreadedAugmenter(dl, tr, 8, 2)
+    mt = MultiThreadedAugmenter(dl, tr, num_threads, 2)
 
     # warm up
     warum_up_times_old = []
-    for _ in range(10):
+    for _ in range(6):
         a = time()
         b = next(mt)
         warum_up_times_old.append(time() - a)
 
     start = time()
     times_old = []
-    for _ in range(20):
+    for _ in range(num_batches):
         a = time()
         b = next(mt)
         times_old.append(time() - a)
     end = time()
     time_old = end - start
 
-
-    dl = BatchGenerator3D_random_sampling(dataset, 1, None, None)
-    mt = ProperMultiThreadedAugmenterv2(dl, 8, 8, 2, tr, None)
-
-    # warm up
-    warum_up_times_new2 = []
-    for _ in range(10):
-        a = time()
-        b = next(mt)
-        warum_up_times_new2.append(time() - a)
-
-    start = time()
-    times_new2 = []
-    for _ in range(20):
-        a = time()
-        b = next(mt)
-        times_new2.append(time() - a)
-    end = time()
-    time_new2 = end - start
-
-
-    dl = BatchGenerator3D_random_sampling(dataset, 1, None, None)
-    mt = ProperMultiThreadedAugmenterv3(dl, 8, 8, 2, tr, None)
+    dl = DataLoader3D(dataset, (128, 128, 128), (64, 64, 64), 1)
+    mt = AlternativeMultiThreadedAugmenter(dl, num_threads, 3, 6, 2, tr, verbose=True)
 
     # warm up
-    warum_up_times_new3 = []
-    for _ in range(10):
-        a = time()
-        b = next(mt)
-        warum_up_times_new3.append(time() - a)
-
-    start = time()
-    times_new3 = []
-    for _ in range(20):
-        a = time()
-        b = next(mt)
-        times_new3.append(time() - a)
-    end = time()
-    time_new3 = end - start
-
-    dl = BatchGenerator3D_random_sampling(dataset, 1, None, None)
-    mt = ProperMultiThreadedAugmenterv4(dl, 8, 8, 2, tr, None)
-
-    # warm up
-    warum_up_times_new4= []
-    for _ in range(10):
-        a = time()
-        b = next(mt)
-        warum_up_times_new4.append(time() - a)
-
-    start = time()
-    times_new4 = []
-    for _ in range(20):
-        a = time()
-        b = next(mt)
-        times_new4.append(time() - a)
-    end = time()
-    time_new4 = end - start
-
-
-    dl = BatchGenerator3D_random_sampling(dataset, 1, None, None)
-    mt = ProperMultiThreadedAugmenterv5(dl, 8, 8, 2, tr, None)
-
-    # warm up
-    warum_up_times_new5= []
-    for _ in range(10):
+    warum_up_times_new5 = []
+    for _ in range(6):
         a = time()
         b = next(mt)
         warum_up_times_new5.append(time() - a)
 
     start = time()
     times_new5 = []
-    for _ in range(20):
+    for _ in range(num_batches):
         a = time()
         b = next(mt)
         times_new5.append(time() - a)
     end = time()
     time_new5 = end - start
 
-    dl = BatchGenerator3D_random_sampling(dataset, 1, None, None)
-    mt = ProperMultiThreadedAugmenterv6(dl, 8, 8, 2, tr, None)
-
-    # warm up
-    warum_up_times_new6= []
-    for _ in range(10):
-        a = time()
-        b = next(mt)
-        warum_up_times_new6.append(time() - a)
-
-    start = time()
-    times_new6 = []
-    for _ in range(20):
-        a = time()
-        b = next(mt)
-        times_new6.append(time() - a)
-    end = time()
-    time_new6 = end - start
-
 
     plt.ion()
-    plt.plot(range(len(times_new)), times_new, color="b", ls="-")
     plt.plot(range(len(times_old)), times_old, color="r", ls="-")
-    plt.plot(range(len(times_new2)), times_new2, color="g", ls="-")
-    plt.plot(range(len(times_new3)), times_new3, color="yellow", ls="-")
-    plt.plot(range(len(times_new4)), times_new4, color="gray", ls="-")
     plt.plot(range(len(times_new5)), times_new5, color="black", ls="-")
-    plt.plot(range(len(times_new6)), times_new6, color=[1, 0, 1], ls="-")
     plt.title("time per example")
-    plt.legend(["new (dl and mt in background process)", "old", "new2 (dl in bg, pool in main)", "new3 (dl and pool in main)", "new4 (mt dl and pool in main)", "new5 (bg dl and processes for transform)", "new6 (processes dl and processes for transform)"])
+    plt.legend(["old, total: %f s" % time_old, "new, total: %f s" % time_new5])
 
 
