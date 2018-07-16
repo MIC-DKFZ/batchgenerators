@@ -467,14 +467,14 @@ def convert_seg_to_bounding_box_coordinates(seg, class_target, pid, dim):
                 bb_target.append(np.array(p_coords_list))
                 roi_masks.append(np.array(p_roi_masks_list))
                 roi_class_ids.append(np.array(p_roi_class_ids_list))
-                # print("CHECK BBTARGET", bb_target[b], roi_masks[b].shape, roi_class_ids[b], pid[b])
+
             elif class_target[b] == -1:
                 bb_target.append([])
                 roi_masks.append(np.zeros_like(seg[b])[None])
                 roi_class_ids.append(np.array([-1]))
 
             else:
-                print("fail: bb kicked out of image by data augmentation", np.sum(seg!=0), pid[b], class_target)
+                print("fail: no seg in non-empty image", np.sum(seg!=0), pid[b], class_target, seg.shape)
                 bb_target.append([])
                 roi_masks.append(np.zeros_like(seg[b])[None])
                 roi_class_ids.append(np.array([-1]))
