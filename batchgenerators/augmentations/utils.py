@@ -468,7 +468,7 @@ def convert_seg_to_bounding_box_coordinates(seg, class_target, pid, dim, is_vali
                 roi_masks.append(np.array(p_roi_masks_list))
                 roi_class_ids.append(np.array(p_roi_class_ids_list))
 
-            elif class_target[b] == -1 or is_validation:
+            elif class_target[b] == -1 or is_validation or dim == 3:
                 bb_target.append([])
                 roi_masks.append(np.zeros_like(seg[b])[None])
                 roi_class_ids.append(np.array([-1]))
