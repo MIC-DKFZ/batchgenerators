@@ -14,7 +14,7 @@
 
 
 from builtins import object
-
+from warnings import warn
 import numpy as np
 from abc import ABCMeta, abstractmethod
 
@@ -48,6 +48,8 @@ class DataLoaderBase(object):
         __metaclass__ = ABCMeta
         self._data = data
         self.BATCH_SIZE = BATCH_SIZE
+        if num_batches is not None:
+            warn("We currently strongly discourage using num_batches != None! That does not seem to work properly")
         self._num_batches = num_batches
         self._seed = seed
         self._resetted_rng = False
