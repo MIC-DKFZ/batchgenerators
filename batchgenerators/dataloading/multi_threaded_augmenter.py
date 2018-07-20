@@ -22,8 +22,10 @@ from batchgenerators.transforms import SpatialTransform
 standard_library.install_aliases()
 from builtins import range
 from builtins import object
+
 from multiprocessing import Process
 from multiprocessing import Queue as MPQueue
+
 import numpy as np
 import sys
 import logging
@@ -83,8 +85,10 @@ class MultiThreadedAugmenter(object):
             while item == "end":
                 self._end_ctr += 1
                 if self._end_ctr == self.num_processes:
+                    self._end_ctr = 0
+                    self._queue_loop = 0
                     logging.debug("MultiThreadedGenerator: finished data generation")
-                    self._finish()
+                    #self._finish()
                     raise StopIteration
 
                 item = self._queues[self._next_queue()].get()
@@ -100,17 +104,20 @@ class MultiThreadedAugmenter(object):
             self._queue_loop = 0
             self._end_ctr = 0
 
-            def producer(queue, data_loader, transform):
-                for item in data_loader:
-                    if transform is not None:
-                        item = transform(**item)
-                    queue.put(item)
-                queue.put("end")
+            def producer(queue, data_loader, transform, thread_id, seed):
+                np.random.seed(seed)
+                data_loader.set_thread_id(thread_id)
+                while True:
+                    for item in data_loader:
+                        if transform is not None:
+                            item = transform(**item)
+                        queue.put(item)
+                    queue.put("end")
 
             for i in range(self.num_processes):
-                np.random.seed(self.seeds[i])
+                #np.random.seed(self.seeds[i])
                 self._queues.append(MPQueue(self.num_cached_per_queue))
-                self._threads.append(Process(target=producer, args=(self._queues[i], self.generator, self.transform)))
+                self._threads.append(Process(target=producer, args=(self._queues[i], self.generator, self.transform, i, self.seeds[i])))
                 self._threads[-1].daemon = True
                 self._threads[-1].start()
         else:
@@ -304,6 +311,33 @@ class AlternativeMultiThreadedAugmenter(object):
 
 
 if __name__ == "__main__":
+    from batchgenerators.dataloading import DataLoaderBase
+
+    class DummyDL(DataLoaderBase):
+        def __init__(self, num_threads_in_mt=8):
+            super(DummyDL, self).__init__(None, None, None, False)
+            self.num_threads_in_mt = num_threads_in_mt
+            self._data = list(range(1000))
+            self.current_position = 0
+
+        def reset(self):
+            super(DummyDL, self).reset()
+            self.current_position = self.thread_id
+
+        def generate_train_batch(self):
+            idx = self.current_position
+            if idx < len(self._data):
+                self.current_position = idx + self.num_threads_in_mt
+                return self._data[idx]
+            else:
+                raise StopIteration
+
+    dl = DummyDL(num_threads_in_mt=3)
+    mt = MultiThreadedAugmenter(dl, None, 3, 1, None)
+
+
+
+
     # ignore this code. this is work in progress
     from BraTS2018.dataset_loading.load_dataset import load_dataset
     from meddec.dataloading.dataset_loading import DataLoader3D

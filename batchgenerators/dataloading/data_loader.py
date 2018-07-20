@@ -45,6 +45,7 @@ class DataLoaderBase(object):
 
     """
     def __init__(self, data, BATCH_SIZE, num_batches=None, seed=False):
+        warn("DEPRECATION WARNING: This DataLoader will soon be removed. Migrate everything to SlimDataLoaderBase now!")
         __metaclass__ = ABCMeta
         self._data = data
         self.BATCH_SIZE = BATCH_SIZE
@@ -52,26 +53,29 @@ class DataLoaderBase(object):
             warn("We currently strongly discourage using num_batches != None! That does not seem to work properly")
         self._num_batches = num_batches
         self._seed = seed
-        self._resetted_rng = False
-        self._iter_initialized = False
-        self._p = None
+        self._was_initialized = False
         if self._num_batches is None:
             self._num_batches = 1e100
         self._batches_generated = 0
+        self.thread_id = 0
 
-    def _initialize_iter(self):
+    def reset(self):
         if self._seed is not False:
             np.random.seed(self._seed)
-        self._iter_initialized = True
+        self._was_initialized = True
+        self._batches_generated = 0
+
+    def set_thread_id(self, thread_id):
+        self.thread_id = thread_id
 
     def __iter__(self):
         return self
 
     def __next__(self):
-        if not self._iter_initialized:
-            self._initialize_iter()
+        if not self._was_initialized:
+            self.reset()
         if self._batches_generated >= self._num_batches:
-            self._iter_initialized = False
+            self._was_initialized = False
             raise StopIteration
         minibatch = self.generate_train_batch()
         self._batches_generated += 1
@@ -79,9 +83,46 @@ class DataLoaderBase(object):
 
     @abstractmethod
     def generate_train_batch(self):
-        '''override this'''
+        '''override this
+        Generate your batch from self._data .Make sure you generate the correct batch size (self.BATCH_SIZE)
         '''
-        Generate your batch from either self._train_data, self._validation_data or self._test_data. Make sure you
-        generate the correct batch size (self.BATCH_SIZE)
+        pass
+
+
+class SlimDataLoaderBase(object):
+    def __init__(self, data, batch_size, number_of_threads_in_multithreaded=None):
+        """
+        Slim version of DataLoaderBase (which is now deprecated). Only provides very simple functionality.
+
+        You must derive from this class to implement your own DataLoader. You must overrive self.generate_train_batch()
+
+        If you use our MultiThreadedAugmenter you will need to also set and use number_of_threads_in_multithreaded. See
+        multithreaded_dataloading in examples!
+
+        :param data: will be stored in self._data. You can use it to generate your batches in self.generate_train_batch()
+        :param batch_size: will be stored in self.batch_size for use in self.generate_train_batch()
+        :param number_of_threads_in_multithreaded: will be stored in self.number_of_threads_in_multithreaded.
+        None per default. If you wish to iterate over all your training data only once per epoch, you must coordinate
+        your Dataloaders and you will need this information
+        """
+        __metaclass__ = ABCMeta
+        self.number_of_threads_in_multithreaded = number_of_threads_in_multithreaded
+        self._data = data
+        self.batch_size = batch_size
+        self.thread_id = 0
+
+    def set_thread_id(self, thread_id):
+        self.thread_id = thread_id
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return self.generate_train_batch()
+
+    @abstractmethod
+    def generate_train_batch(self):
+        '''override this
+        Generate your batch from self._data .Make sure you generate the correct batch size (self.BATCH_SIZE)
         '''
         pass
