@@ -45,7 +45,7 @@ class DataLoaderBase(object):
 
     """
     def __init__(self, data, BATCH_SIZE, num_batches=None, seed=False):
-        warn("DEPRECATION WARNING: This DataLoader will soon be removed. Migrate everything to SlimDataLoaderBase now!")
+        warn("This DataLoader will soon be removed. Migrate everything to SlimDataLoaderBase now!", DeprecationWarning)
         __metaclass__ = ABCMeta
         self._data = data
         self.BATCH_SIZE = BATCH_SIZE

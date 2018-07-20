@@ -109,3 +109,4 @@ for i in mt:
     batches.append(i)
 print(batches)
 assert len(np.unique(batches)) == 100 and len(batches) == 100
+
