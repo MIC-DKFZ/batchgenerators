@@ -3,7 +3,9 @@ import numpy as np
 """
 Why is is so hard to iterate only once over my entire training dataset when MultiThreadedAugmenter is used?
 This is because MultiThreadedAugmenter will spawn num_threads workers and each worker will hold a copy of the entire
-pipeline, including the DataLoader"""
+pipeline, including the DataLoader. Therefore, if your DataLoader is configured to run over the training data once, but 
+you have 8 threads then what you will be getting from the MultiThreadedAugmenter is an iteration over eight times your 
+training dataset"""
 
 
 """
@@ -46,7 +48,7 @@ for i in mt:
 
 
 """
-You can run the mt as often as you want because it will reset itself before raising StopIteration
+You can run the mt as often as you want because the DataLoader it will reset itself before raising StopIteration
 """
 for i in mt:
     print(i)
@@ -56,7 +58,7 @@ for i in mt:
 
 
 """
-But wait. Isn't it suboptimal dumb to iterate over training data always in the same order? Correct. Try this:
+But wait. Isn't it suboptimal to iterate over training data always in the same order? Correct. Try this:
 """
 
 class DummyDLWithShuffle(DummyDL):
