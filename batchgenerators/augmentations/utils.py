@@ -433,22 +433,20 @@ def general_cc_var_num_channels(img, diff_order=0, mink_norm=1, sigma=1, mask_im
     return white_colors, output_img
 
 
-def convert_seg_to_bounding_box_coordinates(seg, class_target, pid, dim, is_validation=False):
+def convert_seg_to_bounding_box_coordinates(data_dict, dim, is_validation=False):
 
         bb_target = []
         roi_masks = []
-        roi_class_ids = []
-        patient_target = []
+        roi_labels = []
 
-        for b in range(seg.shape[0]):
+        for b in range(data_dict['seg'].shape[0]):
 
             p_coords_list = []
             p_roi_masks_list = []
-            p_roi_class_ids_list = []
-            patient_target.append(np.max(class_target[b]) + 1)
+            p_roi_labels_list = []
 
-            if np.sum(seg[b]!=0) > 0:
-                clusters, n_cands = lb(seg[b])
+            if np.sum(data_dict['seg'][b]!=0) > 0:
+                clusters, n_cands = lb(data_dict['seg'][b])
                 rois = np.array([(clusters == ii) * 1 for ii in range(1, n_cands + 1)])  # separate clusters and concat
                 # rois = rois[:n_max_gt] #cut clutter out to save memory
                 # print("Rois in transformer", rois.shape, pid[b])
@@ -462,24 +460,22 @@ def convert_seg_to_bounding_box_coordinates(seg, class_target, pid, dim, is_vali
 
                     p_coords_list.append(coord_list)
                     p_roi_masks_list.append(r)
-                    p_roi_class_ids_list.append(class_target[b] + 1)
+                    p_roi_labels_list.append(data_dict['class_target'][b] + 1) #include background.
 
                 bb_target.append(np.array(p_coords_list))
                 roi_masks.append(np.array(p_roi_masks_list))
-                roi_class_ids.append(np.array(p_roi_class_ids_list))
+                roi_labels.append(np.array(p_roi_labels_list))
 
-            elif class_target[b] == -1 or is_validation:
-                bb_target.append([])
-                roi_masks.append(np.zeros_like(seg[b])[None])
-                roi_class_ids.append(np.array([-1]))
 
             else:
-                print("fail: no seg in slice during training", np.sum(seg!=0), pid[b], class_target, seg.shape)
+                if data_dict['class_target'][b] > -1 and not is_validation and dim == 2:
+                    print("fail: no seg in slice during training",
+                          np.sum(data_dict['seg']!=0), data_dict['pid'][b], data_dict['class_target'], data_dict['seg'].shape)
                 bb_target.append([])
-                roi_masks.append(np.zeros_like(seg[b])[None])
-                roi_class_ids.append(np.array([-1]))
+                roi_masks.append(np.zeros_like(data_dict['seg'][b])[None])
+                roi_labels.append(np.array([-1]))
 
-        return bb_target, roi_masks, roi_class_ids, np.array(patient_target)
+        return bb_target, roi_masks, roi_labels
 
 
 def transpose_channels(batch):
