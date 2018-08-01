@@ -95,8 +95,15 @@ def uncenter_coords(coords):
     return coords
 
 
-def interpolate_img(img, coords, order=3, mode='nearest', cval=0.0):
-    return map_coordinates(img, coords, order=order, mode=mode, cval=cval)
+def interpolate_img(img, coords, order=3, mode='nearest', cval=0.0, is_seg=False):
+    if is_seg and order != 0:
+        unique_labels = np.unique(img)
+        result = np.zeros([len(unique_labels)] + list(coords.shape[1:]), img.dtype)
+        for i, c in enumerate(unique_labels):
+            result[i] = map_coordinates((img == c).astype(float), coords, order=order, mode=mode, cval=cval)
+        return unique_labels[result.argmax(0)]
+    else:
+        return map_coordinates(img, coords, order=order, mode=mode, cval=cval)
 
 
 def generate_noise(shape, alpha, sigma):

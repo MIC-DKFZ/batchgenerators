@@ -346,7 +346,7 @@ def augment_spatial(data, seg, patch_size, patch_center_dist_from_border=30,
         if seg is not None:
             for channel_id in range(seg.shape[1]):
                 seg_result[sample_id, channel_id] = interpolate_img(seg[sample_id, channel_id], coords, order_seg,
-                                                                    border_mode_seg, cval=border_cval_seg)
+                                                                    border_mode_seg, cval=border_cval_seg, is_seg=True)
     return data_result, seg_result
 
 

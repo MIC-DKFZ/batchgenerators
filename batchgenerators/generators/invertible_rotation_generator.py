@@ -75,7 +75,7 @@ class InvertibleRotationGenerator(object):
                 for channel_id in range(seg.shape[1]):
                     seg[sample_id, channel_id] = interpolate_img(seg[sample_id, channel_id], coords,
                                                                  self.params['order_seg'], self.params['bmode_seg'],
-                                                                 cval=self.params['bcval_seg'])
+                                                                 cval=self.params['bcval_seg'], is_seg=True)
 
         return {'data': data, 'seg': seg}
 
