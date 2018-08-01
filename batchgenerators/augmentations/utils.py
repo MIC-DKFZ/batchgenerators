@@ -103,7 +103,7 @@ def interpolate_img(img, coords, order=3, mode='nearest', cval=0.0, is_seg=False
             result[i] = map_coordinates((img == c).astype(float), coords, order=order, mode=mode, cval=cval)
         return unique_labels[result.argmax(0)]
     else:
-        return map_coordinates(img, coords, order=order, mode=mode, cval=cval)
+        return map_coordinates(img.astype(float), coords, order=order, mode=mode, cval=cval).astype(img.dtype)
 
 
 def generate_noise(shape, alpha, sigma):
