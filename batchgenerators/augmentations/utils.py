@@ -475,14 +475,14 @@ def convert_seg_to_bounding_box_coordinates(data_dict, dim, is_validation=False)
 
 
             else:
-                if data_dict['class_target'][b] > -1 and not is_validation and dim == 2:
-                    print("fail: no seg in slice during training",
-                          np.sum(data_dict['seg']!=0), data_dict['pid'][b], data_dict['class_target'], data_dict['seg'].shape)
+                # if data_dict['class_target'][b] > -1 and not is_validation and dim == 2:
+                #     print("fail: no seg in slice during training",
+                #           np.sum(data_dict['seg']!=0), data_dict['pid'][b], data_dict['class_target'][b], data_dict['seg'].shape)
                 bb_target.append([])
                 roi_masks.append(np.zeros_like(data_dict['seg'][b])[None])
                 roi_labels.append(np.array([-1]))
 
-        return bb_target, roi_masks, roi_labels
+        return np.array(bb_target), np.array(roi_masks), np.array(roi_labels)
 
 
 def transpose_channels(batch):
