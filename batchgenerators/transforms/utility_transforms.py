@@ -104,13 +104,14 @@ class ConvertSegToBoundingBoxCoordinates(AbstractTransform):
     """ Converts segmentation masks into bounding box coordinates. Works only for one object per image
     """
 
-    def __init__(self, dim, is_validation=False):
+    def __init__(self, dim, get_rois_from_seg=False):
         self.dim = dim
-        self.is_validation = is_validation
+        self.get_rois_from_seg = get_rois_from_seg
 
     def __call__(self, **data_dict):
         data_dict['bb_target'], data_dict['roi_masks'], data_dict['roi_labels'] = convert_seg_to_bounding_box_coordinates(
-            data_dict, self.dim, self.is_validation)
+            data_dict, self.dim, self.get_rois_from_seg)
+        data_dict['seg'][data_dict['seg'] > 0 ] = 1 # roi encoded information not needed anymore.
         return data_dict
 
 class MoveSegToDataChannel(AbstractTransform):
