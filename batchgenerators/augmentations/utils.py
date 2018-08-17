@@ -457,7 +457,7 @@ def convert_seg_to_bounding_box_coordinates(data_dict, dim, get_rois_from_seg=Fa
             if np.sum(data_dict['seg'][b]!=0) > 0:
                 if get_rois_from_seg:
                     clusters, n_cands = lb(data_dict['seg'][b])
-                    data_dict['class_target'][b] = [data_dict['class_target'][b] + 1] * n_cands
+                    data_dict['class_target'][b] = [data_dict['class_target'][b]] * n_cands
                 else:
                     n_cands = int(np.max(data_dict['seg'][b]))
 
@@ -475,8 +475,7 @@ def convert_seg_to_bounding_box_coordinates(data_dict, dim, get_rois_from_seg=Fa
 
                         p_coords_list.append(coord_list)
                         p_roi_masks_list.append(r)
-                        # p_roi_labels_list.append(data_dict['class_target'][b] + 1) #include background. TODO BREAST
-                        p_roi_labels_list.append(data_dict['class_target'][b][rix]) #include background.
+                        p_roi_labels_list.append(data_dict['class_target'][b][rix] + 1) #add background class = 0.
 
                 bb_target.append(np.array(p_coords_list))
                 roi_masks.append(np.array(p_roi_masks_list))

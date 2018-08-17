@@ -111,7 +111,9 @@ class ConvertSegToBoundingBoxCoordinates(AbstractTransform):
     def __call__(self, **data_dict):
         data_dict['bb_target'], data_dict['roi_masks'], data_dict['roi_labels'] = convert_seg_to_bounding_box_coordinates(
             data_dict, self.dim, self.get_rois_from_seg)
-        data_dict['seg'][data_dict['seg'] > 0 ] = 1 # roi encoded information not needed anymore.
+        fg_bg_seg = np.copy(data_dict['seg']) # roi encoded information not needed anymore. map to foreground background array.
+        fg_bg_seg[fg_bg_seg > 0 ] = 1
+        data_dict['seg'] = fg_bg_seg
         return data_dict
 
 class MoveSegToDataChannel(AbstractTransform):
