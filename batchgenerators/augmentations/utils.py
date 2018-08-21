@@ -441,7 +441,9 @@ def general_cc_var_num_channels(img, diff_order=0, mink_norm=1, sigma=1, mask_im
     return white_colors, output_img
 
 
-def convert_seg_to_bounding_box_coordinates(data_dict, dim, is_validation=False):
+def convert_seg_to_bounding_box_coordinates(data_dict, dim, get_rois_from_seg=False):
+
+
 
         bb_target = []
         roi_masks = []
@@ -454,21 +456,27 @@ def convert_seg_to_bounding_box_coordinates(data_dict, dim, is_validation=False)
             p_roi_labels_list = []
 
             if np.sum(data_dict['seg'][b]!=0) > 0:
-                clusters, n_cands = lb(data_dict['seg'][b])
-                rois = np.array([(clusters == ii) * 1 for ii in range(1, n_cands + 1)])  # separate clusters and concat
+                if get_rois_from_seg:
+                    clusters, n_cands = lb(data_dict['seg'][b])
+                    data_dict['class_target'][b] = [data_dict['class_target'][b]] * n_cands
+                else:
+                    n_cands = int(np.max(data_dict['seg'][b]))
+
+                rois = np.array([(data_dict['seg'][b] == ii) * 1 for ii in range(1, n_cands + 1)])  # separate clusters and concat
                 # rois = rois[:n_max_gt] #cut clutter out to save memory
                 # print("Rois in transformer", rois.shape, pid[b])
                 for rix, r in enumerate(rois):
-                    seg_ixs = np.argwhere(r != 0)
-                    coord_list = [np.min(seg_ixs[:, 1])-1, np.min(seg_ixs[:, 2])-1, np.max(seg_ixs[:, 1])+1,
-                                     np.max(seg_ixs[:, 2])+1]
-                    if dim == 3:
+                    if np.sum(r !=0) > 0: #check if the lesion survived data augmentation
+                        seg_ixs = np.argwhere(r != 0)
+                        coord_list = [np.min(seg_ixs[:, 1])-1, np.min(seg_ixs[:, 2])-1, np.max(seg_ixs[:, 1])+1,
+                                         np.max(seg_ixs[:, 2])+1]
+                        if dim == 3:
 
-                        coord_list.extend([np.min(seg_ixs[:, 3])-1, np.max(seg_ixs[:, 3])+1])
+                            coord_list.extend([np.min(seg_ixs[:, 3])-1, np.max(seg_ixs[:, 3])+1])
 
-                    p_coords_list.append(coord_list)
-                    p_roi_masks_list.append(r)
-                    p_roi_labels_list.append(data_dict['class_target'][b] + 1) #include background.
+                        p_coords_list.append(coord_list)
+                        p_roi_masks_list.append(r)
+                        p_roi_labels_list.append(data_dict['class_target'][b][rix] + 1) #add background class = 0.
 
                 bb_target.append(np.array(p_coords_list))
                 roi_masks.append(np.array(p_roi_masks_list))
@@ -476,14 +484,15 @@ def convert_seg_to_bounding_box_coordinates(data_dict, dim, is_validation=False)
 
 
             else:
-                # if data_dict['class_target'][b] > -1 and not is_validation and dim == 2:
-                #     print("fail: no seg in slice during training",
-                #           np.sum(data_dict['seg']!=0), data_dict['pid'][b], data_dict['class_target'][b], data_dict['seg'].shape)
                 bb_target.append([])
                 roi_masks.append(np.zeros_like(data_dict['seg'][b])[None])
                 roi_labels.append(np.array([-1]))
 
+        if get_rois_from_seg:
+            data_dict.pop('class_target', None)
+
         return np.array(bb_target), np.array(roi_masks), np.array(roi_labels)
+
 
 
 def transpose_channels(batch):
