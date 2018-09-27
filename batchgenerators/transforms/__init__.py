@@ -1,5 +1,5 @@
 from .abstract_transforms import AbstractTransform, Compose, RndTransform
-from .channel_selection_transforms import DataChannelSelectionTransform, SegChannelSelectionTransform
+from .channel_selection_transforms import DataChannelSelectionTransform, SegChannelSelectionTransform, SegChannelMergeTransform, SegChannelRandomSwapTransform, SegChannelRandomDuplicateTransform
 from .color_transforms import BrightnessMultiplicativeTransform, BrightnessTransform, ContrastAugmentationTransform, \
     FancyColorTransform, GammaTransform, IlluminationTransform
 from .crop_and_pad_transforms import CenterCropSegTransform, CenterCropTransform, PadTransform, RandomCropTransform
@@ -19,4 +19,3 @@ transform_list = [
     ZeroMeanUnitVarianceTransform, ChannelTranslation, MirrorTransform, SpatialTransform, ZoomTransform,
     ConvertSegToOnehotTransform, ListToTensor, NumpyToTensor
 ]
-
