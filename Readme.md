@@ -4,6 +4,14 @@ Research Center (DKFZ) to suit all our deep learning data augmentation needs.
 It is not (yet) perfect, but we feel it is good enough to be shared with the community. If you encounter bug, feel free
 to contact us or open a github issue.
 
+### Important!
+Starting from version 1.14.6 numpy is built against OpenBLAS instead of ATLAS. Mutrix multiplications (as we are using 
+to rotate coordinate systems for data augmentation) now run mutlithreaded on all available threads. This can cause chaos 
+if you are using a multithreaded pipeline, beacause each background worker will spawn a lot of threads to do the 
+matrix multiplication (8 workers on a 16Core machine = up to 256 threads. duh.). There is nothing we (dkfz devs) can do to 
+tackle that problem, but this will only be a real issue in very specific configurations of data augmentation. If you 
+notice unnecessarily high CPU load, downgrade numpy to 1.14.5 to solve the issue (or set OMP_NUM_THREADS=1). 
+Numpy devs are aware of this problem and trying to find a solution (see https://github.com/numpy/numpy/issues/11826#issuecomment-425087772)
 
 ## Suported Augmentations
 We supports a variety of augmentations, all of which are compatible with **2D and 3D input data**! (This is something
