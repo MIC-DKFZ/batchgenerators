@@ -14,6 +14,7 @@
 
 
 from builtins import object
+import warnings
 from warnings import warn
 import numpy as np
 from abc import ABCMeta, abstractmethod
@@ -45,6 +46,7 @@ class DataLoaderBase(object):
 
     """
     def __init__(self, data, BATCH_SIZE, num_batches=None, seed=False):
+        warnings.simplefilter("once", DeprecationWarning)
         warn("This DataLoader will soon be removed. Migrate everything to SlimDataLoaderBase now!", DeprecationWarning)
         __metaclass__ = ABCMeta
         self._data = data
