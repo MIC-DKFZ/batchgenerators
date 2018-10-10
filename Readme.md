@@ -4,6 +4,9 @@ Research Center (DKFZ) to suit all our deep learning data augmentation needs.
 It is not (yet) perfect, but we feel it is good enough to be shared with the community. If you encounter bug, feel free
 to contact us or open a github issue.
 
+## Windows is not (yet) supported!!
+Batchgenerators makes heavy use of python multithreading and python multithreading on windows is a problem. We are trying to find a solution but as of now batchgenerators won't work on Windows!
+
 ### Important!
 Starting from version 1.14.6 numpy is built against OpenBLAS instead of ATLAS. Mutrix multiplications (as we are using 
 to rotate coordinate systems for data augmentation) now run mutlithreaded on all available threads. This can cause chaos 
