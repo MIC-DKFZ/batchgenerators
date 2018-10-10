@@ -523,8 +523,7 @@ def resize_segmentation(segmentation, new_shape, order=3, cval=0):
         reshaped = np.zeros(new_shape, dtype=segmentation.dtype)
 
         for i, c in enumerate(unique_labels):
-            reshaped_multihot = np.round(
-                resize((segmentation == c).astype(float), new_shape, order, mode="constant", cval=cval, clip=True))
+            reshaped_multihot = resize((segmentation == c).astype(float), new_shape, order, mode="constant", cval=cval, clip=True)
             reshaped[reshaped_multihot >= 0.5] = c
         return reshaped
 
