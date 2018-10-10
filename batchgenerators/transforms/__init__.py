@@ -1,12 +1,13 @@
 from .abstract_transforms import AbstractTransform, Compose, RndTransform
-from .channel_selection_transforms import DataChannelSelectionTransform, SegChannelSelectionTransform
+from .channel_selection_transforms import DataChannelSelectionTransform, SegChannelSelectionTransform, SegChannelMergeTransform, SegChannelRandomSwapTransform, SegChannelRandomDuplicateTransform
 from .color_transforms import BrightnessMultiplicativeTransform, BrightnessTransform, ContrastAugmentationTransform, \
     FancyColorTransform, GammaTransform, IlluminationTransform
 from .crop_and_pad_transforms import CenterCropSegTransform, CenterCropTransform, PadTransform, RandomCropTransform
 from .noise_transforms import GaussianBlurTransform, GaussianNoiseTransform
 from .sample_normalization_transforms import CutOffOutliersTransform, RangeTransform, ZeroMeanUnitVarianceTransform
 
-from .utility_transforms import ConvertSegToOnehotTransform, ListToTensor, NumpyToTensor, RenameTransform
+from .utility_transforms import ConvertSegToOnehotTransform, ListToTensor, NumpyToTensor, RenameTransform, \
+    ConvertMultiSegToOnehotTransform, ConvertSegToArgmaxTransform, ConvertMultiSegToArgmaxTransform
 from .spatial_transforms import ChannelTranslation, MirrorTransform, SpatialTransform, ZoomTransform, TransposeAxesTransform
 from .resample_transforms import ResampleTransform
 
@@ -19,4 +20,3 @@ transform_list = [
     ZeroMeanUnitVarianceTransform, ChannelTranslation, MirrorTransform, SpatialTransform, ZoomTransform,
     ConvertSegToOnehotTransform, ListToTensor, NumpyToTensor
 ]
-
