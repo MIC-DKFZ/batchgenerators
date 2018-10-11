@@ -101,19 +101,16 @@ class ConvertSegToOnehotTransform(AbstractTransform):
 
 
 class ConvertSegToBoundingBoxCoordinates(AbstractTransform):
-    """ Converts segmentation masks into bounding box coordinates. Works only for one object per image
+    """ Converts segmentation masks into bounding box coordinates.
     """
 
-    def __init__(self, dim, get_rois_from_seg=False):
+    def __init__(self, dim, get_rois_from_seg_flag=False, class_specific_seg_flag=False):
         self.dim = dim
-        self.get_rois_from_seg = get_rois_from_seg
+        self.get_rois_from_seg_flag = get_rois_from_seg_flag
+        self.class_specific_seg_flag = class_specific_seg_flag
 
     def __call__(self, **data_dict):
-        data_dict['bb_target'], data_dict['roi_masks'], data_dict['roi_labels'] = convert_seg_to_bounding_box_coordinates(
-            data_dict, self.dim, self.get_rois_from_seg)
-        fg_bg_seg = np.copy(data_dict['seg']) # roi encoded information not needed anymore. map to foreground background array.
-        fg_bg_seg[fg_bg_seg > 0 ] = 1
-        data_dict['seg'] = fg_bg_seg
+        data_dict = convert_seg_to_bounding_box_coordinates(data_dict, self.dim, self.get_rois_from_seg_flag, class_specific_seg_flag=self.class_specific_seg_flag)
         return data_dict
 
 class MoveSegToDataChannel(AbstractTransform):
