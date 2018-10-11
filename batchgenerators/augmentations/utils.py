@@ -98,10 +98,11 @@ def uncenter_coords(coords):
 def interpolate_img(img, coords, order=3, mode='nearest', cval=0.0, is_seg=False):
     if is_seg and order != 0:
         unique_labels = np.unique(img)
-        result = np.zeros([len(unique_labels)] + list(coords.shape[1:]), img.dtype)
+        result = np.zeros(coords.shape[1:], img.dtype)
         for i, c in enumerate(unique_labels):
-            result[i] = map_coordinates((img == c).astype(float), coords, order=order, mode=mode, cval=cval)
-        return unique_labels[result.argmax(0)]
+            res_new = map_coordinates((img == c).astype(float), coords, order=order, mode=mode, cval=cval)
+            result[res_new >= 0.5] = c
+        return result
     else:
         return map_coordinates(img.astype(float), coords, order=order, mode=mode, cval=cval).astype(img.dtype)
 
@@ -534,12 +535,12 @@ def resize_segmentation(segmentation, new_shape, order=3, cval=0):
     if order == 0:
         return resize(segmentation, new_shape, order, mode="constant", cval=cval, clip=True).astype(tpe)
     else:
-        reshaped_multihot = np.zeros([len(unique_labels)] + list(new_shape), dtype=float)
+        reshaped = np.zeros(new_shape, dtype=segmentation.dtype)
+
         for i, c in enumerate(unique_labels):
-            reshaped_multihot[i] = np.round(
-                resize((segmentation == c).astype(float), new_shape, order, mode="constant", cval=cval, clip=True))
-        reshaped = unique_labels[np.argmax(reshaped_multihot, 0)].astype(segmentation.dtype)
-        return reshaped.astype(tpe)
+            reshaped_multihot = resize((segmentation == c).astype(float), new_shape, order, mode="constant", cval=cval, clip=True)
+            reshaped[reshaped_multihot >= 0.5] = c
+        return reshaped
 
 
 def resize_softmax_output(softmax_output, new_shape, order=3):

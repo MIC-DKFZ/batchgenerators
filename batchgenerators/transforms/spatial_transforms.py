@@ -172,8 +172,7 @@ class SpatialTransform(AbstractTransform):
 
         do_scale (bool): Whether or not to apply scaling
 
-        scale (tuple of float): scale range ; scale is randomly sampled from interval.
-        Scale < 1 will zoom in, scale > 1 will zoom out! Example: Scale=0.2 means zooming in by factor 5
+        scale (tuple of float): scale range ; scale is randomly sampled from interval
 
         border_mode_data: How to treat border pixels in data? see scipy.ndimage.map_coordinates
 
@@ -196,7 +195,10 @@ class SpatialTransform(AbstractTransform):
                  do_elastic_deform=True, alpha=(0., 1000.), sigma=(10., 13.),
                  do_rotation=True, angle_x=(0, 2 * np.pi), angle_y=(0, 2 * np.pi), angle_z=(0, 2 * np.pi),
                  do_scale=True, scale=(0.75, 1.25), border_mode_data='nearest', border_cval_data=0, order_data=3,
-                 border_mode_seg='constant', border_cval_seg=0, order_seg=0, random_crop=True, data_key="data", label_key="seg"):
+                 border_mode_seg='constant', border_cval_seg=0, order_seg=0, random_crop=True, data_key="data", label_key="seg", p_el_per_sample=0.2, p_scale_per_sample=0.2, p_rot_per_sample=0.2):
+        self.p_rot_per_sample = p_rot_per_sample
+        self.p_scale_per_sample = p_scale_per_sample
+        self.p_el_per_sample = p_el_per_sample
         self.data_key = data_key
         self.label_key = label_key
         self.patch_size = patch_size
@@ -240,7 +242,9 @@ class SpatialTransform(AbstractTransform):
                                   border_mode_data=self.border_mode_data,
                                   border_cval_data=self.border_cval_data, order_data=self.order_data,
                                   border_mode_seg=self.border_mode_seg, border_cval_seg=self.border_cval_seg,
-                                  order_seg=self.order_seg, random_crop=self.random_crop)
+                                  order_seg=self.order_seg, random_crop=self.random_crop,
+                                  p_el_per_sample=self.p_el_per_sample, p_scale_per_sample=self.p_scale_per_sample,
+                                  p_rot_per_sample=self.p_rot_per_sample)
 
         data_dict[self.data_key] = ret_val[0]
         if seg is not None:

@@ -20,6 +20,8 @@ from batchgenerators.augmentations.utils import create_zero_centered_coordinate_
     interpolate_img, \
     rotate_coords_2d, rotate_coords_3d, scale_coords, resize_segmentation
 from skimage.transform import resize
+from batchgenerators.augmentations.crop_and_pad_augmentations import random_crop as random_crop_aug
+from batchgenerators.augmentations.crop_and_pad_augmentations import center_crop as center_crop_aug
 
 
 def augment_resize(data, target_size, order=3, order_seg=1, cval_seg=0, seg=None, concatenate_list=False):
@@ -285,7 +287,8 @@ def augment_spatial(data, seg, patch_size, patch_center_dist_from_border=30,
                     do_elastic_deform=True, alpha=(0., 1000.), sigma=(10., 13.),
                     do_rotation=True, angle_x=(0, 2 * np.pi), angle_y=(0, 2 * np.pi), angle_z=(0, 2 * np.pi),
                     do_scale=True, scale=(0.75, 1.25), border_mode_data='nearest', border_cval_data=0, order_data=3,
-                    border_mode_seg='constant', border_cval_seg=0, order_seg=0, random_crop=True):
+                    border_mode_seg='constant', border_cval_seg=0, order_seg=0, random_crop=True, p_el_per_sample=0.2,
+                    p_scale_per_sample=0.2, p_rot_per_sample=0.2):
     dim = len(patch_size)
     seg_result = None
     if seg is not None:
@@ -305,11 +308,13 @@ def augment_spatial(data, seg, patch_size, patch_center_dist_from_border=30,
         patch_center_dist_from_border = dim * [patch_center_dist_from_border]
     for sample_id in range(data.shape[0]):
         coords = create_zero_centered_coordinate_mesh(patch_size)
-        if do_elastic_deform:
+        modified_coords = False
+        if np.random.uniform() < p_el_per_sample and do_elastic_deform:
             a = np.random.uniform(alpha[0], alpha[1])
             s = np.random.uniform(sigma[0], sigma[1])
             coords = elastic_deform_coordinates(coords, a, s)
-        if do_rotation:
+            modified_coords = True
+        if np.random.uniform() < p_rot_per_sample and do_rotation:
             if angle_x[0] == angle_x[1]:
                 a_x = angle_x[0]
             else:
@@ -326,27 +331,37 @@ def augment_spatial(data, seg, patch_size, patch_center_dist_from_border=30,
                 coords = rotate_coords_3d(coords, a_x, a_y, a_z)
             else:
                 coords = rotate_coords_2d(coords, a_x)
-        if do_scale:
+            modified_coords = True
+        if np.random.uniform() < p_scale_per_sample and do_scale:
             if np.random.random() < 0.5 and scale[0] < 1:
                 sc = np.random.uniform(scale[0], 1)
             else:
                 sc = np.random.uniform(max(scale[0], 1), scale[1])
             coords = scale_coords(coords, sc)
+            modified_coords = True
         # now find a nice center location
-        for d in range(dim):
+        if modified_coords:
+            for d in range(dim):
+                if random_crop:
+                    ctr = np.random.uniform(patch_center_dist_from_border[d],
+                                            data.shape[d + 2] - patch_center_dist_from_border[d])
+                else:
+                    ctr = int(np.round(data.shape[d + 2] / 2.))
+                coords[d] += ctr
+            for channel_id in range(data.shape[1]):
+                data_result[sample_id, channel_id] = interpolate_img(data[sample_id, channel_id], coords, order_data,
+                                                                     border_mode_data, cval=border_cval_data)
+            if seg is not None:
+                for channel_id in range(seg.shape[1]):
+                    seg_result[sample_id, channel_id] = interpolate_img(seg[sample_id, channel_id], coords, order_seg,
+                                                                        border_mode_seg, cval=border_cval_seg, is_seg=True)
+        else:
             if random_crop:
-                ctr = np.random.uniform(patch_center_dist_from_border[d],
-                                        data.shape[d + 2] - patch_center_dist_from_border[d])
+                d, s = random_crop_aug(data[sample_id:sample_id + 1], seg[sample_id:sample_id + 1], patch_size, patch_center_dist_from_border)
             else:
-                ctr = int(np.round(data.shape[d + 2] / 2.))
-            coords[d] += ctr
-        for channel_id in range(data.shape[1]):
-            data_result[sample_id, channel_id] = interpolate_img(data[sample_id, channel_id], coords, order_data,
-                                                                 border_mode_data, cval=border_cval_data)
-        if seg is not None:
-            for channel_id in range(seg.shape[1]):
-                seg_result[sample_id, channel_id] = interpolate_img(seg[sample_id, channel_id], coords, order_seg,
-                                                                    border_mode_seg, cval=border_cval_seg, is_seg=True)
+                d, s = center_crop_aug(data[sample_id:sample_id + 1], patch_size, seg[sample_id:sample_id + 1])
+            data_result[sample_id] = d[0]
+            seg_result[sample_id] = s[0]
     return data_result, seg_result
 
 

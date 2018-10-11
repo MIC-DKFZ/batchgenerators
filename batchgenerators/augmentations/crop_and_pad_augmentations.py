@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from builtins import range
+from warnings import warn
 
 import numpy as np
 
@@ -128,21 +129,19 @@ def center_crop_seg(seg, output_size):
 ###
 
 def get_rnd_vals(crop_size, data_shape, margins):
-    if crop_size[0] < data_shape[2]:
-        lb_x = np.random.randint(margins[0], data_shape[2] - crop_size[0] - margins[0])
-    elif crop_size[0] == data_shape[2]:
-        lb_x = 0
-    else:
-        raise ValueError("crop_size[0] must be smaller or equal to the images x dimension")
-
-    if crop_size[1] < data_shape[3]:
-        lb_y = np.random.randint(margins[1], data_shape[3] - crop_size[1] - margins[1])
-    elif crop_size[1] == data_shape[3]:
-        lb_y = 0
-    else:
-        raise ValueError("crop_size[1] must be smaller or equal to the images y dimension")
-
-    return lb_x, lb_y
+    lbs = []
+    for i in range(len(data_shape) - 2):
+        if crop_size[i] < data_shape[i + 2]:
+            if data_shape[i+2] - crop_size[i] - margins[i] > margins[i]:
+                lbs.append(np.random.randint(margins[i], data_shape[i+2] - crop_size[i] - margins[i]))
+            else:
+                warn("Random crop is falling back to center crop because the crop along with the dasired margin does "
+                     "not fit the data. data: %s, crop_size: %s, margin: %s" % (str(data_shape), str(crop_size),
+                                                                                str(margins)))
+                lbs.append((data_shape[i+2] - crop_size[i]) // 2)
+        else:
+            raise RuntimeError("Crop_size > data_shape. data: %s, crop: %s" % (str(data_shape), str(crop_size)))
+    return lbs
 
 
 def random_crop(data, seg=None, crop_size=128, margins=[0, 0, 0]):
@@ -172,51 +171,39 @@ def random_crop(data, seg=None, crop_size=128, margins=[0, 0, 0]):
         assert len(crop_size) == len(
             data_shape) - 2, "If you provide a list/tuple as center crop make sure it has the same dimension as your data (2d/3d)"
 
-    lb_x, lb_y = get_rnd_vals(crop_size, data_shape, margins)
+    lbs = get_rnd_vals(crop_size, data_shape, margins)
 
     if len(data_shape) == 4:
         if not is_list:
-            data_return = data[:, :, lb_x:lb_x + crop_size[0], lb_y:lb_y + crop_size[1]]
+            data_return = data[:, :, lbs[0]:lbs[0] + crop_size[0], lbs[1]:lbs[1] + crop_size[1]]
             if seg is not None:
-                seg_return = seg[:, :, lb_x:lb_x + crop_size[0], lb_y:lb_y + crop_size[1]]
+                seg_return = seg[:, :, lbs[0]:lbs[0] + crop_size[0], lbs[1]:lbs[1] + crop_size[1]]
         else:
             data_return = np.zeros([data_shape[0], data_shape[1]] + list(crop_size), dtype=data[0].dtype)
             if seg is not None:
                 seg_return = np.zeros([seg_shape[0], seg_shape[1]] + list(crop_size), dtype=data[0].dtype)
             for i, data_smpl in enumerate(data):
-                lb_x, lb_y = get_rnd_vals(crop_size, tuple([1] + list(data_smpl.shape)), margins)
-                data_return[i,] = data_smpl[:, lb_x:lb_x + crop_size[0], lb_y:lb_y + crop_size[1]]
+                lbs = get_rnd_vals(crop_size, tuple([1] + list(data_smpl.shape)), margins)
+                data_return[i,] = data_smpl[:, lbs[0]:lbs[0] + crop_size[0], lbs[1]:lbs[1] + crop_size[1]]
                 if seg is not None:
-                    seg_return[i,] = seg[i][:, lb_x:lb_x + crop_size[0], lb_y:lb_y + crop_size[1]]
+                    seg_return[i,] = seg[i][:, lbs[0]:lbs[0] + crop_size[0], lbs[1]:lbs[1] + crop_size[1]]
     elif len(data_shape) == 5:
         if not is_list:
-            if crop_size[2] < data_shape[4]:
-                lb_z = np.random.randint(margins[2], data_shape[4] - crop_size[2] - margins[2])
-            elif crop_size[2] == data_shape[4]:
-                lb_z = 0
-            else:
-                raise ValueError("crop_size[2] must be smaller or equal to the images z dimension")
-            data_return = data[:, :, lb_x:lb_x + crop_size[0], lb_y:lb_y + crop_size[1], lb_z:lb_z + crop_size[2]]
+            data_return = data[:, :, lbs[0]:lbs[0] + crop_size[0], lbs[1]:lbs[1] + crop_size[1], lbs[2]:lbs[2] + crop_size[2]]
             if seg is not None:
-                seg_return = seg[:, :, lb_x:lb_x + crop_size[0], lb_y:lb_y + crop_size[1], lb_z:lb_z + crop_size[2]]
+                seg_return = seg[:, :, lbs[0]:lbs[0] + crop_size[0], lbs[1]:lbs[1] + crop_size[1], lbs[2]:lbs[2] + crop_size[2]]
         else:
             data_return = np.zeros([data_shape[0], data_shape[1]] + list(crop_size), dtype=data[0].dtype)
             if seg is not None:
                 seg_return = np.zeros([seg_shape[0], seg_shape[1]] + list(crop_size), dtype=data[0].dtype)
 
             for i, data_smpl in enumerate(data):
-                if crop_size[2] < data_smpl.shape[3]:
-                    lb_z = np.random.randint(margins[2], data_smpl.shape[3] - crop_size[2] - margins[2])
-                elif crop_size[2] == data_smpl.shape[3]:
-                    lb_z = 0
-                else:
-                    raise ValueError("crop_size[2] must be smaller or equal to the images z dimension")
-                lb_x, lb_y = get_rnd_vals(crop_size, tuple([1] + list(data_smpl.shape)), margins)
-                data_return[i,] = data_smpl[:, lb_x:lb_x + crop_size[0], lb_y:lb_y + crop_size[1],
-                                  lb_z:lb_z + crop_size[2]]
+                lbs = get_rnd_vals(crop_size, tuple([1] + list(data_smpl.shape)), margins)
+                data_return[i,] = data_smpl[:, lbs[0]:lbs[0] + crop_size[0], lbs[1]:lbs[1] + crop_size[1],
+                                  lbs[2]:lbs[2] + crop_size[2]]
                 if seg is not None:
-                    seg_return[i,] = seg[i][:, lb_x:lb_x + crop_size[0], lb_y:lb_y + crop_size[1],
-                                     lb_z:lb_z + crop_size[2]]
+                    seg_return[i,] = seg[i][:, lbs[0]:lbs[0] + crop_size[0], lbs[1]:lbs[1] + crop_size[1],
+                                     lbs[2]:lbs[2] + crop_size[2]]
     else:
         raise ValueError("Invalid data/seg dimension")
     return data_return, seg_return

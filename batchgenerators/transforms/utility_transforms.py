@@ -100,6 +100,97 @@ class ConvertSegToOnehotTransform(AbstractTransform):
         return data_dict
 
 
+class ConvertMultiSegToOnehotTransform(AbstractTransform):
+    """Regular onehot conversion, but for each channel in the input seg."""
+
+    def __init__(self, classes):
+        self.classes = classes
+
+    def __call__(self, **data_dict):
+        seg = data_dict.get("seg")
+        if seg is not None:
+            new_seg = np.zeros([seg.shape[0], len(self.classes) * seg.shape[1]] + list(seg.shape[2:]), dtype=seg.dtype)
+            for b in range(seg.shape[0]):
+                for c in range(seg.shape[1]):
+                    new_seg[b, c*len(self.classes):(c+1)*len(self.classes)] = convert_seg_image_to_one_hot_encoding(seg[b, c], self.classes)
+            data_dict["seg"] = new_seg
+        else:
+            from warnings import warn
+            warn("calling ConvertMultiSegToOnehotTransform but there is no segmentation")
+
+        return data_dict
+
+
+class ConvertSegToArgmaxTransform(AbstractTransform):
+    """Apply argmax to segmentation. Intended to be used with onehot segmentations.
+
+    Args:
+        labels (list or tuple for int): Label values corresponding to onehot indices. Assumed to be sorted.
+        keepdim (bool): Whether to keep the reduced axis with size 1
+    """
+
+    def __init__(self, labels=None, keepdim=True):
+        self.keepdim = keepdim
+        self.labels = labels
+
+    def __call__(self, **data_dict):
+        seg = data_dict.get("seg")
+        if seg is not None:
+            n_labels = seg.shape[1]
+            seg = np.argmax(seg, 1)
+            if self.keepdim:
+                seg = np.expand_dims(seg, 1)
+            if self.labels is not None:
+                if list(self.labels) != list(range(n_labels)):
+                    for index, value in enumerate(reversed(self.labels)):
+                        index = n_labels - index - 1
+                        seg[seg == index] = value
+            data_dict["seg"] = seg
+        else:
+            from warnings import warn
+            warn("Calling ConvertSegToArgmaxTransform but there is no segmentation")
+
+        return data_dict
+
+
+class ConvertMultiSegToArgmaxTransform(AbstractTransform):
+    """Apply argmax to segmentation. This is designed to reduce a onehot seg to one with multiple channels.
+
+    Args:
+        output_channels (int): Output segmentation will have this many channels.
+            It is required that output_channels evenly divides the number of channels in the input.
+        labels (list or tuple for int): Label values corresponding to onehot indices. Assumed to be sorted.
+    """
+
+    def __init__(self, output_channels=1, labels=None):
+        self.output_channels = output_channels
+        self.labels = labels
+
+    def __call__(self, **data_dict):
+        seg = data_dict.get("seg")
+        if seg is not None:
+            if not seg.shape[1] % self.output_channels == 0:
+                from warnings import warn
+                warn("Calling ConvertMultiSegToArgmaxTransform but number of input channels {} cannot be divided into {} output channels.".format(seg.shape[1], self.output_channels))
+            n_labels = seg.shape[1] // self.output_channels
+            target_size = list(seg.shape)
+            target_size[1] = self.output_channels
+            output = np.zeros(target_size, dtype=seg.dtype)
+            for i in range(self.output_channels):
+                output[:, i] = np.argmax(seg[:, i*n_labels:(i+1)*n_labels], 1)
+            if self.labels is not None:
+                if list(self.labels) != list(range(n_labels)):
+                    for index, value in enumerate(reversed(self.labels)):
+                        index = n_labels - index - 1
+                        output[output == index] = value
+            data_dict["seg"] = output
+        else:
+            from warnings import warn
+            warn("Calling ConvertMultiSegToArgmaxTransform but there is no segmentation")
+
+        return data_dict
+
+
 class ConvertSegToBoundingBoxCoordinates(AbstractTransform):
     """ Converts segmentation masks into bounding box coordinates.
     """
