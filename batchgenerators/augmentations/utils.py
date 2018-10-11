@@ -487,7 +487,6 @@ def convert_seg_to_bounding_box_coordinates(data_dict, dim, get_rois_from_seg_fl
 
                     if class_specific_seg_flag:
                         out_seg[b][data_dict['seg'][b] == rix + 1] = data_dict['class_target'][b][rix] + 1
-                        assert data_dict['class_target'][b][rix] < 2, [data_dict['class_target'], data_dict['pid']]
 
                 if not class_specific_seg_flag:
                     out_seg[b][data_dict['seg'][b] > 0] = 1
@@ -509,7 +508,6 @@ def convert_seg_to_bounding_box_coordinates(data_dict, dim, get_rois_from_seg_fl
         data_dict['roi_masks'] = np.array(roi_masks)
         data_dict['roi_labels'] = np.array(roi_labels)
         data_dict['seg'] = out_seg
-        assert np.max(out_seg) <= 2, [data_dict['pid'], data_dict['roi_labels']]
         return data_dict
 
 
