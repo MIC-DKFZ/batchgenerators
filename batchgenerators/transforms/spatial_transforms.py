@@ -21,7 +21,7 @@ import numpy as np
 
 
 class ZoomTransform(AbstractTransform):
-    def __init__(self, zoom_factors=1, order=3, order_seg=1, cval_seg=0, data_key="data", label_key="seg"):
+    def __init__(self, zoom_factors=1, order=3, order_seg=1, cval_seg=0, concatenate_list=False, data_key="data", label_key="seg"):
         """
         Zooms 'data' (and 'seg') by zoom_factors
         :param zoom_factors: int or list/tuple of int
@@ -36,6 +36,7 @@ class ZoomTransform(AbstractTransform):
         :param label_key:
 
         """
+        self.concatenate_list = concatenate_list
         self.cval_seg = cval_seg
         self.order_seg = order_seg
         self.data_key = data_key
@@ -47,13 +48,37 @@ class ZoomTransform(AbstractTransform):
         data = data_dict.get(self.data_key)
         seg = data_dict.get(self.label_key)
 
-        ret_val = augment_zoom(data=data, seg=seg, zoom_factors=self.zoom_factors, order=self.order, order_seg=self.order_seg, cval_seg=self.cval_seg)
+        if isinstance(data, np.ndarray):
+            concatenate = True
+        else:
+            concatenate = self.concatenate_list
 
-        data_dict[self.data_key] = ret_val[0]
         if seg is not None:
-            data_dict[self.label_key] = ret_val[1]
-        return data_dict
+            if isinstance(seg, np.ndarray):
+                concatenate_seg = True
+            else:
+                concatenate_seg = self.concatenate_list
+        else:
+            concatenate_seg = None
 
+        results = []
+        for b in data.shape[0]:
+            sample_seg = None
+            if seg is not None:
+                sample_seg = seg[b]
+            res_data, res_seg = augment_zoom(data[b], sample_seg, self.zoom_factors, self.order, self.order_seg, self.cval_seg)
+            results.append([(res_data, res_seg)])
+
+        if concatenate:
+            data = np.vstack([i[0][None] for i in results])
+
+        if concatenate_seg is not None and concatenate_seg:
+            seg = np.vstack([i[1][None] for i in results])
+
+        data_dict[self.data_key] = data
+        if seg is not None:
+            data_dict[self.label_key] = seg
+        return data_dict
 
 class ResizeTransform(AbstractTransform):
 

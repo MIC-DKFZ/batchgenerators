@@ -55,7 +55,7 @@ def augment_resize(sample_data, sample_seg, target_size, order=3, order_seg=1, c
     return sample_data, sample_seg
 
 
-def augment_zoom(data, zoom_factors, order=3, order_seg=1, cval_seg=0, seg=None, concatenate_list=False):
+def augment_zoom(sample_data, sample_seg, zoom_factors, order=3, order_seg=1, cval_seg=0):
     """
     zooms data (and seg) by factor zoom_factors
     :param data: np.ndarray or list/tuple of np.ndarrays, must be (b, c, x, y(, z))) (if list/tuple then each entry
@@ -70,85 +70,23 @@ def augment_zoom(data, zoom_factors, order=3, order_seg=1, cval_seg=0, seg=None,
     concatenated into one large ndarray (once again b, c, x, y(, z))
     :return:
     """
-    if isinstance(data, np.ndarray):
-        is_list = False
-    elif isinstance(data, (list, tuple)):
-        is_list = True
-        assert len(data) > 0 and all([isinstance(i, np.ndarray) for i in data])
+
+    dimensionality = len(sample_data.shape) - 2
+    shape = np.array(sample_data.shape[2:])
+    if not isinstance(zoom_factors, (list, tuple)):
+        zoom_factors_here = np.array([zoom_factors] * dimensionality)
     else:
-        raise TypeError("Data has to be either a numpy array or a list")
+        assert len(zoom_factors) == dimensionality, "If you give a tuple/list as target size, make sure it has " \
+                                                    "the same dimensionality as data!"
+        zoom_factors_here = np.array(zoom_factors)
+    target_shape_here = np.round(shape * zoom_factors_here).astype(int)
 
-    if seg is not None:
-        if is_list:
-            assert isinstance(seg, (list, tuple)), "if data is list/tuple then seg must be, too"
-            assert len(seg) > 0 and all([isinstance(i, np.ndarray) for i in seg])
-        else:
-            assert isinstance(seg, np.ndarray)
+    sample_data = resize_multichannel_image(sample_data, target_shape_here, order)
 
-    if not is_list:
-        data = [data]
-        if seg is not None:
-            seg = [seg]
-        concatenate_list = True
+    if sample_seg is not None:
+        sample_seg = resize_segmentation(sample_seg, target_shape_here, order_seg, cval_seg)
 
-    result_data = []
-    for i in range(len(data)):
-        dimensionality = len(data[i].shape) - 2
-        shape = np.array(data[i].shape[2:])
-        if not isinstance(zoom_factors, (list, tuple)):
-            zoom_factors_here = np.array([zoom_factors] * dimensionality)
-        else:
-            assert len(zoom_factors) == dimensionality, "If you give a tuple/list as target size, make sure it has " \
-                                                        "the same dimensionality as data!"
-            zoom_factors_here = np.array(zoom_factors)
-        target_shape_here = np.round(shape * zoom_factors_here).astype(int)
-
-        # resize only supports 3d images. And it makes sense to treat each color channel of each sample separately
-        result_this_data = []
-        for b in range(data[i].shape[0]):
-            result_this_sample = []
-            for c in range(data[i].shape[1]):
-                result_this_sample.append(
-                    resize(data[i][b, c].astype(float), target_shape_here, order).astype(data[i].dtype)[None])
-            result_this_sample = np.vstack(result_this_sample)
-            result_this_data.append(result_this_sample[None])
-        result_this_data = np.vstack(result_this_data)
-        result_data.append(result_this_data)
-
-    if concatenate_list:
-        result_data = np.vstack(result_data)
-
-    if seg is not None:
-        result_seg = []
-        for i in range(len(seg)):
-            dimensionality = len(seg[i].shape) - 2
-            shape = np.array(seg[i].shape[2:])
-            if not isinstance(zoom_factors, (list, tuple)):
-                zoom_factors_here = np.array([zoom_factors] * dimensionality)
-            else:
-                assert len(zoom_factors) == dimensionality, "If you give a tuple/list as target size, make sure it has " \
-                                                            "the same dimensionality as seg!"
-                zoom_factors_here = np.array(zoom_factors)
-            target_shape_here = np.round(shape * zoom_factors_here).astype(int)
-
-            # resize only supports 3d images. And it makes sense to treat each color channel of each sample separately
-            result_this_seg = []
-            for b in range(seg[i].shape[0]):
-                result_this_sample = []
-                for c in range(seg[i].shape[1]):
-                    result_this_sample.append(
-                        resize_segmentation(seg[i][b, c].astype(float), target_shape_here, order_seg, cval_seg).astype(seg[i].dtype)[None])
-                result_this_sample = np.vstack(result_this_sample)
-                result_this_seg.append(result_this_sample[None])
-            result_this_seg = np.vstack(result_this_seg)
-            result_seg.append(result_this_seg)
-
-        if concatenate_list:
-            result_seg = np.vstack(result_seg)
-    else:
-        result_seg = None
-
-    return result_data, result_seg
+    return sample_data, sample_seg
 
 
 def augment_mirroring(data, seg=None, axes=(2, 3, 4)):
