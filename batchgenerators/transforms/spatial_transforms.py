@@ -84,13 +84,36 @@ class ResizeTransform(AbstractTransform):
         data = data_dict.get(self.data_key)
         seg = data_dict.get(self.label_key)
 
-        ret_val = augment_resize(data=data, seg=seg, target_size=self.target_size, order=self.order,
-                                 order_seg=self.order_seg, cval_seg=self.cval_seg,
-                                 concatenate_list=self.concatenate_list)
+        if isinstance(data, np.ndarray):
+            concatenate = True
+        else:
+            concatenate = self.concatenate_list
 
-        data_dict[self.data_key] = ret_val[0]
         if seg is not None:
-            data_dict[self.label_key] = ret_val[1]
+            if isinstance(seg, np.ndarray):
+                concatenate_seg = True
+            else:
+                concatenate_seg = self.concatenate_list
+        else:
+            concatenate_seg = None
+
+        results = []
+        for b in data.shape[0]:
+            sample_seg = None
+            if seg is not None:
+                sample_seg = seg[b]
+            res_data, res_seg = augment_resize(data[b], sample_seg, self.target_size, self.order, self.order_seg, self.cval_seg)
+            results.append([(res_data, res_seg)])
+
+        if concatenate:
+            data = np.vstack([i[0][None] for i in results])
+
+        if concatenate_seg is not None and concatenate_seg:
+            seg = np.vstack([i[1][None] for i in results])
+
+        data_dict[self.data_key] = data
+        if seg is not None:
+            data_dict[self.label_key] = seg
         return data_dict
 
 

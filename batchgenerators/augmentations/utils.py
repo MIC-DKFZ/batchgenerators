@@ -545,20 +545,20 @@ def resize_segmentation(segmentation, new_shape, order=3, cval=0):
         return reshaped
 
 
-def resize_softmax_output(softmax_output, new_shape, order=3):
+def resize_multichannel_image(multichannel_image, new_shape, order=3):
     '''
-    Resizes softmax output. Resizes each channel in c separately and fuses results back together
+    Resizes multichannel_image. Resizes each channel in c separately and fuses results back together
 
-    :param softmax_output: c x x x y x z
-    :param new_shape: x x y x z
+    :param multichannel_image: c x x x y (x z)
+    :param new_shape: x x y (x z)
     :param order:
     :return:
     '''
-    tpe = softmax_output.dtype
-    new_shp = [softmax_output.shape[0]] + list(new_shape)
-    result = np.zeros(new_shp, dtype=softmax_output.dtype)
-    for i in range(softmax_output.shape[0]):
-        result[i] = resize(softmax_output[i].astype(float), new_shape, order, "constant", 0, True)
+    tpe = multichannel_image.dtype
+    new_shp = [multichannel_image.shape[0]] + list(new_shape)
+    result = np.zeros(new_shp, dtype=multichannel_image.dtype)
+    for i in range(multichannel_image.shape[0]):
+        result[i] = resize(multichannel_image[i].astype(float), new_shape, order, "constant", 0, True)
     return result.astype(tpe)
 
 
