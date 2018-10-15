@@ -31,14 +31,13 @@ def augment_rician_noise(data, noise_variance=(0, 0.1)):
     return data
 
 
-def augment_gaussian_noise(data, noise_variance=(0, 0.1)):
-    for sample_idx in range(data.shape[0]):
-        if noise_variance[0] == noise_variance[1]:
-            variance = noise_variance[0]
-        else:
-            variance = random.uniform(noise_variance[0], noise_variance[1])
-        data[sample_idx] = data[sample_idx] + np.random.normal(0.0, variance, size=data[sample_idx].shape)
-    return data
+def augment_gaussian_noise(data_sample, noise_variance=(0, 0.1)):
+    if noise_variance[0] == noise_variance[1]:
+        variance = noise_variance[0]
+    else:
+        variance = random.uniform(noise_variance[0], noise_variance[1])
+    data_sample = data_sample + np.random.normal(0.0, variance, size=data_sample.shape)
+    return data_sample
 
 
 def augment_gaussian_blur(data, sigma_range, per_channel=True, p_per_channel=1):

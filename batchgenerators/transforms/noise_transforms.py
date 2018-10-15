@@ -16,7 +16,7 @@
 from batchgenerators.augmentations.noise_augmentations import augment_blank_square_noise, augment_gaussian_blur, \
     augment_gaussian_noise, augment_rician_noise
 from batchgenerators.transforms.abstract_transforms import AbstractTransform
-
+import numpy as np
 
 class RicianNoiseTransform(AbstractTransform):
     """Adds rician noise with the given variance.
@@ -48,13 +48,16 @@ class GaussianNoiseTransform(AbstractTransform):
     CAREFUL: This transform will modify the value range of your data!
     """
 
-    def __init__(self, noise_variance=(0, 0.1), data_key="data", label_key="seg"):
+    def __init__(self, noise_variance=(0, 0.1), data_key="data", label_key="seg", p_per_sample=1):
+        self.p_per_sample = p_per_sample
         self.data_key = data_key
         self.label_key = label_key
         self.noise_variance = noise_variance
 
     def __call__(self, **data_dict):
-        data_dict[self.data_key] = augment_gaussian_noise(data_dict[self.data_key], self.noise_variance)
+        for b in range(len(data_dict[self.data_key])):
+            if np.random.uniform() < self.p_per_sample:
+                data_dict[self.data_key][b] = augment_gaussian_noise(data_dict[self.data_key][b], self.noise_variance)
         return data_dict
 
 

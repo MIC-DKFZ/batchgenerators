@@ -309,13 +309,14 @@ class SpatialTransform(AbstractTransform):
 
 
 class TransposeAxesTransform(AbstractTransform):
-    def __init__(self, transpose_any_of_these=(2, 3, 4), data_key="data", label_key="seg"):
+    def __init__(self, transpose_any_of_these=(2, 3, 4), data_key="data", label_key="seg", p_per_sample=1):
         '''
         This transform will randomly shuffle the axes of transpose_any_of_these.
         :param transpose_any_of_these:
         :param data_key:
         :param label_key:
         '''
+        self.p_per_sample = p_per_sample
         self.data_key = data_key
         self.label_key = label_key
         self.transpose_any_of_these = transpose_any_of_these
@@ -324,11 +325,20 @@ class TransposeAxesTransform(AbstractTransform):
         data = data_dict.get(self.data_key)
         seg = data_dict.get(self.label_key)
 
-        ret_val = augment_transpose_axes(data, seg, self.transpose_any_of_these)
+        for b in range(len(data)):
+            if np.random.uniform() < self.p_per_sample:
+                if seg is not None:
+                    s = seg[b]
+                else:
+                    s = None
+                ret_val = augment_transpose_axes(data[b], s, self.transpose_any_of_these)
+                data[b] = ret_val[0]
+                if seg is not None:
+                    seg[b] = ret_val[1]
 
-        data_dict[self.data_key] = ret_val[0]
+        data_dict[self.data_key] = data
         if seg is not None:
-            data_dict[self.label_key] = ret_val[1]
+            data_dict[self.label_key] = seg
         return data_dict
 
 

@@ -248,20 +248,15 @@ def augment_spatial(data, seg, patch_size, patch_center_dist_from_border=30,
     return data_result, seg_result
 
 
-def augment_transpose_axes(data, seg, axes=(2, 3, 4)):
-    axes = list(np.array(axes) - 1)  # need list to allow shuffle; -1 because we iterate over samples in batch
-    data_res = np.copy(data)
-    seg_res = None
-    if seg is not None:
-        seg_res = np.copy(seg)
+def augment_transpose_axes(data_sample, seg_sample, axes=(2, 3, 4)):
+    axes = list(np.array(axes) - 1)  # need list to allow shuffle; -2 because we iterate over samples in batch
 
-    assert np.max(axes) <= len(data.shape), "axes must only contain valid axis ids"
-    for b in range(data.shape[0]):
-        np.random.shuffle(axes)
-        data_res[b] = data_res[b].transpose(*([0] + axes))
-        if seg is not None:
-            seg_res[b] = seg_res[b].transpose(*([0] + axes))
-    return data_res, seg_res
+    assert np.max(axes) <= len(data_sample.shape), "axes must only contain valid axis ids"
+    np.random.shuffle(axes)
+    data_sample = data_sample.transpose(*([0] + axes))
+    if seg_sample is not None:
+        seg_sample = seg_sample.transpose(*([0] + axes))
+    return data_sample, seg_sample
 
 
 def flip_vector_axis(data):

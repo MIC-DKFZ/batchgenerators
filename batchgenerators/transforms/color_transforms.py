@@ -34,16 +34,18 @@ class ContrastAugmentationTransform(AbstractTransform):
         channel
 
     """
-    def __init__(self, contrast_range=(0.75, 1.25), preserve_range=True, per_channel=True, data_key="data"):
+    def __init__(self, contrast_range=(0.75, 1.25), preserve_range=True, per_channel=True, data_key="data", p_per_sample=1):
+        self.p_per_sample = p_per_sample
         self.data_key = data_key
         self.contrast_range = contrast_range
         self.preserve_range = preserve_range
         self.per_channel = per_channel
 
     def __call__(self, **data_dict):
-        data_dict['data'] = augment_contrast(data_dict[self.data_key], contrast_range=self.contrast_range,
-                                             preserve_range=self.preserve_range, per_channel=self.per_channel)
-
+        for b in range(len(data_dict[self.data_key])):
+            if np.random.uniform() < self.p_per_sample:
+                data_dict[self.data_key][b] = augment_contrast(data_dict[self.data_key][b], contrast_range=self.contrast_range,
+                                                     preserve_range=self.preserve_range, per_channel=self.per_channel)
         return data_dict
 
 
@@ -85,14 +87,17 @@ class BrightnessMultiplicativeTransform(AbstractTransform):
     CAREFUL: This transform will modify the value range of your data!
 
     """
-    def __init__(self, multiplier_range=(0.5, 2), per_channel=True, data_key="data"):
+    def __init__(self, multiplier_range=(0.5, 2), per_channel=True, data_key="data", p_per_sample=1):
+        self.p_per_sample = p_per_sample
         self.data_key = data_key
         self.multiplier_range = multiplier_range
         self.per_channel = per_channel
 
     def __call__(self, **data_dict):
-        data_dict[self.data_key] = augment_brightness_multiplicative(data_dict[self.data_key], self.multiplier_range,
-                                                              self.per_channel)
+        for b in range(len(data_dict[self.data_key])):
+            if np.random.uniform() < self.p_per_sample:
+                data_dict[self.data_key][b] = augment_brightness_multiplicative(data_dict[self.data_key][b], self.multiplier_range,
+                                                                      self.per_channel)
         return data_dict
 
 
