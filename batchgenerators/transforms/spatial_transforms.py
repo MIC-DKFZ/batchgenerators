@@ -62,7 +62,7 @@ class ZoomTransform(AbstractTransform):
             concatenate_seg = None
 
         results = []
-        for b in data.shape[0]:
+        for b in range(len(data)):
             sample_seg = None
             if seg is not None:
                 sample_seg = seg[b]
@@ -123,7 +123,7 @@ class ResizeTransform(AbstractTransform):
             concatenate_seg = None
 
         results = []
-        for b in data.shape[0]:
+        for b in range(len(data)):
             sample_seg = None
             if seg is not None:
                 sample_seg = seg[b]
@@ -159,11 +159,18 @@ class MirrorTransform(AbstractTransform):
         data = data_dict.get(self.data_key)
         seg = data_dict.get(self.label_key)
 
-        ret_val = augment_mirroring(data=data, seg=seg, axes=self.axes)
+        for b in range(len(data)):
+            sample_seg = None
+            if seg is not None:
+                sample_seg = seg[b]
+            ret_val = augment_mirroring(data[b], sample_seg, axes=self.axes)
+            data[b] = ret_val[0]
+            if seg is not None:
+                seg[b] = ret_val[1]
 
-        data_dict[self.data_key] = ret_val[0]
+        data_dict[self.data_key] = data
         if seg is not None:
-            data_dict[self.label_key] = ret_val[1]
+            data_dict[self.label_key] = seg
 
         return data_dict
 

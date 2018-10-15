@@ -105,14 +105,18 @@ class MultiThreadedAugmenter(object):
             self._end_ctr = 0
 
             def producer(queue, data_loader, transform, thread_id, seed):
-                np.random.seed(seed)
-                data_loader.set_thread_id(thread_id)
-                while True:
-                    for item in data_loader:
-                        if transform is not None:
-                            item = transform(**item)
-                        queue.put(item)
+                try:
+                    np.random.seed(seed)
+                    data_loader.set_thread_id(thread_id)
+                    while True:
+                        for item in data_loader:
+                            if transform is not None:
+                                item = transform(**item)
+                            queue.put(item)
+                        queue.put("end")
+                except KeyboardInterrupt:
                     queue.put("end")
+                    raise KeyboardInterrupt
 
             for i in range(self.num_processes):
                 #np.random.seed(self.seeds[i])
