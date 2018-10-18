@@ -24,7 +24,8 @@ from batchgenerators.augmentations.crop_and_pad_augmentations import random_crop
 from batchgenerators.augmentations.crop_and_pad_augmentations import center_crop as center_crop_aug
 
 
-def augment_resize(data, target_size, order=3, order_seg=1, cval_seg=0, seg=None, concatenate_list=False):
+def augment_resize(data, target_size, order=3, order_seg=1, cval_seg=0, seg=None, concatenate_list=False,
+                   border_mode="constant"):
     """
     Reshapes data (and seg) to target_size
     :param data: np.ndarray or list/tuple of np.ndarrays, must be (b, c, x, y(, z))) (if list/tuple then each entry
@@ -37,6 +38,7 @@ def augment_resize(data, target_size, order=3, order_seg=1, cval_seg=0, seg=None
     np.ndarray (just like data). Must also be (b, c, x, y(, z))
     :param concatenate_list: if you give list/tuple of data/seg and set concatenate_list=True then the result will be
     concatenated into one large ndarray (once again b, c, x, y(, z))
+    :param border_mode: Points outside the boundaries of the input are filled according to the given mode. {‘constant’, ‘edge’, ‘symmetric’, ‘reflect’, ‘wrap’}, optional
     :return:
     """
     if isinstance(data, np.ndarray):
@@ -73,7 +75,7 @@ def augment_resize(data, target_size, order=3, order_seg=1, cval_seg=0, seg=None
                     resize(image=data[i][b, c].astype(float),
                            output_shape=target_size_here,
                            order=order,
-                           mode="reflect"
+                           mode=border_mode
                            ).astype(data[i].dtype)[None])
             result_this_sample = np.vstack(result_this_sample)
             result_this_data.append(result_this_sample[None])
