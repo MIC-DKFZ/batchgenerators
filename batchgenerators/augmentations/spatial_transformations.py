@@ -360,12 +360,17 @@ def augment_spatial(data, seg, patch_size, patch_center_dist_from_border=30,
                     seg_result[sample_id, channel_id] = interpolate_img(seg[sample_id, channel_id], coords, order_seg,
                                                                         border_mode_seg, cval=border_cval_seg, is_seg=True)
         else:
-            if random_crop:
-                d, s = random_crop_aug(data[sample_id:sample_id + 1], seg[sample_id:sample_id + 1], patch_size, patch_center_dist_from_border)
+            if seg is None:
+                s = None
             else:
-                d, s = center_crop_aug(data[sample_id:sample_id + 1], patch_size, seg[sample_id:sample_id + 1])
+                s = seg[sample_id:sample_id + 1]
+            if random_crop:
+                d, s = random_crop_aug(data[sample_id:sample_id + 1], s, patch_size, patch_center_dist_from_border)
+            else:
+                d, s = center_crop_aug(data[sample_id:sample_id + 1], patch_size, s)
             data_result[sample_id] = d[0]
-            seg_result[sample_id] = s[0]
+            if seg is not None:
+                seg_result[sample_id] = s[0]
     return data_result, seg_result
 
 
