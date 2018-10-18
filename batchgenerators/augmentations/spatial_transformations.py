@@ -70,7 +70,11 @@ def augment_resize(data, target_size, order=3, order_seg=1, cval_seg=0, seg=None
             result_this_sample = []
             for c in range(data[i].shape[1]):
                 result_this_sample.append(
-                    resize(data[i][b, c].astype(float), target_size_here, order).astype(data[i].dtype)[None])
+                    resize(image=data[i][b, c].astype(float),
+                           output_shape=target_size_here,
+                           order=order,
+                           mode="reflect"
+                           ).astype(data[i].dtype)[None])
             result_this_sample = np.vstack(result_this_sample)
             result_this_data.append(result_this_sample[None])
         result_this_data = np.vstack(result_this_data)
