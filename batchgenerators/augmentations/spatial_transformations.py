@@ -89,20 +89,20 @@ def augment_zoom(sample_data, sample_seg, zoom_factors, order=3, order_seg=1, cv
     return sample_data, sample_seg
 
 
-def augment_mirroring(sample_data, sample_seg=None, axes=(2, 3, 4)):
+def augment_mirroring(sample_data, sample_seg=None, axes=(0, 1, 2)):
     if (len(sample_data.shape) != 3) and (len(sample_data.shape) != 4):
         raise Exception(
             "Invalid dimension for sample_data and sample_seg. sample_data and sample_seg should be either "
             "[channels, x, y] or [channels, x, y, z]")
-    if 2 in axes and np.random.uniform() < 0.5:
+    if 0 in axes and np.random.uniform() < 0.5:
         sample_data[:, :] = sample_data[:, ::-1]
         if sample_seg is not None:
             sample_seg[:, :] = sample_seg[:, ::-1]
-    if 3 in axes and np.random.uniform() < 0.5:
+    if 1 in axes and np.random.uniform() < 0.5:
         sample_data[:, :, :] = sample_data[:, :, ::-1]
         if sample_seg is not None:
             sample_seg[:, :, :] = sample_seg[:, :, ::-1]
-    if 4 in axes and len(sample_data.shape) == 5:
+    if 2 in axes and len(sample_data.shape) == 4:
         if np.random.uniform() < 0.5:
             sample_data[:, :, :, :] = sample_data[:, :, :, ::-1]
             if sample_seg is not None:
@@ -248,8 +248,15 @@ def augment_spatial(data, seg, patch_size, patch_center_dist_from_border=30,
     return data_result, seg_result
 
 
-def augment_transpose_axes(data_sample, seg_sample, axes=(2, 3, 4)):
-    axes = list(np.array(axes) - 1)  # need list to allow shuffle; -2 because we iterate over samples in batch
+def augment_transpose_axes(data_sample, seg_sample, axes=(0, 1, 2)):
+    """
+
+    :param data_sample: c,x,y(,z)
+    :param seg_sample: c,x,y(,z)
+    :param axes: list/tuple
+    :return:
+    """
+    axes = list(np.array(axes) + 1)  # need list to allow shuffle; +1 to accomodate for color channel
 
     assert np.max(axes) <= len(data_sample.shape), "axes must only contain valid axis ids"
     np.random.shuffle(axes)

@@ -145,8 +145,8 @@ def augment_downsampling_upsampling(data, sampling_range_per_axes=None, order_do
                 if 4 in axes_to_work_on:
                     resample_to_this_shape[2] /= np.random.uniform(sampling_range_per_axes[4][0], sampling_range_per_axes[4][1])
                 resample_to_this_shape = np.round(resample_to_this_shape).astype(int)
-                resampled_data = resize(data[b, c].astype(float), resample_to_this_shape, order_down, 'constant', 0, True)
-                resampled_data = resize(resampled_data, original_shape[2:], order_up, 'constant', 0, True).astype(data.dtype)
+                resampled_data = resize(data[b, c].astype(float), resample_to_this_shape, order_down, 'constant', 0, True, anti_aliasing=False)
+                resampled_data = resize(resampled_data, original_shape[2:], order_up, 'constant', 0, True, anti_aliasing=False).astype(data.dtype)
                 data[b, c] = resampled_data
         else:
             resample_to_this_shape = np.array(data[b, c].shape)
@@ -161,8 +161,8 @@ def augment_downsampling_upsampling(data, sampling_range_per_axes=None, order_do
                                                                sampling_range_per_axes[4][1])
             resample_to_this_shape = np.round(resample_to_this_shape).astype(int)
             for c in channels:
-                resampled_data = resize(data[b, c].astype(float), resample_to_this_shape, order_down, 'constant', 0, True)
-                resampled_data = resize(resampled_data, original_shape[2:], order_up, 'constant', 0, True).astype(data.dtype)
+                resampled_data = resize(data[b, c].astype(float), resample_to_this_shape, order_down, 'constant', 0, True, anti_aliasing=False)
+                resampled_data = resize(resampled_data, original_shape[2:], order_up, 'constant', 0, True, anti_aliasing=False).astype(data.dtype)
                 data[b, c] = resampled_data
     return data
 

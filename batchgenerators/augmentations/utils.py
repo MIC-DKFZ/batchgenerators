@@ -535,12 +535,12 @@ def resize_segmentation(segmentation, new_shape, order=3, cval=0):
     unique_labels = np.unique(segmentation)
     assert len(segmentation.shape) == len(new_shape), "new shape must have same dimensionality as segmentation"
     if order == 0:
-        return resize(segmentation, new_shape, order, mode="constant", cval=cval, clip=True).astype(tpe)
+        return resize(segmentation, new_shape, order, mode="constant", cval=cval, clip=True, anti_aliasing=False).astype(tpe)
     else:
         reshaped = np.zeros(new_shape, dtype=segmentation.dtype)
 
         for i, c in enumerate(unique_labels):
-            reshaped_multihot = resize((segmentation == c).astype(float), new_shape, order, mode="constant", cval=cval, clip=True)
+            reshaped_multihot = resize((segmentation == c).astype(float), new_shape, order, mode="constant", cval=cval, clip=True, anti_aliasing=False)
             reshaped[reshaped_multihot >= 0.5] = c
         return reshaped
 
@@ -558,7 +558,7 @@ def resize_multichannel_image(multichannel_image, new_shape, order=3):
     new_shp = [multichannel_image.shape[0]] + list(new_shape)
     result = np.zeros(new_shp, dtype=multichannel_image.dtype)
     for i in range(multichannel_image.shape[0]):
-        result[i] = resize(multichannel_image[i].astype(float), new_shape, order, "constant", 0, True)
+        result[i] = resize(multichannel_image[i].astype(float), new_shape, order, "constant", 0, True, anti_aliasing=False)
     return result.astype(tpe)
 
 
