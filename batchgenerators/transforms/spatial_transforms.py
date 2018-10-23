@@ -11,7 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import warnings
+from warnings import warn
 
 from batchgenerators.transforms.abstract_transforms import AbstractTransform
 from batchgenerators.augmentations.spatial_transformations import augment_spatial, augment_channel_translation, \
@@ -106,6 +107,12 @@ class MirrorTransform(AbstractTransform):
         self.data_key = data_key
         self.label_key = label_key
         self.axes = axes
+        warnings.simplefilter("once", DeprecationWarning)
+        warn("The axes in MirrorTransform will soon change! Currently for mirroring along any axes of a 5d tensor "
+             "you would set axes=(2, 3, 4). These correspond to the actual axes of a 5d tensor.\n"
+             "The way axes are done in the future is to access the spatial dimensions directly, disregarding b and c. "
+             "For the same 5d tensor you will have to set axes=(0, 1, 2)!!\n"
+             "(don't to anything for now, this is just a warning)")
 
     def __call__(self, **data_dict):
         data = data_dict.get(self.data_key)
@@ -264,6 +271,12 @@ class TransposeAxesTransform(AbstractTransform):
         self.data_key = data_key
         self.label_key = label_key
         self.transpose_any_of_these = transpose_any_of_these
+        warnings.simplefilter("once", DeprecationWarning)
+        warn("The axes in TransposeAxesTransform will soon change! Currently for transposing any axes of a 5d tensor "
+             "you would set axes=(2, 3, 4). These correspond to the axes of a 5d tensor.\n"
+             "The way axes are done in the future is to access the spatial dimensions directly, disregarding b and c. "
+             "For the same 5d tensor you will have to set axes=(0, 1, 2)!!\n"
+             "(don't to anything for now, this is just a warning)")
 
     def __call__(self, **data_dict):
         data = data_dict.get(self.data_key)
