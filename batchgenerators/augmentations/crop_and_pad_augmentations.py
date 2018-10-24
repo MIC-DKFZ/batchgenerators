@@ -131,7 +131,7 @@ def center_crop_seg(seg, output_size):
 def get_rnd_vals(crop_size, data_shape, margins):
     lbs = []
     for i in range(len(data_shape) - 2):
-        if crop_size[i] < data_shape[i + 2]:
+        if crop_size[i] <= data_shape[i + 2]:
             if data_shape[i+2] - crop_size[i] - margins[i] > margins[i]:
                 lbs.append(np.random.randint(margins[i], data_shape[i+2] - crop_size[i] - margins[i]))
             else:
