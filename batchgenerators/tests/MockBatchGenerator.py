@@ -13,10 +13,11 @@
 # limitations under the License.
 
 
-from DeepLearningBatchGeneratorUtils.DataGeneratorBase import BatchGeneratorBase
 import numpy as np
+from batchgenerators.dataloading import DataLoaderBase
 
-class MockBatchGenerator(BatchGeneratorBase):
+
+class MockBatchGenerator(DataLoaderBase):
 
     def generate_train_batch(self):
 
@@ -31,7 +32,7 @@ class MockBatchGenerator(BatchGeneratorBase):
         return data_dict
 
 
-class MockRepeatBatchGenerator(BatchGeneratorBase):
+class MockRepeatBatchGenerator(DataLoaderBase):
     def generate_train_batch(self):
 
         # copy data to ensure that we are not modifying the original dataset with subsequeng augmentation techniques!
@@ -43,3 +44,23 @@ class MockRepeatBatchGenerator(BatchGeneratorBase):
         return data_dict
 
 
+class DummyGenerator(DataLoaderBase):
+    def __init__(self, dataset_size, batch_size, fill_data='random', fill_seg='ones'):
+        if fill_data == "random":
+            data = np.random.random(dataset_size)
+        else:
+            raise NotImplementedError
+
+        if fill_seg == "ones":
+            seg = np.ones(dataset_size)
+        else:
+            raise NotImplementedError
+
+        super(DummyGenerator, self).__init__((data, seg), batch_size, None, False)
+
+    def generate_train_batch(self):
+        idx = np.random.choice(self._data[0].shape[0])
+
+        data = self._data[0][idx]
+        seg = self._data[1][idx]
+        return {'data': data, 'seg': seg}

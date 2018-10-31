@@ -36,6 +36,7 @@ def augment_resize(sample_data, sample_seg, target_size, order=3, order_seg=1, c
     np.ndarray (just like data). Must also be (b, c, x, y(, z))
     :param concatenate_list: if you give list/tuple of data/seg and set concatenate_list=True then the result will be
     concatenated into one large ndarray (once again b, c, x, y(, z))
+    :param border_mode: Points outside the boundaries of the input are filled according to the given mode. {‘constant’, ‘edge’, ‘symmetric’, ‘reflect’, ‘wrap’}, optional
     :return:
     """
     dimensionality = len(sample_data.shape) - 2
@@ -164,8 +165,8 @@ def augment_spatial(data, seg, patch_size, patch_center_dist_from_border=30,
                     do_elastic_deform=True, alpha=(0., 1000.), sigma=(10., 13.),
                     do_rotation=True, angle_x=(0, 2 * np.pi), angle_y=(0, 2 * np.pi), angle_z=(0, 2 * np.pi),
                     do_scale=True, scale=(0.75, 1.25), border_mode_data='nearest', border_cval_data=0, order_data=3,
-                    border_mode_seg='constant', border_cval_seg=0, order_seg=0, random_crop=True, p_el_per_sample=0.2,
-                    p_scale_per_sample=0.2, p_rot_per_sample=0.2):
+                    border_mode_seg='constant', border_cval_seg=0, order_seg=0, random_crop=True, p_el_per_sample=1,
+                    p_scale_per_sample=1, p_rot_per_sample=1):
     dim = len(patch_size)
     seg_result = None
     if seg is not None:
@@ -238,7 +239,8 @@ def augment_spatial(data, seg, patch_size, patch_center_dist_from_border=30,
             else:
                 s = seg[sample_id:sample_id + 1]
             if random_crop:
-                d, s = random_crop_aug(data[sample_id:sample_id + 1], s, patch_size, patch_center_dist_from_border)
+                margin = [patch_center_dist_from_border[d] - patch_size[d] // 2 for d in range(dim)]
+                d, s = random_crop_aug(data[sample_id:sample_id + 1], s, patch_size, margin)
             else:
                 d, s = center_crop_aug(data[sample_id:sample_id + 1], patch_size, s)
             data_result[sample_id] = d[0]

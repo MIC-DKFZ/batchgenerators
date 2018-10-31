@@ -119,7 +119,6 @@ class MultiThreadedAugmenter(object):
                     raise KeyboardInterrupt
 
             for i in range(self.num_processes):
-                #np.random.seed(self.seeds[i])
                 self._queues.append(MPQueue(self.num_cached_per_queue))
                 self._threads.append(Process(target=producer, args=(self._queues[i], self.generator, self.transform, i, self.seeds[i])))
                 self._threads[-1].daemon = True
