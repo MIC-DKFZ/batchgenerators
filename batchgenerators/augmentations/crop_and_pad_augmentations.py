@@ -13,10 +13,11 @@
 # limitations under the License.
 
 from builtins import range
+import warnings
 from warnings import warn
-
 import numpy as np
-from meddec.utilities.padding import pad_nd_image
+warnings.simplefilter("once", UserWarning)
+
 
 
 def center_crop(data, crop_size, seg=None):
@@ -133,47 +134,51 @@ def get_rnd_vals(crop_size, data_shape, margins):
     lbs = []
     for i in range(len(data_shape) - 2):
         if crop_size[i] > data_shape[i + 2]:
-            warn("Crop_size > data_shape. data: %s, crop: %s. Data will be padded to accomodate crop_size" % (str(data_shape), str(crop_size)))
+            warn("Crop_size > data_shape. data: %s, crop: %s. Data will be padded to accomodate crop_size" % (str(data_shape), str(crop_size)), UserWarning)
 
-        if data_shape[i+2] - crop_size[i] - margins[i] > margins[i]:
+        if data_shape[i+2] - crop_size[i] - margins[i] >= margins[i]:
             lbs.append(np.random.randint(margins[i], data_shape[i+2] - crop_size[i] - margins[i]))
         else:
             warn("Random crop is falling back to center crop because the crop along with the desired margin does "
-                 "not fit the data. data: %s, crop_size: %s, margin: %s" % (str(data_shape), str(crop_size),
-                                                                            str(margins)))
+                 "not fit the data. "
+                 "data: %s, crop_size: %s, margin: %s" % (str(data_shape), str(crop_size), str(margins)), UserWarning)
             lbs.append((data_shape[i+2] - crop_size[i]) // 2)
     return lbs
 
 
 def random_crop(data, seg=None, crop_size=128, margins=[0, 0, 0]):
 
-    if isinstance(data, (list, tuple)):
-        assert len(data) > 0 and isinstance(data[0], np.ndarray)
-    else:
+    if not isinstance(data, (list, tuple, np.ndarray)):
         raise TypeError("data has to be either a numpy array or a list")
+
 
     data_shape = tuple([len(data)] + list(data[0].shape))
     data_dtype = data[0].dtype
+    dim = len(data_shape) - 2
 
     if seg is not None:
         seg_shape = tuple([len(seg)] + list(seg[0].shape))
         seg_dtype = seg[0].dtype
 
-        if isinstance(seg, (list, tuple)):
-            assert len(data) > 0 and isinstance(data[0], np.ndarray)
-        else:
-            raise TypeError("seg has to be either a numpy array or a list")
+        if not isinstance(seg, (list, tuple, np.ndarray)):
+            raise TypeError("data has to be either a numpy array or a list")
 
         assert all([i == j for i, j in zip(seg_shape[2:], data_shape[2:])]), "data and seg must have the same spatial " \
                                                                              "dimensions. Data: %s, seg: %s" % \
                                                                              (str(data_shape), str(seg_shape))
 
     if type(crop_size) not in (tuple, list, np.ndarray):
-        crop_size = [crop_size] * (len(data_shape) - 2)
+        crop_size = [crop_size] * dim
     else:
         assert len(crop_size) == len(
             data_shape) - 2, "If you provide a list/tuple as center crop make sure it has the same dimension as your " \
                              "data (2d/3d)"
+
+    if not isinstance(margins, (np.ndarray, tuple, list)):
+        margins = [margins] * dim
+
+    if any([crop_size[d] > (data_shape[d+2] + 2*abs(min(0, margins[d]))) for d in range(dim)]):
+        warn("Crop_size > data_shape. Data will be padded to accomodate crop_size")
 
     data_return = np.zeros((data_shape[0], data_shape[1], *crop_size), dtype=data_dtype)
     if seg is not None:
@@ -184,8 +189,8 @@ def random_crop(data, seg=None, crop_size=128, margins=[0, 0, 0]):
     for b in range(data_shape[0]):
         lbs = get_rnd_vals(crop_size, data_shape, margins)
         need_to_pad = [[0, 0]] + [[abs(min(0, lbs[d])),
-                                   abs(min(0, data_shape[d] - (lbs[d] + crop_size[d])))]
-                                  for d in range(len(data_shape))]
+                                   abs(min(0, data_shape[d + 2] - (lbs[d] + crop_size[d])))]
+                                  for d in range(dim)]
 
         if any([i > 0 for j in need_to_pad for i in j]):
             data_2 = np.pad(data[b], need_to_pad, 'constant', constant_values=0)
@@ -200,9 +205,9 @@ def random_crop(data, seg=None, crop_size=128, margins=[0, 0, 0]):
             else:
                 seg_2 = None
 
-        lbs = [lbs[d] + need_to_pad[d+2][0] for d in range(len(data_shape))]
+        lbs = [lbs[d] + need_to_pad[d+1][0] for d in range(dim)]
         assert all([i >= 0 for i in lbs]), "just a failsafe"
-        slicer = [slice(0, data_shape[1])] + [slice(lbs[d], lbs[d]+crop_size[d]) for d in range(len(data_shape))]
+        slicer = [slice(0, data_shape[1])] + [slice(lbs[d], lbs[d]+crop_size[d]) for d in range(dim)]
         data_return[b] = data_2[slicer]
         if seg_return is not None:
             seg_return[b] = seg_2[slicer]
