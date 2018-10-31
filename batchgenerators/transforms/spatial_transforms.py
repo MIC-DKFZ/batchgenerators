@@ -11,7 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import warnings
+from warnings import warn
 
 from batchgenerators.transforms.abstract_transforms import AbstractTransform
 from batchgenerators.augmentations.spatial_transformations import augment_spatial, augment_channel_translation, \
@@ -106,6 +107,12 @@ class MirrorTransform(AbstractTransform):
         self.data_key = data_key
         self.label_key = label_key
         self.axes = axes
+        warnings.simplefilter("once", DeprecationWarning)
+        warn("The axes in MirrorTransform will soon change! Currently for mirroring along any axes of a 5d tensor "
+             "you would set axes=(2, 3, 4). These correspond to the actual axes of a 5d tensor.\n"
+             "The way axes are done in the future is to access the spatial dimensions directly, disregarding b and c. "
+             "For the same 5d tensor you will have to set axes=(0, 1, 2)!!\n"
+             "(don't to anything for now, this is just a warning)")
 
     def __call__(self, **data_dict):
         data = data_dict.get(self.data_key)
@@ -195,7 +202,7 @@ class SpatialTransform(AbstractTransform):
                  do_elastic_deform=True, alpha=(0., 1000.), sigma=(10., 13.),
                  do_rotation=True, angle_x=(0, 2 * np.pi), angle_y=(0, 2 * np.pi), angle_z=(0, 2 * np.pi),
                  do_scale=True, scale=(0.75, 1.25), border_mode_data='nearest', border_cval_data=0, order_data=3,
-                 border_mode_seg='constant', border_cval_seg=0, order_seg=0, random_crop=True, data_key="data", label_key="seg", p_el_per_sample=0.2, p_scale_per_sample=0.2, p_rot_per_sample=0.2):
+                 border_mode_seg='constant', border_cval_seg=0, order_seg=0, random_crop=True, data_key="data", label_key="seg", p_el_per_sample=1, p_scale_per_sample=1, p_rot_per_sample=1):
         self.p_rot_per_sample = p_rot_per_sample
         self.p_scale_per_sample = p_scale_per_sample
         self.p_el_per_sample = p_el_per_sample
@@ -264,6 +271,12 @@ class TransposeAxesTransform(AbstractTransform):
         self.data_key = data_key
         self.label_key = label_key
         self.transpose_any_of_these = transpose_any_of_these
+        warnings.simplefilter("once", DeprecationWarning)
+        warn("The axes in TransposeAxesTransform will soon change! Currently for transposing any axes of a 5d tensor "
+             "you would set axes=(2, 3, 4). These correspond to the axes of a 5d tensor.\n"
+             "The way axes are done in the future is to access the spatial dimensions directly, disregarding b and c. "
+             "For the same 5d tensor you will have to set axes=(0, 1, 2)!!\n"
+             "(don't to anything for now, this is just a warning)")
 
     def __call__(self, **data_dict):
         data = data_dict.get(self.data_key)

@@ -13,9 +13,11 @@
 # limitations under the License.
 
 from builtins import range
+import warnings
 from warnings import warn
-
 import numpy as np
+warnings.simplefilter("once", UserWarning)
+
 
 
 def center_crop(data, crop_size, seg=None):
@@ -131,81 +133,85 @@ def center_crop_seg(seg, output_size):
 def get_rnd_vals(crop_size, data_shape, margins):
     lbs = []
     for i in range(len(data_shape) - 2):
-        if crop_size[i] < data_shape[i + 2]:
-            if data_shape[i+2] - crop_size[i] - margins[i] > margins[i]:
-                lbs.append(np.random.randint(margins[i], data_shape[i+2] - crop_size[i] - margins[i]))
-            else:
-                warn("Random crop is falling back to center crop because the crop along with the dasired margin does "
-                     "not fit the data. data: %s, crop_size: %s, margin: %s" % (str(data_shape), str(crop_size),
-                                                                                str(margins)))
-                lbs.append((data_shape[i+2] - crop_size[i]) // 2)
+        if crop_size[i] > data_shape[i + 2]:
+            warn("Crop_size > data_shape. data: %s, crop: %s. Data will be padded to accomodate crop_size" % (str(data_shape), str(crop_size)), UserWarning)
+
+        if data_shape[i+2] - crop_size[i] - margins[i] >= margins[i]:
+            lbs.append(np.random.randint(margins[i], data_shape[i+2] - crop_size[i] - margins[i]))
         else:
-            raise RuntimeError("Crop_size > data_shape. data: %s, crop: %s" % (str(data_shape), str(crop_size)))
+            warn("Random crop is falling back to center crop because the crop along with the desired margin does "
+                 "not fit the data. "
+                 "data: %s, crop_size: %s, margin: %s" % (str(data_shape), str(crop_size), str(margins)), UserWarning)
+            lbs.append((data_shape[i+2] - crop_size[i]) // 2)
     return lbs
 
 
 def random_crop(data, seg=None, crop_size=128, margins=[0, 0, 0]):
-    if isinstance(data, np.ndarray):
-        is_list = False
-        data_shape = tuple(list(data.shape))
-    elif isinstance(data, (list, tuple)):
-        is_list = True
-        assert len(data) > 0 and isinstance(data[0], np.ndarray)
-        data_shape = tuple([len(data)] + list(data[0].shape))
-    else:
-        raise TypeError("Data has to be either a numpy array or a list")
-    if seg is None:
-        pass
-    elif isinstance(seg, np.ndarray):
-        seg_shape = tuple(list(seg.shape))
-    elif isinstance(seg, (list, tuple)):
-        assert len(data) > 0 and isinstance(data[0], np.ndarray)
-        seg_shape = tuple([len(seg)] + list(seg[0].shape))
-    else:
-        raise TypeError("Data has to be either a numpy array or a list")
 
-    seg_return = None
+    if not isinstance(data, (list, tuple, np.ndarray)):
+        raise TypeError("data has to be either a numpy array or a list")
+
+
+    data_shape = tuple([len(data)] + list(data[0].shape))
+    data_dtype = data[0].dtype
+    dim = len(data_shape) - 2
+
+    if seg is not None:
+        seg_shape = tuple([len(seg)] + list(seg[0].shape))
+        seg_dtype = seg[0].dtype
+
+        if not isinstance(seg, (list, tuple, np.ndarray)):
+            raise TypeError("data has to be either a numpy array or a list")
+
+        assert all([i == j for i, j in zip(seg_shape[2:], data_shape[2:])]), "data and seg must have the same spatial " \
+                                                                             "dimensions. Data: %s, seg: %s" % \
+                                                                             (str(data_shape), str(seg_shape))
+
     if type(crop_size) not in (tuple, list, np.ndarray):
-        crop_size = [crop_size] * (len(data_shape) - 2)
+        crop_size = [crop_size] * dim
     else:
         assert len(crop_size) == len(
-            data_shape) - 2, "If you provide a list/tuple as center crop make sure it has the same dimension as your data (2d/3d)"
+            data_shape) - 2, "If you provide a list/tuple as center crop make sure it has the same dimension as your " \
+                             "data (2d/3d)"
 
-    lbs = get_rnd_vals(crop_size, data_shape, margins)
+    if not isinstance(margins, (np.ndarray, tuple, list)):
+        margins = [margins] * dim
 
-    if len(data_shape) == 4:
-        if not is_list:
-            data_return = data[:, :, lbs[0]:lbs[0] + crop_size[0], lbs[1]:lbs[1] + crop_size[1]]
-            if seg is not None:
-                seg_return = seg[:, :, lbs[0]:lbs[0] + crop_size[0], lbs[1]:lbs[1] + crop_size[1]]
-        else:
-            data_return = np.zeros([data_shape[0], data_shape[1]] + list(crop_size), dtype=data[0].dtype)
-            if seg is not None:
-                seg_return = np.zeros([seg_shape[0], seg_shape[1]] + list(crop_size), dtype=data[0].dtype)
-            for i, data_smpl in enumerate(data):
-                lbs = get_rnd_vals(crop_size, tuple([1] + list(data_smpl.shape)), margins)
-                data_return[i,] = data_smpl[:, lbs[0]:lbs[0] + crop_size[0], lbs[1]:lbs[1] + crop_size[1]]
-                if seg is not None:
-                    seg_return[i,] = seg[i][:, lbs[0]:lbs[0] + crop_size[0], lbs[1]:lbs[1] + crop_size[1]]
-    elif len(data_shape) == 5:
-        if not is_list:
-            data_return = data[:, :, lbs[0]:lbs[0] + crop_size[0], lbs[1]:lbs[1] + crop_size[1], lbs[2]:lbs[2] + crop_size[2]]
-            if seg is not None:
-                seg_return = seg[:, :, lbs[0]:lbs[0] + crop_size[0], lbs[1]:lbs[1] + crop_size[1], lbs[2]:lbs[2] + crop_size[2]]
-        else:
-            data_return = np.zeros([data_shape[0], data_shape[1]] + list(crop_size), dtype=data[0].dtype)
-            if seg is not None:
-                seg_return = np.zeros([seg_shape[0], seg_shape[1]] + list(crop_size), dtype=data[0].dtype)
+    if any([crop_size[d] > (data_shape[d+2] + 2*abs(min(0, margins[d]))) for d in range(dim)]):
+        warn("Crop_size > data_shape. Data will be padded to accomodate crop_size")
 
-            for i, data_smpl in enumerate(data):
-                lbs = get_rnd_vals(crop_size, tuple([1] + list(data_smpl.shape)), margins)
-                data_return[i,] = data_smpl[:, lbs[0]:lbs[0] + crop_size[0], lbs[1]:lbs[1] + crop_size[1],
-                                  lbs[2]:lbs[2] + crop_size[2]]
-                if seg is not None:
-                    seg_return[i,] = seg[i][:, lbs[0]:lbs[0] + crop_size[0], lbs[1]:lbs[1] + crop_size[1],
-                                     lbs[2]:lbs[2] + crop_size[2]]
+    data_return = np.zeros((data_shape[0], data_shape[1], *crop_size), dtype=data_dtype)
+    if seg is not None:
+        seg_return = np.zeros((seg_shape[0], seg_shape[1], *crop_size), dtype=seg_dtype)
     else:
-        raise ValueError("Invalid data/seg dimension")
+        seg_return = None
+
+    for b in range(data_shape[0]):
+        lbs = get_rnd_vals(crop_size, data_shape, margins)
+        need_to_pad = [[0, 0]] + [[abs(min(0, lbs[d])),
+                                   abs(min(0, data_shape[d + 2] - (lbs[d] + crop_size[d])))]
+                                  for d in range(dim)]
+
+        if any([i > 0 for j in need_to_pad for i in j]):
+            data_2 = np.pad(data[b], need_to_pad, 'constant', constant_values=0)
+            if seg_return is not None:
+                seg_2 = np.pad(seg[b], need_to_pad, 'constant', constant_values=0)
+            else:
+                seg_2 = None
+        else:
+            data_2 = data[b]
+            if seg_return is not None:
+                seg_2 = seg[b]
+            else:
+                seg_2 = None
+
+        lbs = [lbs[d] + need_to_pad[d+1][0] for d in range(dim)]
+        assert all([i >= 0 for i in lbs]), "just a failsafe"
+        slicer = [slice(0, data_shape[1])] + [slice(lbs[d], lbs[d]+crop_size[d]) for d in range(dim)]
+        data_return[b] = data_2[slicer]
+        if seg_return is not None:
+            seg_return[b] = seg_2[slicer]
+
     return data_return, seg_return
 
 
