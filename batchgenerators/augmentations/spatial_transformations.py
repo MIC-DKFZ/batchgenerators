@@ -367,7 +367,8 @@ def augment_spatial(data, seg, patch_size, patch_center_dist_from_border=30,
             else:
                 s = seg[sample_id:sample_id + 1]
             if random_crop:
-                d, s = random_crop_aug(data[sample_id:sample_id + 1], s, patch_size, patch_center_dist_from_border)
+                margin = [patch_center_dist_from_border[d] - patch_size[d] // 2 for d in range(dim)]
+                d, s = random_crop_aug(data[sample_id:sample_id + 1], s, patch_size, margin)
             else:
                 d, s = center_crop_aug(data[sample_id:sample_id + 1], patch_size, s)
             data_result[sample_id] = d[0]
