@@ -23,6 +23,25 @@ from batchgenerators.augmentations.crop_and_pad_augmentations import random_crop
 from batchgenerators.augmentations.crop_and_pad_augmentations import center_crop as center_crop_aug
 
 
+def augment_rot90(sample_data, sample_seg, num_rot=(1, 2, 3), axes=(0, 1, 2)):
+    """
+
+    :param sample_data:
+    :param sample_seg:
+    :param num_rot: rotate by 90 degrees how often? must be tuple -> nom rot randomly chosen from that tuple
+    :param axes: around which axes will the rotation take place? two axes are chosen randomly from axes.
+    :return:
+    """
+    num_rot = np.random.choice(num_rot)
+    axes = np.random.choice(axes, size=2, replace=False)
+    axes.sort()
+    axes = [i + 1 for i in axes]
+    sample_data = np.rot90(sample_data, num_rot, axes)
+    if sample_seg is not None:
+        sample_seg = np.rot90(sample_seg, num_rot, axes)
+    return sample_data, sample_seg
+
+
 def augment_resize(sample_data, sample_seg, target_size, order=3, order_seg=1, cval_seg=0):
     """
     Reshapes data (and seg) to target_size

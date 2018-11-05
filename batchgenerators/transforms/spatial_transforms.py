@@ -11,14 +11,47 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import warnings
-from warnings import warn
-
 from batchgenerators.transforms.abstract_transforms import AbstractTransform
 from batchgenerators.augmentations.spatial_transformations import augment_spatial, augment_channel_translation, \
-    augment_mirroring, augment_transpose_axes, augment_zoom, augment_resize, flip_vector_axis
+    augment_mirroring, augment_transpose_axes, augment_zoom, augment_resize, flip_vector_axis, augment_rot90
 import numpy as np
 
+
+class Rot90Transform(AbstractTransform):
+    def __init__(self, num_rot=(1, 2, 3), axes=(0, 1, 2), data_key="data", label_key="seg", p_per_sample=0.3):
+        """
+        :param num_rot: rotate by 90 degrees how often? must be tuple -> nom rot randomly chosen from that tuple
+        :param axes: around which axes will the rotation take place? two axes are chosen randomly from axes.
+        :param data_key:
+        :param label_key:
+        :param p_per_sample:
+        """
+        self.p_per_sample = p_per_sample
+        self.label_key = label_key
+        self.data_key = data_key
+        self.axes = axes
+        self.num_rot = num_rot
+
+    def __call__(self, **data_dict):
+        data = data_dict.get(self.data_key)
+        seg = data_dict.get(self.label_key)
+
+        for b in range(data.shape[0]):
+            if np.random.uniform() < self.p_per_sample:
+                d = data[b]
+                if seg is not None:
+                    s = seg[b]
+                else:
+                    s = None
+                d, s = augment_rot90(d, s, self.num_rot, self.axes)
+                data[b] = d
+                if s is not None:
+                    seg[b] = s
+
+        data_dict[self.data_key] = data
+        if seg is not None:
+            data_dict[self.label_key] = seg
+        return data_dict
 
 
 class ZoomTransform(AbstractTransform):
