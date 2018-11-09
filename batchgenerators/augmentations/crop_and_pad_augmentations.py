@@ -63,6 +63,20 @@ def get_lbs_for_center_crop(crop_size, data_shape):
 
 
 def crop(data, seg=None, crop_size=128, margins=(0, 0, 0), crop_type="center"):
+    """
+    crops data and seg (seg may be None) to crop_size. Whether this will be achieved via center or random crop is
+    determined by crop_type. Margin will be respected only for random_crop and will prevent the crops form being closer
+    than margin to the respective image border. crop_size can be larger than data_shape - margin -> data/seg will be
+    padded with zeros in that case. margins can be negative -> results in padding of data/seg followed by cropping with
+    margin=0 for the appropriate axes
+
+    :param data:
+    :param seg:
+    :param crop_size:
+    :param margins:
+    :param crop_type:
+    :return:
+    """
     if not isinstance(data, (list, tuple, np.ndarray)):
         raise TypeError("data has to be either a numpy array or a list")
 
