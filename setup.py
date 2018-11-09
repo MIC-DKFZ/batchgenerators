@@ -13,6 +13,7 @@ setup(name='batchgenerators',
             "numpy>=1.10.2",
             "scipy",
             "scikit-image",
-            "future"
+            "future",
+            "unittest2"
       ],
       zip_safe=False)

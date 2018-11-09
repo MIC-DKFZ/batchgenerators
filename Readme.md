@@ -4,6 +4,8 @@ Research Center (DKFZ) to suit all our deep learning data augmentation needs.
 It is not (yet) perfect, but we feel it is good enough to be shared with the community. If you encounter bug, feel free
 to contact us or open a github issue.
 
+[![Build Status](https://travis-ci.org/MIC-DKFZ/batchgenerators.svg?branch=master)](https://travis-ci.org/MIC-DKFZ/batchgenerators)
+
 ## Windows is not (yet) supported!!
 Batchgenerators makes heavy use of python multithreading and python multithreading on windows is a problem. We are trying to find a solution but as of now batchgenerators won't work on Windows!
 
@@ -65,7 +67,7 @@ allow for several segmentation maps. If you have only one segmentation, make sur
 
 ##How to install locally
 
-Install dependencies
+Install dependencies (some of them are only needed for certain functionalities)
 ```
 pip install numpy scipy nilearn matplotlib scikit-image nibabel
 ```
