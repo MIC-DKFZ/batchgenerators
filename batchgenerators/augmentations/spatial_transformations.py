@@ -58,7 +58,7 @@ def augment_resize(sample_data, sample_seg, target_size, order=3, order_seg=1, c
     :param border_mode: Points outside the boundaries of the input are filled according to the given mode. {‘constant’, ‘edge’, ‘symmetric’, ‘reflect’, ‘wrap’}, optional
     :return:
     """
-    dimensionality = len(sample_data.shape) - 2
+    dimensionality = len(sample_data.shape) - 1
     if not isinstance(target_size, (list, tuple)):
         target_size_here = [target_size] * dimensionality
     else:
