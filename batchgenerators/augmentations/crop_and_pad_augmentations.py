@@ -21,89 +21,7 @@ warnings.simplefilter("once", UserWarning)
 
 
 def center_crop(data, crop_size, seg=None):
-    if isinstance(data, np.ndarray):
-        is_list = False
-        data_shape = tuple(list(data.shape))
-    elif isinstance(data, (list, tuple)):
-        is_list = True
-        assert len(data) > 0 and isinstance(data[0], np.ndarray)
-        data_shape = tuple([len(data)] + list(data[0].shape))
-    else:
-        raise TypeError("Data has to be either a numpy array or a list")
-    if isinstance(seg, np.ndarray):
-        seg_shape = tuple(list(seg.shape))
-    elif isinstance(seg, (list, tuple)):
-        assert len(data) > 0 and isinstance(data[0], np.ndarray)
-        seg_shape = tuple([len(seg)] + list(seg[0].shape))
-    elif seg is not None:
-        raise TypeError("Data has to be either a numpy array or a list")
-
-    seg_return = None
-    if type(crop_size) not in (tuple, list, np.ndarray):
-        center_crop_size = [int(crop_size)] * (len(data_shape) - 2)
-    else:
-        center_crop_size = crop_size
-        assert len(crop_size) == len(
-            data_shape) - 2, "If you provide a list/tuple as center crop make sure it has the same dimension as your data (2d/3d)"
-    center = np.array(data_shape[2:]) / 2
-    if len(data_shape) == 5:
-        if not is_list:
-            data_return = data[:, :,
-                          int(center[0] - center_crop_size[0] / 2.):int(center[0] + center_crop_size[0] / 2.),
-                          int(center[1] - center_crop_size[1] / 2.):int(center[1] + center_crop_size[1] / 2.),
-                          int(center[2] - center_crop_size[2] / 2.):int(center[2] + center_crop_size[2] / 2.)]
-            if seg is not None:
-                seg_return = seg[:, :,
-                             int(center[0] - center_crop_size[0] / 2.):int(center[0] + center_crop_size[0] / 2.),
-                             int(center[1] - center_crop_size[1] / 2.):int(center[1] + center_crop_size[1] / 2.),
-                             int(center[2] - center_crop_size[2] / 2.):int(center[2] + center_crop_size[2] / 2.)]
-        else:
-            data_return = np.zeros([data_shape[0], data_shape[1]] + list(center_crop_size), dtype=data[0].dtype)
-            if seg is not None:
-                seg_return = np.zeros([seg_shape[0], seg_shape[1]] + list(center_crop_size), dtype=data[0].dtype)
-            for i, data_smpl in enumerate(data):
-                center = np.array(data_smpl.shape[1:]) / 2
-                data_return[i,] = data_smpl[:,
-                                  int(center[0] - center_crop_size[0] / 2.):int(center[0] + center_crop_size[0] / 2.),
-                                  int(center[1] - center_crop_size[1] / 2.):int(center[1] + center_crop_size[1] / 2.),
-                                  int(center[2] - center_crop_size[2] / 2.):int(center[2] + center_crop_size[2] / 2.)]
-                if seg is not None:
-                    seg_return[i,] = seg[i][:,
-                                     int(center[0] - center_crop_size[0] / 2.):int(
-                                         center[0] + center_crop_size[0] / 2.),
-                                     int(center[1] - center_crop_size[1] / 2.):int(
-                                         center[1] + center_crop_size[1] / 2.),
-                                     int(center[2] - center_crop_size[2] / 2.):int(
-                                         center[2] + center_crop_size[2] / 2.)]
-    elif len(data_shape) == 4:
-        if not is_list:
-            data_return = data[:, :,
-                          int(center[0] - center_crop_size[0] / 2.):int(center[0] + center_crop_size[0] / 2.),
-                          int(center[1] - center_crop_size[1] / 2.):int(center[1] + center_crop_size[1] / 2.)]
-            if seg is not None:
-                seg_return = seg[:, :,
-                             int(center[0] - center_crop_size[0] / 2.):int(center[0] + center_crop_size[0] / 2.),
-                             int(center[1] - center_crop_size[1] / 2.):int(center[1] + center_crop_size[1] / 2.)]
-        else:
-            data_return = np.zeros([data_shape[0], data_shape[1]] + list(center_crop_size), dtype=data[0].dtype)
-            if seg is not None:
-                seg_return = np.zeros([seg_shape[0], seg_shape[1]] + list(center_crop_size), dtype=data[0].dtype)
-            for i, data_smpl in enumerate(data):
-                center = np.array(data_smpl.shape[1:]) / 2
-
-                data_return[i,] = data_smpl[:,
-                                  int(center[0] - center_crop_size[0] / 2.):int(center[0] + center_crop_size[0] / 2.),
-                                  int(center[1] - center_crop_size[1] / 2.):int(center[1] + center_crop_size[1] / 2.)]
-                if seg is not None:
-                    seg_return[i,] = seg[i][:,
-                                     int(center[0] - center_crop_size[0] / 2.):int(
-                                         center[0] + center_crop_size[0] / 2.),
-                                     int(center[1] - center_crop_size[1] / 2.):int(
-                                         center[1] + center_crop_size[1] / 2.)]
-    else:
-        raise Exception(
-            "Invalid dimension for seg. seg should be either [BATCH_SIZE, channels, x, y] or [BATCH_SIZE, channels, x, y, z]")
-    return data_return, seg_return
+    return crop(data, seg, crop_size, 0, 'center')
 
 
 def center_crop_seg(seg, output_size):
@@ -130,7 +48,14 @@ def center_crop_seg(seg, output_size):
 
 ###
 
-def get_rnd_vals(crop_size, data_shape, margins):
+def get_lbs_for_random_crop(crop_size, data_shape, margins):
+    """
+
+    :param crop_size:
+    :param data_shape: (b,c,x,y(,z)) must be the whole thing!
+    :param margins:
+    :return:
+    """
     lbs = []
     for i in range(len(data_shape) - 2):
         if crop_size[i] > data_shape[i + 2]:
@@ -146,11 +71,23 @@ def get_rnd_vals(crop_size, data_shape, margins):
     return lbs
 
 
-def random_crop(data, seg=None, crop_size=128, margins=[0, 0, 0]):
+def get_lbs_for_center_crop(crop_size, data_shape):
+    """
+    :param crop_size:
+    :param data_shape: (b,c,x,y(,z)) must be the whole thing!
+    :return:
+    """
+    lbs = []
+    for i in range(len(data_shape) - 2):
+        if crop_size[i] > data_shape[i + 2]:
+            warn("Crop_size > data_shape. data: %s, crop: %s. Data will be padded to accomodate crop_size" % (str(data_shape), str(crop_size)), UserWarning)
+        lbs.append((data_shape[i + 2] - crop_size[i]) // 2)
+    return lbs
 
+
+def crop(data, seg=None, crop_size=128, margins=(0, 0, 0), crop_type="center"):
     if not isinstance(data, (list, tuple, np.ndarray)):
         raise TypeError("data has to be either a numpy array or a list")
-
 
     data_shape = tuple([len(data)] + list(data[0].shape))
     data_dtype = data[0].dtype
@@ -178,7 +115,7 @@ def random_crop(data, seg=None, crop_size=128, margins=[0, 0, 0]):
         margins = [margins] * dim
 
     if any([crop_size[d] > (data_shape[d+2] + 2*abs(min(0, margins[d]))) for d in range(dim)]):
-        warn("Crop_size > data_shape. Data will be padded to accomodate crop_size")
+        warn("Crop_size > data_shape (considering margin). Data will be padded to accomodate crop_size")
 
     data_return = np.zeros((data_shape[0], data_shape[1], *crop_size), dtype=data_dtype)
     if seg is not None:
@@ -187,9 +124,17 @@ def random_crop(data, seg=None, crop_size=128, margins=[0, 0, 0]):
         seg_return = None
 
     for b in range(data_shape[0]):
-        lbs = get_rnd_vals(crop_size, data_shape, margins)
+        data_shape_here = [data_shape[0]] + list(data[b].shape)
+
+        if crop_type == "center":
+            lbs = get_lbs_for_center_crop(crop_size, data_shape_here)
+        elif crop_type == "random":
+            lbs = get_lbs_for_random_crop(crop_size, data_shape_here, margins)
+        else:
+            raise NotImplementedError("crop_type must be either center or random")
+
         need_to_pad = [[0, 0]] + [[abs(min(0, lbs[d])),
-                                   abs(min(0, data_shape[d + 2] - (lbs[d] + crop_size[d])))]
+                                   abs(min(0, data_shape_here[d + 2] - (lbs[d] + crop_size[d])))]
                                   for d in range(dim)]
 
         if any([i > 0 for j in need_to_pad for i in j]):
@@ -207,12 +152,16 @@ def random_crop(data, seg=None, crop_size=128, margins=[0, 0, 0]):
 
         lbs = [lbs[d] + need_to_pad[d+1][0] for d in range(dim)]
         assert all([i >= 0 for i in lbs]), "just a failsafe"
-        slicer = [slice(0, data_shape[1])] + [slice(lbs[d], lbs[d]+crop_size[d]) for d in range(dim)]
+        slicer = [slice(0, data_shape_here[1])] + [slice(lbs[d], lbs[d]+crop_size[d]) for d in range(dim)]
         data_return[b] = data_2[slicer]
         if seg_return is not None:
             seg_return[b] = seg_2[slicer]
 
     return data_return, seg_return
+
+
+def random_crop(data, seg=None, crop_size=128, margins=[0, 0, 0]):
+    return crop(data, seg, crop_size, margins, 'random')
 
 
 def pad_to_multiple(data, multiple, seg=None, pad_value_data=None, pad_value_seg=None):

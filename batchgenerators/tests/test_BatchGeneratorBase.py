@@ -18,9 +18,8 @@ from builtins import str
 from builtins import range
 import unittest
 import numpy as np
-from .MockBatchGenerator import MockBatchGenerator
-from DeepLearningBatchGeneratorUtils.MultiThreadedGenerator import MultiThreadedGenerator
 import sys
+from batchgenerators.tests.DataGenerators import BasicDataLoader
 
 class TestMultiThreading(unittest.TestCase):
 
