@@ -16,7 +16,8 @@ from builtins import range
 import warnings
 from warnings import warn
 import numpy as np
-from meddec.utilities.padding import pad_nd_image
+
+from batchgenerators.augmentations.utils import pad_nd_image
 
 warnings.simplefilter("once", UserWarning)
 
