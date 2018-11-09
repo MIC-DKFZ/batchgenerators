@@ -36,7 +36,7 @@ class NumpyToTensor(AbstractTransform):
         and long supported (use string)
         """
         if not isinstance(keys, (list, tuple)):
-            keys = list(keys)
+            keys = [keys]
         self.keys = keys
         self.cast_to = cast_to
 

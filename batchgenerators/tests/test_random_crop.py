@@ -13,13 +13,9 @@
 # limitations under the License.
 
 
-from builtins import range
 import unittest
 import numpy as np
-from skimage import data
 from batchgenerators.augmentations.crop_and_pad_augmentations import random_crop
-from batchgenerators.tests.MockBatchGenerator import DummyGenerator
-import warnings
 
 
 class TestRandomCrop(unittest.TestCase):
