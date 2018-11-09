@@ -7,7 +7,7 @@ setup(name='batchgenerators',
       author='Division of Medical Image Computing, German Cancer Research Center',
       author_email='f.isensee@dkfz-heidelberg.de',
       license='Apache License Version 2.0, January 2004',
-      packages=['batchgenerators', 'batchgenerators.augmentations', 'batchgenerators.generators',
+      packages=['batchgenerators', 'batchgenerators.augmentations', 
       'batchgenerators.examples', 'batchgenerators.transforms', 'batchgenerators.dataloading'],
       install_requires=[
             "numpy>=1.10.2",
