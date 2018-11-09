@@ -92,17 +92,9 @@ def crop(data, seg=None, crop_size=128, margins=(0, 0, 0), crop_type="center"):
     if any([crop_size[d] > (data_shape[d+2] + 2*abs(min(0, margins[d]))) for d in range(dim)]):
         warn("Crop_size > data_shape (considering margin). Data will be padded to accomodate crop_size")
 
-    if dim == 2:
-        data_return = np.zeros((data_shape[0], data_shape[1], crop_size[0], crop_size[1]), dtype=data_dtype)
-    else:
-        data_return = np.zeros((data_shape[0], data_shape[1], crop_size[0], crop_size[1], crop_size[2]),
-                               dtype=data_dtype)
+    data_return = np.zeros([data_shape[0], data_shape[1]] + list(crop_size), dtype=data_dtype)
     if seg is not None:
-        if dim == 2:
-            seg_return = np.zeros((seg_shape[0], seg_shape[1], crop_size[0], crop_size[1]), dtype=seg_dtype)
-        else:
-            seg_return = np.zeros((seg_shape[0], seg_shape[1], crop_size[0], crop_size[1], crop_size[2]),
-                                  dtype=seg_dtype)
+        seg_return = np.zeros([seg_shape[0], seg_shape[1]] + list(crop_size), dtype=seg_dtype)
     else:
         seg_return = None
 
