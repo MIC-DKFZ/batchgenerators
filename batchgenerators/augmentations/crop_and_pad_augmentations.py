@@ -19,34 +19,9 @@ import numpy as np
 warnings.simplefilter("once", UserWarning)
 
 
-
 def center_crop(data, crop_size, seg=None):
     return crop(data, seg, crop_size, 0, 'center')
 
-
-def center_crop_seg(seg, output_size):
-    if type(output_size) not in (tuple, list, np.ndarray):
-        center_crop = [int(output_size)] * (len(seg.shape) - 2)
-    else:
-        center_crop = output_size
-        assert len(center_crop) == len(
-            seg.shape) - 2, "If you provide a list/tuple as center crop make sure it has the same dimension as your data (2d/3d)"
-    center = np.array(seg.shape[2:]) / 2
-    if len(seg.shape) == 4:
-        seg_return = seg[:, :, int(center[0] - center_crop[0] / 2.):int(center[0] + center_crop[0] / 2.),
-                     int(center[1] - center_crop[1] / 2.):int(center[1] + center_crop[1] / 2.)]
-    elif len(seg.shape) == 5:
-        seg_return = seg[:, :, int(center[0] - center_crop[0] / 2.):int(center[0] + center_crop[0] / 2.),
-                     int(center[1] - center_crop[1] / 2.):int(center[1] + center_crop[1] / 2.),
-                     int(center[2] - center_crop[2] / 2.):int(center[2] + center_crop[2] / 2.)]
-    else:
-        raise Exception(
-            "Invalid dimension for seg. seg should be either [BATCH_SIZE, channels, x, y] or [BATCH_SIZE, channels, x, y, z]")
-
-    return seg_return
-
-
-###
 
 def get_lbs_for_random_crop(crop_size, data_shape, margins):
     """
@@ -189,7 +164,7 @@ def pad_to_multiple(data, multiple, seg=None, pad_value_data=None, pad_value_seg
         return ret_data, ret_seg
 
 
-def pad_to_ratio_2d(data, ratio, seg=None, pad_value_data=None, pad_value_seg=None):
+def pad_to_aspect_ratio_2d(data, ratio, seg=None, pad_value_data=None, pad_value_seg=None):
 
     assert ratio != 0
 

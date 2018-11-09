@@ -11,10 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+from warnings import warn
 
 from batchgenerators.augmentations.crop_and_pad_augmentations import center_crop, center_crop_seg, fillup_pad, pad, \
-    pad_to_multiple, random_crop, pad_to_ratio_2d
+    pad_to_multiple, random_crop, pad_to_aspect_ratio_2d
 from batchgenerators.transforms.abstract_transforms import AbstractTransform
 
 
@@ -61,7 +61,7 @@ class CenterCropSegTransform(AbstractTransform):
         seg = data_dict.get(self.label_key)
 
         if seg is not None:
-            data_dict[self.label_key] = center_crop_seg(seg, self.output_size)
+            data_dict[self.label_key] = center_crop(seg, self.output_size, None)
         else:
             from warnings import warn
             warn("You shall not pass data_dict without seg: Used CenterCropSegTransform, but there is no seg", Warning)
@@ -196,7 +196,7 @@ class PadToMultipleTransform(AbstractTransform):
         return data_dict
 
 
-class PadToRatioTransform(AbstractTransform):
+class PadToAbstractRatioTransform(AbstractTransform):
     """Pads data and seg to a ratio of w:h e.g. 16:9 == ratio = 16/9. and 1:2 == ratio 0.5
 
     Args:
@@ -220,10 +220,17 @@ class PadToRatioTransform(AbstractTransform):
         data = data_dict.get(self.data_key)
         seg = data_dict.get(self.label_key)
 
-        data, seg = pad_to_ratio_2d(data, self.ratio, seg, self.pad_value_data, self.pad_value_seg)
+        data, seg = pad_to_aspect_ratio_2d(data, self.ratio, seg, self.pad_value_data, self.pad_value_seg)
 
         data_dict[self.data_key] = data
         if seg is not None:
             data_dict[self.label_key] = seg
 
         return data_dict
+
+
+class PadToRatioTransform(PadToAbstractRatioTransform):
+    def __init__(self, ratio, pad_value_data=None, pad_value_seg=None, data_key="data", label_key="seg"):
+        warn("PadToRatioTransform was renamed to PadToAbstractRatioTransform. Please adapt your code accordingly. "
+             "Functionality is identical", DeprecationWarning)
+        super(PadToRatioTransform, self).__init__(ratio, pad_value_data, pad_value_seg, data_key, label_key)
