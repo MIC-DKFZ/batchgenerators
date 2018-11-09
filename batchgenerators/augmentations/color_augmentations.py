@@ -21,6 +21,14 @@ from batchgenerators.augmentations.utils import general_cc_var_num_channels, ill
 
 
 def augment_contrast(data_sample, contrast_range=(0.75, 1.25), preserve_range=True, per_channel=True):
+    """
+    
+    :param data_sample: 
+    :param contrast_range: increases the contrast for if factor>1, decreases the contrast if factor<1
+    :param preserve_range: 
+    :param per_channel: 
+    :return: 
+    """
     if not per_channel:
         mn = data_sample.mean()
         if preserve_range:
