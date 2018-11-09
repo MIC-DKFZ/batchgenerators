@@ -69,7 +69,10 @@ def augment_resize(sample_data, sample_seg, target_size, order=3, order_seg=1, c
     sample_data = resize_multichannel_image(sample_data, target_size_here, order)
 
     if sample_seg is not None:
-        sample_seg = resize_segmentation(sample_seg, target_size_here, order_seg, cval_seg)
+        if sample_seg is not None:
+            target_seg = np.ones([sample_seg.shape[0]] + target_shape_here)
+            for c in range(sample_seg.shape[0]):
+                target_seg[c] = resize_segmentation(sample_seg[c], target_shape_here, order_seg, cval_seg)
 
     return sample_data, sample_seg
 
@@ -77,14 +80,14 @@ def augment_resize(sample_data, sample_seg, target_size, order=3, order_seg=1, c
 def augment_zoom(sample_data, sample_seg, zoom_factors, order=3, order_seg=1, cval_seg=0):
     """
     zooms data (and seg) by factor zoom_factors
-    :param data: np.ndarray or list/tuple of np.ndarrays, must be (b, c, x, y(, z))) (if list/tuple then each entry
+    :param sample_data: np.ndarray or list/tuple of np.ndarrays, must be (c, x, y(, z))) (if list/tuple then each entry
     must be of this shape!)
     :param zoom_factors: int or list/tuple of int
     :param order: interpolation order for data (see skimage.transform.resize)
     :param order_seg: interpolation order for seg (see skimage.transform.resize)
     :param cval_seg: cval for segmentation (see skimage.transform.resize)
-    :param seg: can be None, if not None then it will also be zoomed by zoom_factors. Can also be list/tuple of
-    np.ndarray (just like data). Must also be (b, c, x, y(, z))
+    :param sample_seg: can be None, if not None then it will also be zoomed by zoom_factors. Can also be list/tuple of
+    np.ndarray (just like data). Must also be (c, x, y(, z))
     :param concatenate_list: if you give list/tuple of data/seg and set concatenate_list=True then the result will be
     concatenated into one large ndarray (once again b, c, x, y(, z))
     :return:
@@ -103,9 +106,11 @@ def augment_zoom(sample_data, sample_seg, zoom_factors, order=3, order_seg=1, cv
     sample_data = resize_multichannel_image(sample_data, target_shape_here, order)
 
     if sample_seg is not None:
-        sample_seg = resize_segmentation(sample_seg, target_shape_here, order_seg, cval_seg)
+        target_seg = np.ones([sample_seg.shape[0]] + target_shape_here)
+        for c in range(sample_seg.shape[0]):
+            target_seg[c] = resize_segmentation(sample_seg[c], target_shape_here, order_seg, cval_seg)
 
-    return sample_data, sample_seg
+    return sample_data, target_seg
 
 
 def augment_mirroring(sample_data, sample_seg=None, axes=(0, 1, 2)):
