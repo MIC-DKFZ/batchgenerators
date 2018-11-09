@@ -16,9 +16,11 @@ from builtins import range
 import numpy as np
 import random
 from skimage.transform import resize
+from batchgenerators.augmentations.utils import uniform
 
 
-def augment_linear_downsampling_scipy(data_sample, zoom_range=(0.5, 1), per_channel=True, p_per_channel=1, channels=None):
+def augment_linear_downsampling_scipy(data_sample, zoom_range=(0.5, 1), per_channel=True, p_per_channel=1,
+                                      channels=None, order_downsample=1, order_upsample=0):
     '''
     Downsamples each sample (linearly) by a random factor and upsamples to original resolution again (nearest neighbor)
 
@@ -39,6 +41,11 @@ def augment_linear_downsampling_scipy(data_sample, zoom_range=(0.5, 1), per_chan
 
         channels (list, tuple): if None then all channels can be augmented. If list then only the channel indices can
         be augmented (but may not always be depending on p_per_channel)
+
+        order_downsample:
+
+        order_upsample:
+
     '''
     if not isinstance(zoom_range, (list, tuple, np.ndarray)):
         zoom_range = [zoom_range]
@@ -49,9 +56,9 @@ def augment_linear_downsampling_scipy(data_sample, zoom_range=(0.5, 1), per_chan
     if not per_channel:
         if isinstance(zoom_range[0], (tuple, list, np.ndarray)):
             assert len(zoom_range) == dim
-            zoom = np.array([random.uniform(i[0], i[1]) for i in zoom_range])
+            zoom = np.array([uniform(i[0], i[1]) for i in zoom_range])
         else:
-            zoom = random.uniform(zoom_range[0], zoom_range[1])
+            zoom = uniform(zoom_range[0], zoom_range[1])
 
         target_shape = np.round(shp * zoom).astype(int)
 
@@ -63,15 +70,16 @@ def augment_linear_downsampling_scipy(data_sample, zoom_range=(0.5, 1), per_chan
             if per_channel:
                 if isinstance(zoom_range[0], (tuple, list, np.ndarray)):
                     assert len(zoom_range) == dim
-                    zoom = np.array([random.uniform(i[0], i[1]) for i in zoom_range])
+                    zoom = np.array([uniform(i[0], i[1]) for i in zoom_range])
                 else:
-                    zoom = random.uniform(zoom_range[0], zoom_range[1])
+                    zoom = uniform(zoom_range[0], zoom_range[1])
 
                 target_shape = np.round(shp * zoom).astype(int)
 
-            downsampled = resize(data_sample[c].astype(float), target_shape, order=1, mode='constant', cval=0,
-                                 anti_aliasing=False)
-            data_sample[c] = resize(downsampled, shp, order=0, mode='constant', cval=0, anti_aliasing=False)
+            downsampled = resize(data_sample[c].astype(float), target_shape, order=order_downsample, mode='constant',
+                                 cval=0, anti_aliasing=False)
+            data_sample[c] = resize(downsampled, shp, order=0, mode='constant', cval=order_upsample,
+                                    anti_aliasing=False)
 
     return data_sample
 

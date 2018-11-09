@@ -15,7 +15,6 @@
 
 from batchgenerators.transforms.abstract_transforms import AbstractTransform
 from batchgenerators.augmentations.resample_augmentations import augment_linear_downsampling_scipy
-from batchgenerators.augmentations.resample_augmentations import augment_downsampling_upsampling
 import numpy as np
 
 
@@ -40,10 +39,16 @@ class ResampleTransform(AbstractTransform):
 
         channels (list, tuple): if None then all channels can be augmented. If list then only the channel indices can
         be augmented (but may not always be depending on p_per_channel)
+
+        order_downsample:
+
+        order_upsample:
     """
 
     def __init__(self, zoom_range=(0.5, 1), data_key="data", per_channel=False, p_per_sample=1, p_per_channel=1,
-                 channels=None):
+                 channels=None, order_downsample=1, order_upsample=0):
+        self.order_upsample = order_upsample
+        self.order_downsample = order_downsample
         self.channels = channels
         self.per_channel = per_channel
         self.p_per_channel = p_per_channel
@@ -58,6 +63,8 @@ class ResampleTransform(AbstractTransform):
                                                                              zoom_range=self.zoom_range,
                                                                              per_channel=self.per_channel,
                                                                              p_per_channel=self.p_per_channel,
-                                                                             channels=self.channels)
+                                                                             channels=self.channels,
+                                                                             order_downsample=self.order_downsample,
+                                                                             order_upsample=self.order_upsample)
         return data_dict
 

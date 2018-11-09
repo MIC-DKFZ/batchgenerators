@@ -580,6 +580,22 @@ def get_range_val(value, rnd_type="uniform"):
         return value
 
 
+def uniform(low, high, size=None):
+    """
+    wrapper for np.random.uniform to allow it to handle low=high
+    :param low:
+    :param high:
+    :return:
+    """
+    if low == high:
+        if size is None:
+            return low
+        else:
+            return np.ones(size) * low
+    else:
+        return np.random.uniform(low, high, size)
+
+
 def pad_nd_image(image, new_shape=None, mode="edge", kwargs=None, return_slicer=False, shape_must_be_divisible_by=None):
     """
     one padder to pad them all. Documentation? Well okay. A little bit
