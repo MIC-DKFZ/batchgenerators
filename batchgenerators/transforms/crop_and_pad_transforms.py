@@ -196,7 +196,7 @@ class PadToMultipleTransform(AbstractTransform):
         return data_dict
 
 
-class PadToAbstractRatioTransform(AbstractTransform):
+class PadToAspectRatioTransform(AbstractTransform):
     """Pads data and seg to a ratio of w:h e.g. 16:9 == ratio = 16/9. and 1:2 == ratio 0.5
 
     Args:
@@ -229,7 +229,7 @@ class PadToAbstractRatioTransform(AbstractTransform):
         return data_dict
 
 
-class PadToRatioTransform(PadToAbstractRatioTransform):
+class PadToRatioTransform(PadToAspectRatioTransform):
     def __init__(self, ratio, pad_value_data=None, pad_value_seg=None, data_key="data", label_key="seg"):
         warn("PadToRatioTransform was renamed to PadToAbstractRatioTransform. Please adapt your code accordingly. "
              "Functionality is identical", DeprecationWarning)
