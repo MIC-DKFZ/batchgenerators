@@ -27,7 +27,7 @@ from batchgenerators.augmentations import utils
 class TestSanity(unittest.TestCase):
 
     def test_sanity(self):
-        self.assertTrue(3 == 3, "Sanity test failed")
+        self.assertTrue(1 == 1, "Sanity test failed")
 
 
 if __name__ == '__main__':
