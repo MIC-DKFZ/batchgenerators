@@ -444,11 +444,10 @@ def general_cc_var_num_channels(img, diff_order=0, mink_norm=1, sigma=1, mask_im
 def convert_seg_to_bounding_box_coordinates(data_dict, dim, get_rois_from_seg_flag=False, class_specific_seg_flag=False):
 
         '''
-
         :param data_dict:
         :param dim:
         :param get_rois_from_seg:
-        :return: coords (x1, y1, x2, y2)
+        :return: coords (y1, x1, y2, x2)
         '''
 
         bb_target = []
@@ -467,9 +466,9 @@ def convert_seg_to_bounding_box_coordinates(data_dict, dim, get_rois_from_seg_fl
                     data_dict['class_target'][b] = [data_dict['class_target'][b]] * n_cands
                 else:
                     n_cands = int(np.max(data_dict['seg'][b]))
+                    clusters = data_dict['seg'][b]
 
-                rois = np.array([(data_dict['seg'][b] == ii) * 1 for ii in range(1, n_cands + 1)])  # separate clusters and concat
-
+                rois = np.array([(clusters == ii) * 1 for ii in range(1, n_cands + 1)])  # separate clusters and concat
                 for rix, r in enumerate(rois):
                     if np.sum(r !=0) > 0: #check if the lesion survived data augmentation
                         seg_ixs = np.argwhere(r != 0)
