@@ -45,17 +45,14 @@ def augment_rot90(sample_data, sample_seg, num_rot=(1, 2, 3), axes=(0, 1, 2)):
 def augment_resize(sample_data, sample_seg, target_size, order=3, order_seg=1, cval_seg=0):
     """
     Reshapes data (and seg) to target_size
-    :param data: np.ndarray or list/tuple of np.ndarrays, must be (b, c, x, y(, z))) (if list/tuple then each entry
+    :param sample_data: np.ndarray or list/tuple of np.ndarrays, must be (c, x, y(, z))) (if list/tuple then each entry
     must be of this shape!)
     :param target_size: int or list/tuple of int
     :param order: interpolation order for data (see skimage.transform.resize)
     :param order_seg: interpolation order for seg (see skimage.transform.resize)
     :param cval_seg: cval for segmentation (see skimage.transform.resize)
-    :param seg: can be None, if not None then it will also be resampled to target_size. Can also be list/tuple of
-    np.ndarray (just like data). Must also be (b, c, x, y(, z))
-    :param concatenate_list: if you give list/tuple of data/seg and set concatenate_list=True then the result will be
-    concatenated into one large ndarray (once again b, c, x, y(, z))
-    :param border_mode: Points outside the boundaries of the input are filled according to the given mode. {‘constant’, ‘edge’, ‘symmetric’, ‘reflect’, ‘wrap’}, optional
+    :param sample_seg: can be None, if not None then it will also be resampled to target_size. Can also be list/tuple of
+    np.ndarray (just like data). Must also be (c, x, y(, z))
     :return:
     """
     dimensionality = len(sample_data.shape) - 1
@@ -88,8 +85,6 @@ def augment_zoom(sample_data, sample_seg, zoom_factors, order=3, order_seg=1, cv
     :param cval_seg: cval for segmentation (see skimage.transform.resize)
     :param sample_seg: can be None, if not None then it will also be zoomed by zoom_factors. Can also be list/tuple of
     np.ndarray (just like data). Must also be (c, x, y(, z))
-    :param concatenate_list: if you give list/tuple of data/seg and set concatenate_list=True then the result will be
-    concatenated into one large ndarray (once again b, c, x, y(, z))
     :return:
     """
 
@@ -109,6 +104,8 @@ def augment_zoom(sample_data, sample_seg, zoom_factors, order=3, order_seg=1, cv
         target_seg = np.ones([sample_seg.shape[0]] + target_shape_here)
         for c in range(sample_seg.shape[0]):
             target_seg[c] = resize_segmentation(sample_seg[c], target_shape_here, order_seg, cval_seg)
+    else:
+        target_seg = None
 
     return sample_data, target_seg
 
