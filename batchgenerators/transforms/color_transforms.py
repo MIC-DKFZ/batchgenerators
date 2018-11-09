@@ -63,15 +63,21 @@ class BrightnessTransform(AbstractTransform):
     CAREFUL: This transform will modify the value range of your data!
 
     """
-    def __init__(self, mu, sigma, per_channel=True, data_key="data"):
+    def __init__(self, mu, sigma, per_channel=True, data_key="data", p_per_sample=1):
+        self.p_per_sample = p_per_sample
         self.data_key = data_key
         self.mu = mu
         self.sigma = sigma
         self.per_channel = per_channel
 
     def __call__(self, **data_dict):
-        data_dict[self.data_key] = augment_brightness_additive(data_dict[self.data_key], self.mu, self.sigma,
-                                                               self.per_channel)
+        data = data_dict[self.data_key]
+
+        for b in range(data.shape[0]):
+            if np.random.uniform() < self.p_per_sample:
+                data[b] = augment_brightness_additive(data[b], self.mu, self.sigma, self.per_channel)
+
+        data_dict[self.data_key] = data
         return data_dict
 
 

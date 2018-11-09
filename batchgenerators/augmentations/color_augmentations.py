@@ -51,18 +51,15 @@ def augment_contrast(data_sample, contrast_range=(0.75, 1.25), preserve_range=Tr
     return data_sample
 
 
-def augment_brightness_additive(data, mu, sigma, per_channel=True):
-    for sample_idx in range(data.shape[0]):
-        sample = data[sample_idx]
-        if not per_channel:
+def augment_brightness_additive(data_sample, mu, sigma, per_channel=True):
+    if not per_channel:
+        rnd_nb = np.random.normal(mu, sigma)
+        data_sample += rnd_nb
+    else:
+        for c in range(data_sample.shape[0]):
             rnd_nb = np.random.normal(mu, sigma)
-            sample += rnd_nb
-        else:
-            for c in range(sample.shape[0]):
-                rnd_nb = np.random.normal(mu, sigma)
-                sample[c] += rnd_nb
-        data[sample_idx] = sample
-    return data
+            data_sample[c] += rnd_nb
+    return data_sample
 
 
 def augment_brightness_multiplicative(data_sample, multiplier_range=(0.5, 2), per_channel=True):
