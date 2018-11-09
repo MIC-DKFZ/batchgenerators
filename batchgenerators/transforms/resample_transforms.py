@@ -11,14 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+from warnings import warn
 
 from batchgenerators.transforms.abstract_transforms import AbstractTransform
 from batchgenerators.augmentations.resample_augmentations import augment_linear_downsampling_scipy
 import numpy as np
 
 
-class ResampleTransform(AbstractTransform):
+class SimulateLowResolutionTransform(AbstractTransform):
     """Downsamples each sample (linearly) by a random factor and upsamples to original resolution again
     (nearest neighbor)
 
@@ -45,8 +45,8 @@ class ResampleTransform(AbstractTransform):
         order_upsample:
     """
 
-    def __init__(self, zoom_range=(0.5, 1), data_key="data", per_channel=False, p_per_sample=1, p_per_channel=1,
-                 channels=None, order_downsample=1, order_upsample=0):
+    def __init__(self, zoom_range=(0.5, 1), per_channel=False, p_per_channel=1,
+                 channels=None, order_downsample=1, order_upsample=0, data_key="data", p_per_sample=1):
         self.order_upsample = order_upsample
         self.order_downsample = order_downsample
         self.channels = channels
@@ -68,3 +68,11 @@ class ResampleTransform(AbstractTransform):
                                                                              order_upsample=self.order_upsample)
         return data_dict
 
+
+class ResampleTransform(SimulateLowResolutionTransform):
+    def __init__(self, zoom_range=(0.5, 1), per_channel=False, p_per_channel=1,
+                 channels=None, order_downsample=1, order_upsample=0, data_key="data", p_per_sample=1):
+        warn("This class is deprecated. It was renamed to SimulateLowResolutionTransform. Please change your code",
+             DeprecationWarning)
+        super(ResampleTransform, self).__init__(zoom_range, per_channel, p_per_channel,
+                 channels, order_downsample, order_upsample, data_key, p_per_sample)
