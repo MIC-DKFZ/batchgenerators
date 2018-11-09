@@ -21,7 +21,7 @@ __author__ = 'Simon Kohl'
 import unittest
 import numpy as np
 from skimage import data
-from .MockBatchGenerator import MockRepeatBatchGenerator
+from ._MockBatchGenerator import MockRepeatBatchGenerator
 from DeepLearningBatchGeneratorUtils.InvertibleGenerators import InvertibleRotationGenerator
 
 

@@ -20,7 +20,7 @@ __author__ = 'Simon Kohl'
 import unittest
 import numpy as np
 from skimage import data
-from .MockBatchGenerator import MockRepeatBatchGenerator
+from ._MockBatchGenerator import MockRepeatBatchGenerator
 from DeepLearningBatchGeneratorUtils.DataAugmentationGenerators import mirror_axis_generator
 
 class TestMirrorAxis(unittest.TestCase):

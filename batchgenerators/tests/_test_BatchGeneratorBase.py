@@ -18,7 +18,7 @@ from builtins import str
 from builtins import range
 import unittest
 import numpy as np
-from .MockBatchGenerator import MockBatchGenerator
+from ._MockBatchGenerator import MockBatchGenerator
 from DeepLearningBatchGeneratorUtils.MultiThreadedGenerator import MultiThreadedGenerator
 import sys
 
