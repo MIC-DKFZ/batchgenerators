@@ -15,14 +15,8 @@
 
 from __future__ import print_function
 from __future__ import absolute_import
-
 import unittest
-from batchgenerators.augmentations import color_augmentations
-from batchgenerators.augmentations import crop_and_pad_augmentations
-from batchgenerators.augmentations import noise_augmentations
-from batchgenerators.augmentations import resample_augmentations
-from batchgenerators.augmentations import spatial_transformations
-from batchgenerators.augmentations import utils
+
 
 class TestSanity(unittest.TestCase):
 
