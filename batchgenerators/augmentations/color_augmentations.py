@@ -91,7 +91,7 @@ def augment_gamma(data_sample, gamma_range=(0.5, 2), invert_image=False, epsilon
             data_sample = data_sample - data_sample.mean() + mn
             data_sample = data_sample / (data_sample.std() + 1e-8) * sd
     else:
-        for c in range(data_sample.shape[1]):
+        for c in range(data_sample.shape[0]):
             if retain_stats:
                 mn = data_sample[c].mean()
                 sd = data_sample[c].std()
