@@ -124,8 +124,10 @@ class GammaTransform(AbstractTransform):
         self.invert_image = invert_image
 
     def __call__(self, **data_dict):
-        data_dict[self.data_key] = augment_gamma(data_dict[self.data_key], self.gamma_range, self.invert_image,
-                                                 per_channel=self.per_channel, retain_stats=self.retain_stats, p_per_sample=self.p_per_sample)
+        for b in range(len(data_dict[self.data_key])):
+            if np.random.uniform() < self.p_per_sample:
+                data_dict[self.data_key][b] = augment_gamma(data_dict[self.data_key][b], self.gamma_range, self.invert_image,
+                                                         per_channel=self.per_channel, retain_stats=self.retain_stats)
         return data_dict
 
 
@@ -159,7 +161,7 @@ class ClipValueRange(AbstractTransform):
         Clips the value range of data to [min, max]
         :param min:
         :param max:
-        :param data_key: 
+        :param data_key:
         """
         self.data_key = data_key
         self.min = min

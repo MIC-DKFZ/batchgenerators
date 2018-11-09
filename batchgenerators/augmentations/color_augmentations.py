@@ -72,41 +72,40 @@ def augment_brightness_multiplicative(data_sample, multiplier_range=(0.5, 2), pe
     return data_sample
 
 
-def augment_gamma(data, gamma_range=(0.5, 2), invert_image=False, epsilon=1e-7, per_channel=False, retain_stats=False, p_per_sample=0.3):
-    for sample in range(data.shape[0]):
-        if np.random.uniform() < p_per_sample:
-            if invert_image:
-                data = - data
-            if not per_channel:
-                if retain_stats:
-                    mn = data[sample].mean()
-                    sd = data[sample].std()
-                if np.random.random() < 0.5 and gamma_range[0] < 1:
-                    gamma = np.random.uniform(gamma_range[0], 1)
-                else:
-                    gamma = np.random.uniform(max(gamma_range[0], 1), gamma_range[1])
-                minm = data[sample].min()
-                rnge = data[sample].max() - minm
-                data[sample] = np.power(((data[sample] - minm) / float(rnge + epsilon)), gamma) * rnge + minm
-                if retain_stats:
-                    data[sample] = data[sample] - data[sample].mean() + mn
-                    data[sample] = data[sample] / (data[sample].std() + 1e-8) * sd
+def augment_gamma(data_sample, gamma_range=(0.5, 2), invert_image=False, epsilon=1e-7, per_channel=False,
+                  retain_stats=False):
+    if invert_image:
+        data_sample = - data_sample
+    if not per_channel:
+        if retain_stats:
+            mn = data_sample.mean()
+            sd = data_sample.std()
+        if np.random.random() < 0.5 and gamma_range[0] < 1:
+            gamma = np.random.uniform(gamma_range[0], 1)
+        else:
+            gamma = np.random.uniform(max(gamma_range[0], 1), gamma_range[1])
+        minm = data_sample.min()
+        rnge = data_sample.max() - minm
+        data_sample = np.power(((data_sample - minm) / float(rnge + epsilon)), gamma) * rnge + minm
+        if retain_stats:
+            data_sample = data_sample - data_sample.mean() + mn
+            data_sample = data_sample / (data_sample.std() + 1e-8) * sd
+    else:
+        for c in range(data_sample.shape[1]):
+            if retain_stats:
+                mn = data_sample[c].mean()
+                sd = data_sample[c].std()
+            if np.random.random() < 0.5 and gamma_range[0] < 1:
+                gamma = np.random.uniform(gamma_range[0], 1)
             else:
-                for c in range(data.shape[1]):
-                    if retain_stats:
-                        mn = data[sample][c].mean()
-                        sd = data[sample][c].std()
-                    if np.random.random() < 0.5 and gamma_range[0] < 1:
-                        gamma = np.random.uniform(gamma_range[0], 1)
-                    else:
-                        gamma = np.random.uniform(max(gamma_range[0], 1), gamma_range[1])
-                    minm = data[sample][c].min()
-                    rnge = data[sample][c].max() - minm
-                    data[sample][c] = np.power(((data[sample][c] - minm) / float(rnge + epsilon)), gamma) * rnge + minm
-                    if retain_stats:
-                        data[sample][c] = data[sample][c] - data[sample][c].mean() + mn
-                        data[sample][c] = data[sample][c] / (data[sample][c].std() + 1e-8) * sd
-    return data
+                gamma = np.random.uniform(max(gamma_range[0], 1), gamma_range[1])
+            minm = data_sample[c].min()
+            rnge = data_sample[c].max() - minm
+            data_sample[c] = np.power(((data_sample[c] - minm) / float(rnge + epsilon)), gamma) * rnge + minm
+            if retain_stats:
+                data_sample[c] = data_sample[c] - data_sample[c].mean() + mn
+                data_sample[c] = data_sample[c] / (data_sample[c].std() + 1e-8) * sd
+    return data_sample
 
 
 def augment_illumination(data, white_rgb):

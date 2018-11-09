@@ -19,7 +19,7 @@ from batchgenerators.augmentations.resample_augmentations import augment_downsam
 
 
 class ResampleTransform(AbstractTransform):
-    '''Downsamples each sample (linearly) by a random factor and upsamples to original resolution again (nearest neighbor)
+    """Downsamples each sample (linearly) by a random factor and upsamples to original resolution again (nearest neighbor)
 
     Info:
     * Uses scipy zoom for resampling.
@@ -27,7 +27,7 @@ class ResampleTransform(AbstractTransform):
 
     Args:
         zoom_range (tuple of float): Random downscaling factor in this range. (e.g.: 0.5 halfs the resolution)
-    '''
+    """
 
     def __init__(self, zoom_range=(0.5, 1), data_key="data"):
         self.data_key = data_key
