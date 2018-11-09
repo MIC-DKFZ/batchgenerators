@@ -13,7 +13,7 @@
 # limitations under the License.
 from warnings import warn
 
-from batchgenerators.augmentations.crop_and_pad_augmentations import center_crop, center_crop_seg, fillup_pad, pad, \
+from batchgenerators.augmentations.crop_and_pad_augmentations import center_crop, fillup_pad, pad, \
     pad_to_multiple, random_crop, pad_to_aspect_ratio_2d
 from batchgenerators.transforms.abstract_transforms import AbstractTransform
 

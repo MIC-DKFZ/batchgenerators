@@ -90,15 +90,15 @@ def augment_zoom(sample_data, sample_seg, zoom_factors, order=3, order_seg=1, cv
     :return:
     """
 
-    dimensionality = len(sample_data.shape) - 2
-    shape = np.array(sample_data.shape[2:])
+    dimensionality = len(sample_data.shape) - 1
+    shape = np.array(sample_data.shape[1:])
     if not isinstance(zoom_factors, (list, tuple)):
         zoom_factors_here = np.array([zoom_factors] * dimensionality)
     else:
         assert len(zoom_factors) == dimensionality, "If you give a tuple/list as target size, make sure it has " \
                                                     "the same dimensionality as data!"
         zoom_factors_here = np.array(zoom_factors)
-    target_shape_here = np.round(shape * zoom_factors_here).astype(int)
+    target_shape_here = list(np.round(shape * zoom_factors_here).astype(int))
 
     sample_data = resize_multichannel_image(sample_data, target_shape_here, order)
 
