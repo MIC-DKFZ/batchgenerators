@@ -444,11 +444,10 @@ def general_cc_var_num_channels(img, diff_order=0, mink_norm=1, sigma=1, mask_im
 def convert_seg_to_bounding_box_coordinates(data_dict, dim, get_rois_from_seg_flag=False, class_specific_seg_flag=False):
 
         '''
-
         :param data_dict:
         :param dim:
         :param get_rois_from_seg:
-        :return: coords (x1, y1, x2, y2)
+        :return: coords (y1, x1, y2, x2)
         '''
 
         bb_target = []
@@ -467,9 +466,9 @@ def convert_seg_to_bounding_box_coordinates(data_dict, dim, get_rois_from_seg_fl
                     data_dict['class_target'][b] = [data_dict['class_target'][b]] * n_cands
                 else:
                     n_cands = int(np.max(data_dict['seg'][b]))
+                    clusters = data_dict['seg'][b]
 
-                rois = np.array([(data_dict['seg'][b] == ii) * 1 for ii in range(1, n_cands + 1)])  # separate clusters and concat
-
+                rois = np.array([(clusters == ii) * 1 for ii in range(1, n_cands + 1)])  # separate clusters and concat
                 for rix, r in enumerate(rois):
                     if np.sum(r !=0) > 0: #check if the lesion survived data augmentation
                         seg_ixs = np.argwhere(r != 0)
@@ -581,4 +580,128 @@ def get_range_val(value, rnd_type="uniform"):
         return value
 
 
+def uniform(low, high, size=None):
+    """
+    wrapper for np.random.uniform to allow it to handle low=high
+    :param low:
+    :param high:
+    :return:
+    """
+    if low == high:
+        if size is None:
+            return low
+        else:
+            return np.ones(size) * low
+    else:
+        return np.random.uniform(low, high, size)
 
+
+def pad_nd_image(image, new_shape=None, mode="edge", kwargs=None, return_slicer=False, shape_must_be_divisible_by=None):
+    """
+    one padder to pad them all. Documentation? Well okay. A little bit
+
+    :param image: nd image. can be anything
+    :param new_shape: what shape do you want? new_shape does not have to have the same dimensionality as image. If
+    len(new_shape) < len(image.shape) then the last axes of image will be padded. If new_shape < image.shape in any of
+    the axes then we will not pad that axis, but also not crop! (interpret new_shape as new_min_shape)
+    Example:
+    image.shape = (10, 1, 512, 512); new_shape = (768, 768) -> result: (10, 1, 768, 768). Cool, huh?
+    image.shape = (10, 1, 512, 512); new_shape = (364, 768) -> result: (10, 1, 512, 768).
+
+    :param mode: see np.pad for documentation
+    :param return_slicer: if True then this function will also return what coords you will need to use when cropping back
+    to original shape
+    :param shape_must_be_divisible_by: for network prediction. After applying new_shape, make sure the new shape is
+    divisibly by that number (can also be a list with an entry for each axis). Whatever is missing to match that will
+    be padded (so the result may be larger than new_shape if shape_must_be_divisible_by is not None)
+    :param kwargs: see np.pad for documentation
+    """
+    if kwargs is None:
+        kwargs = {}
+
+    if new_shape is not None:
+        old_shape = np.array(image.shape[-len(new_shape):])
+    else:
+        assert shape_must_be_divisible_by is not None
+        assert isinstance(shape_must_be_divisible_by, (list, tuple, np.ndarray))
+        new_shape = image.shape[-len(shape_must_be_divisible_by):]
+        old_shape = new_shape
+
+    num_axes_nopad = len(image.shape) - len(new_shape)
+
+    new_shape = [max(new_shape[i], old_shape[i]) for i in range(len(new_shape))]
+
+    if not isinstance(new_shape, np.ndarray):
+        new_shape = np.array(new_shape)
+
+    if shape_must_be_divisible_by is not None:
+        if not isinstance(shape_must_be_divisible_by, (list, tuple, np.ndarray)):
+            shape_must_be_divisible_by = [shape_must_be_divisible_by] * len(new_shape)
+        else:
+            assert len(shape_must_be_divisible_by) == len(new_shape)
+
+        for i in range(len(new_shape)):
+            if new_shape[i] % shape_must_be_divisible_by[i] == 0:
+                new_shape[i] -= shape_must_be_divisible_by[i]
+
+        new_shape = np.array([new_shape[i] + shape_must_be_divisible_by[i] - new_shape[i] % shape_must_be_divisible_by[i] for i in range(len(new_shape))])
+
+    difference = new_shape - old_shape
+    pad_below = difference // 2
+    pad_above = difference // 2 + difference % 2
+    pad_list = [[0, 0]]*num_axes_nopad + list([list(i) for i in zip(pad_below, pad_above)])
+    res = np.pad(image, pad_list, mode, **kwargs)
+    if not return_slicer:
+        return res
+    else:
+        pad_list = np.array(pad_list)
+        pad_list[:, 1] = np.array(res.shape) - pad_list[:, 1]
+        slicer = list(slice(*i) for i in pad_list)
+        return res, slicer
+
+
+def mask_random_square(img, square_size, n_val, channel_wise_n_val=False, square_pos=None):
+    """Masks (sets = 0) a random square in an image"""
+
+    img_h = img.shape[-2]
+    img_w = img.shape[-1]
+
+    img = img.copy()
+
+    if square_pos is None:
+        w_start = np.random.randint(0, img_w - square_size)
+        h_start = np.random.randint(0, img_h - square_size)
+    else:
+        pos_wh = square_pos[np.random.randint(0, len(square_pos))]
+        w_start = pos_wh[0]
+        h_start = pos_wh[1]
+
+    if img.ndim == 2:
+        rnd_n_val = get_range_val(n_val)
+        img[h_start:(h_start + square_size), w_start:(w_start + square_size)] = rnd_n_val
+    elif img.ndim == 3:
+        if channel_wise_n_val:
+            for i in range(img.shape[0]):
+                rnd_n_val = get_range_val(n_val)
+                img[i, h_start:(h_start + square_size), w_start:(w_start + square_size)] = rnd_n_val
+        else:
+            rnd_n_val = get_range_val(n_val)
+            img[:, h_start:(h_start + square_size), w_start:(w_start + square_size)] = rnd_n_val
+    elif img.ndim == 4:
+        if channel_wise_n_val:
+            for i in range(img.shape[0]):
+                rnd_n_val = get_range_val(n_val)
+                img[:, i, h_start:(h_start + square_size), w_start:(w_start + square_size)] = rnd_n_val
+        else:
+            rnd_n_val = get_range_val(n_val)
+            img[:, :, h_start:(h_start + square_size), w_start:(w_start + square_size)] = rnd_n_val
+
+    return img
+
+
+def mask_random_squares(img, square_size, n_squares, n_val, channel_wise_n_val=False, square_pos=None):
+    """Masks a given number of squares in an image"""
+    for i in range(n_squares):
+        img = mask_random_square(img, square_size, n_val, channel_wise_n_val=channel_wise_n_val,
+                                 square_pos=square_pos)
+    return img

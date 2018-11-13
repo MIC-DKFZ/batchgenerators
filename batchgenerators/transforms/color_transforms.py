@@ -13,28 +13,25 @@
 # limitations under the License.
 
 import numpy as np
-
 from batchgenerators.augmentations.color_augmentations import augment_contrast, augment_brightness_additive, \
     augment_brightness_multiplicative, augment_gamma, augment_illumination, augment_PCA_shift
 from batchgenerators.transforms.abstract_transforms import AbstractTransform
 
 
 class ContrastAugmentationTransform(AbstractTransform):
-    """Augments the contrast of data
-
-    Args:
-        contrast range (tuple of float): range from which to sample a random contrast that is applied to the data. If
+    def __init__(self, contrast_range=(0.75, 1.25), preserve_range=True, per_channel=True, data_key="data", p_per_sample=1):
+        """
+        Augments the contrast of data
+        :param contrast_range: range from which to sample a random contrast that is applied to the data. If
         one value is smaller and one is larger than 1, half of the contrast modifiers will be >1 and the other half <0
         (in the inverval that was specified)
-
-        preserve_range (bool): if True then the intensity values after contrast augmentation will be cropped to min and
-        max values of the data before augmentation
-
-        per_channel (bool): whether to use the same contrast modifier for all color channels or a separate one for each
+        :param preserve_range: if True then the intensity values after contrast augmentation will be cropped to min and
+        max values of the data before augmentation.
+        :param per_channel: whether to use the same contrast modifier for all color channels or a separate one for each
         channel
-
-    """
-    def __init__(self, contrast_range=(0.75, 1.25), preserve_range=True, per_channel=True, data_key="data", p_per_sample=1):
+        :param data_key:
+        :param p_per_sample:
+        """
         self.p_per_sample = p_per_sample
         self.data_key = data_key
         self.contrast_range = contrast_range
@@ -44,50 +41,51 @@ class ContrastAugmentationTransform(AbstractTransform):
     def __call__(self, **data_dict):
         for b in range(len(data_dict[self.data_key])):
             if np.random.uniform() < self.p_per_sample:
-                data_dict[self.data_key][b] = augment_contrast(data_dict[self.data_key][b], contrast_range=self.contrast_range,
-                                                     preserve_range=self.preserve_range, per_channel=self.per_channel)
+                data_dict[self.data_key][b] = augment_contrast(data_dict[self.data_key][b],
+                                                               contrast_range=self.contrast_range,
+                                                               preserve_range=self.preserve_range,
+                                                               per_channel=self.per_channel)
         return data_dict
 
 
 class BrightnessTransform(AbstractTransform):
-    """Augments the brightness of data. Additive brightness is sampled from Gaussian distribution with mu and sigma
-
-    Args:
-        mu (float): mean of the Gaussian distribution to sample the added brightness from
-
-        sigma (float): standard deviation of the Gaussian distribution to sample the added brightness from
-
-        per_channel (bool): whether to use the same brightness modifier for all color channels or a separate one for
+    def __init__(self, mu, sigma, per_channel=True, data_key="data", p_per_sample=1):
+        """
+        Augments the brightness of data. Additive brightness is sampled from Gaussian distribution with mu and sigma
+        :param mu: mean of the Gaussian distribution to sample the added brightness from
+        :param sigma: standard deviation of the Gaussian distribution to sample the added brightness from
+        :param per_channel: whether to use the same brightness modifier for all color channels or a separate one for
         each channel
-
-    CAREFUL: This transform will modify the value range of your data!
-
-    """
-    def __init__(self, mu, sigma, per_channel=True, data_key="data"):
+        :param data_key:
+        :param p_per_sample:
+        """
+        self.p_per_sample = p_per_sample
         self.data_key = data_key
         self.mu = mu
         self.sigma = sigma
         self.per_channel = per_channel
 
     def __call__(self, **data_dict):
-        data_dict[self.data_key] = augment_brightness_additive(data_dict[self.data_key], self.mu, self.sigma,
-                                                               self.per_channel)
+        data = data_dict[self.data_key]
+
+        for b in range(data.shape[0]):
+            if np.random.uniform() < self.p_per_sample:
+                data[b] = augment_brightness_additive(data[b], self.mu, self.sigma, self.per_channel)
+
+        data_dict[self.data_key] = data
         return data_dict
 
 
 class BrightnessMultiplicativeTransform(AbstractTransform):
-    """Augments the brightness of data. Multiplicative brightness is sampled from multiplier_range
-
-    Args:
-        multiplier_range (tuple of float): range to uniformly sample the brightness modifier from
-
-        per_channel (bool): whether to use the same brightness modifier for all color channels or a separate one for
-        each channel
-
-    CAREFUL: This transform will modify the value range of your data!
-
-    """
     def __init__(self, multiplier_range=(0.5, 2), per_channel=True, data_key="data", p_per_sample=1):
+        """
+        Augments the brightness of data. Multiplicative brightness is sampled from multiplier_range
+        :param multiplier_range: range to uniformly sample the brightness modifier from
+        :param per_channel:  whether to use the same brightness modifier for all color channels or a separate one for
+        each channel
+        :param data_key:
+        :param p_per_sample:
+        """
         self.p_per_sample = p_per_sample
         self.data_key = data_key
         self.multiplier_range = multiplier_range
@@ -96,26 +94,28 @@ class BrightnessMultiplicativeTransform(AbstractTransform):
     def __call__(self, **data_dict):
         for b in range(len(data_dict[self.data_key])):
             if np.random.uniform() < self.p_per_sample:
-                data_dict[self.data_key][b] = augment_brightness_multiplicative(data_dict[self.data_key][b], self.multiplier_range,
-                                                                      self.per_channel)
+                data_dict[self.data_key][b] = augment_brightness_multiplicative(data_dict[self.data_key][b],
+                                                                                self.multiplier_range,
+                                                                                self.per_channel)
         return data_dict
 
 
 class GammaTransform(AbstractTransform):
-    """Augments by changing 'gamma' of the image (same as gamma correction in photos or computer monitors
+    def __init__(self, gamma_range=(0.5, 2), invert_image=False, per_channel=False, data_key="data", retain_stats=False, p_per_sample=1):
+        """
+        Augments by changing 'gamma' of the image (same as gamma correction in photos or computer monitors
 
-    Args:
-        gamma_range (tuple of float): range to sample gamma from. If one value is smaller than 1 and the other one is
-        larger then half the samples will have gamma <1 and the other >1 (in the inverval that was specified)
-
-        invert_image: whether to invert the image before applying gamma augmentation
-
-        retain_stats: Gamma transformation will alter the mean and std of the data in the patch. If retain_stats=True,
+        :param gamma_range: range to sample gamma from. If one value is smaller than 1 and the other one is
+        larger then half the samples will have gamma <1 and the other >1 (in the inverval that was specified).
+        Tuple of float. If one value is < 1 and the other > 1 then half the images will be augmented with gamma values
+        smaller than 1 and the other half with > 1
+        :param invert_image: whether to invert the image before applying gamma augmentation
+        :param per_channel:
+        :param data_key:
+        :param retain_stats: Gamma transformation will alter the mean and std of the data in the patch. If retain_stats=True,
         the data will be transformed to match the mean and standard deviation before gamma augmentation
-
-    """
-
-    def __init__(self, gamma_range=(0.5, 2), invert_image=False, per_channel=False, data_key="data", retain_stats=False, p_per_sample=0.3):
+        :param p_per_sample:
+        """
         self.p_per_sample = p_per_sample
         self.retain_stats = retain_stats
         self.per_channel = per_channel
@@ -124,8 +124,10 @@ class GammaTransform(AbstractTransform):
         self.invert_image = invert_image
 
     def __call__(self, **data_dict):
-        data_dict[self.data_key] = augment_gamma(data_dict[self.data_key], self.gamma_range, self.invert_image,
-                                                 per_channel=self.per_channel, retain_stats=self.retain_stats, p_per_sample=self.p_per_sample)
+        for b in range(len(data_dict[self.data_key])):
+            if np.random.uniform() < self.p_per_sample:
+                data_dict[self.data_key][b] = augment_gamma(data_dict[self.data_key][b], self.gamma_range, self.invert_image,
+                                                         per_channel=self.per_channel, retain_stats=self.retain_stats)
         return data_dict
 
 
@@ -153,10 +155,14 @@ class FancyColorTransform(AbstractTransform):
         return data_dict
 
 
-
-class ColorClipTransform(AbstractTransform):
-    """Do not use this for now"""
+class ClipValueRange(AbstractTransform):
     def __init__(self, min=None, max=None, data_key="data"):
+        """
+        Clips the value range of data to [min, max]
+        :param min:
+        :param max:
+        :param data_key:
+        """
         self.data_key = data_key
         self.min = min
         self.max = max
