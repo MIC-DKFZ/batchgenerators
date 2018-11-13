@@ -101,7 +101,7 @@ class ZoomTransform(AbstractTransform):
             if seg is not None:
                 sample_seg = seg[b]
             res_data, res_seg = augment_zoom(data[b], sample_seg, self.zoom_factors, self.order, self.order_seg, self.cval_seg)
-            results.append([(res_data, res_seg)])
+            results.append((res_data, res_seg))
 
         if concatenate:
             data = np.vstack([i[0][None] for i in results])
@@ -162,7 +162,7 @@ class ResizeTransform(AbstractTransform):
             if seg is not None:
                 sample_seg = seg[b]
             res_data, res_seg = augment_resize(data[b], sample_seg, self.target_size, self.order, self.order_seg, self.cval_seg)
-            results.append([(res_data, res_seg)])
+            results.append((res_data, res_seg))
 
         if concatenate:
             data = np.vstack([i[0][None] for i in results])
