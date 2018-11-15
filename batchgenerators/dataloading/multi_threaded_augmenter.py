@@ -14,21 +14,27 @@
 
 
 from __future__ import print_function
-
 from future import standard_library
-
 from batchgenerators.transforms import SpatialTransform
-
 standard_library.install_aliases()
 from builtins import range
 from builtins import object
-
 from multiprocessing import Process
 from multiprocessing import Queue as MPQueue
-
 import numpy as np
 import sys
 import logging
+
+
+def producer(queue, data_loader, transform, thread_id, seed):
+    np.random.seed(seed)
+    data_loader.set_thread_id(thread_id)
+    while True:
+        for item in data_loader:
+            if transform is not None:
+                item = transform(**item)
+            queue.put(item)
+        queue.put("end")
 
 
 class MultiThreadedAugmenter(object):
@@ -103,16 +109,6 @@ class MultiThreadedAugmenter(object):
             logging.debug("starting workers")
             self._queue_loop = 0
             self._end_ctr = 0
-
-            def producer(queue, data_loader, transform, thread_id, seed):
-                np.random.seed(seed)
-                data_loader.set_thread_id(thread_id)
-                while True:
-                    for item in data_loader:
-                        if transform is not None:
-                            item = transform(**item)
-                        queue.put(item)
-                    queue.put("end")
 
             for i in range(self.num_processes):
                 self._queues.append(MPQueue(self.num_cached_per_queue))
