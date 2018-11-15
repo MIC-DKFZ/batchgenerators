@@ -193,7 +193,6 @@ class MirrorTransform(AbstractTransform):
                              "axes=(2, 3, 4) to mirror along all spatial dimensions of a 5d tensor (b, c, x, y, z) "
                              "is now axes=(0, 1, 2). Please adapt your scripts accordingly.")
 
-
     def __call__(self, **data_dict):
         data = data_dict.get(self.data_key)
         seg = data_dict.get(self.label_key)
