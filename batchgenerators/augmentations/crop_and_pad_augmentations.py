@@ -144,10 +144,11 @@ def crop(data, seg=None, crop_size=128, margins=(0, 0, 0), crop_type="center"):
 
         lbs = [lbs[d] + need_to_pad[d+1][0] for d in range(dim)]
         assert all([i >= 0 for i in lbs]), "just a failsafe"
-        slicer = [slice(0, data_shape_here[1])] + [slice(lbs[d], lbs[d]+crop_size[d]) for d in range(dim)]
-        data_return[b] = data_2[slicer]
+        slicer_data = [slice(0, data_shape_here[1])] + [slice(lbs[d], lbs[d]+crop_size[d]) for d in range(dim)]
+        data_return[b] = data_2[slicer_data]
         if seg_return is not None:
-            seg_return[b] = seg_2[slicer]
+            slicer_seg = [slice(0, seg_shape[1])] + [slice(lbs[d], lbs[d] + crop_size[d]) for d in range(dim)]
+            seg_return[b] = seg_2[slicer_seg]
 
     return data_return, seg_return
 

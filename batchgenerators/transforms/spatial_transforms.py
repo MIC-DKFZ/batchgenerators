@@ -101,7 +101,7 @@ class ZoomTransform(AbstractTransform):
             if seg is not None:
                 sample_seg = seg[b]
             res_data, res_seg = augment_zoom(data[b], sample_seg, self.zoom_factors, self.order, self.order_seg, self.cval_seg)
-            results.append([(res_data, res_seg)])
+            results.append((res_data, res_seg))
 
         if concatenate:
             data = np.vstack([i[0][None] for i in results])
@@ -162,7 +162,7 @@ class ResizeTransform(AbstractTransform):
             if seg is not None:
                 sample_seg = seg[b]
             res_data, res_seg = augment_resize(data[b], sample_seg, self.target_size, self.order, self.order_seg, self.cval_seg)
-            results.append([(res_data, res_seg)])
+            results.append((res_data, res_seg))
 
         if concatenate:
             data = np.vstack([i[0][None] for i in results])
@@ -192,7 +192,6 @@ class MirrorTransform(AbstractTransform):
             raise ValueError("MirrorTransform now takes the axes as the spatial dimensions. What previously was "
                              "axes=(2, 3, 4) to mirror along all spatial dimensions of a 5d tensor (b, c, x, y, z) "
                              "is now axes=(0, 1, 2). Please adapt your scripts accordingly.")
-
 
     def __call__(self, **data_dict):
         data = data_dict.get(self.data_key)
