@@ -39,7 +39,7 @@ def get_lbs_for_random_crop(crop_size, data_shape, margins):
         if crop_size[i] > data_shape[i + 2]:
             warn("Crop_size > data_shape. data: %s, crop: %s. Data will be padded to accomodate crop_size" % (str(data_shape), str(crop_size)), UserWarning)
 
-        if data_shape[i+2] - crop_size[i] - margins[i] >= margins[i]:
+        if data_shape[i+2] - crop_size[i] - margins[i] > margins[i]:
             lbs.append(np.random.randint(margins[i], data_shape[i+2] - crop_size[i] - margins[i]))
         else:
             warn("Random crop is falling back to center crop because the crop along with the desired margin does "
