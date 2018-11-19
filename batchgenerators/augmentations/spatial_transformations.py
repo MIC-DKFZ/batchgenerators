@@ -284,10 +284,19 @@ def augment_transpose_axes(data_sample, seg_sample, axes=(0, 1, 2)):
     axes = list(np.array(axes) + 1)  # need list to allow shuffle; +1 to accomodate for color channel
 
     assert np.max(axes) <= len(data_sample.shape), "axes must only contain valid axis ids"
+    static_axes = list(range(len(data_sample.shape)))
+    for i in axes: static_axes[i] = -1
     np.random.shuffle(axes)
-    data_sample = data_sample.transpose(*([0] + axes))
+
+    ctr = 0
+    for j, i in enumerate(static_axes):
+        if i == -1:
+            static_axes[j] = axes[ctr]
+            ctr += 1
+
+    data_sample = data_sample.transpose(*static_axes)
     if seg_sample is not None:
-        seg_sample = seg_sample.transpose(*([0] + axes))
+        seg_sample = seg_sample.transpose(*static_axes)
     return data_sample, seg_sample
 
 
