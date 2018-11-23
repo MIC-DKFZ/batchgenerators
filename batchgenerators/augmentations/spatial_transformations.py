@@ -82,7 +82,7 @@ def augment_zoom(sample_data, sample_seg, zoom_factors, order=3, order_seg=1, cv
     zooms data (and seg) by factor zoom_factors
     :param sample_data: np.ndarray or list/tuple of np.ndarrays, must be (c, x, y(, z))) (if list/tuple then each entry
     must be of this shape!)
-    :param zoom_factors: int or list/tuple of int
+    :param zoom_factors: int or list/tuple of int (multiplication factor for the input size)
     :param order: interpolation order for data (see skimage.transform.resize)
     :param order_seg: interpolation order for seg (see skimage.transform.resize)
     :param cval_seg: cval for segmentation (see skimage.transform.resize)
