@@ -76,9 +76,9 @@ def augment_linear_downsampling_scipy(data_sample, zoom_range=(0.5, 1), per_chan
 
                 target_shape = np.round(shp * zoom).astype(int)
 
-            downsampled = resize(data_sample[c].astype(float), target_shape, order=order_downsample, mode='constant',
-                                 cval=0, anti_aliasing=False)
-            data_sample[c] = resize(downsampled, shp, order=0, mode='constant', cval=order_upsample,
+            downsampled = resize(data_sample[c].astype(float), target_shape, order=order_downsample, mode='edge',
+                                 anti_aliasing=False)
+            data_sample[c] = resize(downsampled, shp, order=0, mode='edge',
                                     anti_aliasing=False)
 
     return data_sample
