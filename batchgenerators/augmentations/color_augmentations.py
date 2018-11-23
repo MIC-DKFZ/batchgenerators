@@ -21,14 +21,6 @@ from batchgenerators.augmentations.utils import general_cc_var_num_channels, ill
 
 
 def augment_contrast(data_sample, contrast_range=(0.75, 1.25), preserve_range=True, per_channel=True):
-    """
-    
-    :param data_sample: 
-    :param contrast_range: increases the contrast for if factor>1, decreases the contrast if factor<1
-    :param preserve_range: 
-    :param per_channel: 
-    :return: 
-    """
     if not per_channel:
         mn = data_sample.mean()
         if preserve_range:
@@ -76,6 +68,7 @@ def augment_brightness_multiplicative(data_sample, multiplier_range=(0.5, 2), pe
         data_sample *= multiplier
     else:
         for c in range(data_sample.shape[0]):
+            multiplier = random.uniform(multiplier_range[0], multiplier_range[1])
             data_sample[c] *= multiplier
     return data_sample
 
@@ -109,7 +102,7 @@ def augment_gamma(data_sample, gamma_range=(0.5, 2), invert_image=False, epsilon
                 gamma = np.random.uniform(max(gamma_range[0], 1), gamma_range[1])
             minm = data_sample[c].min()
             rnge = data_sample[c].max() - minm
-            data_sample[c] = np.power(((data_sample[c] - minm) / float(rnge + epsilon)), gamma) * rnge + minm
+            data_sample[c] = np.power(((data_sample[c] - minm) / float(rnge + epsilon)), gamma) * float(rnge + epsilon) + minm
             if retain_stats:
                 data_sample[c] = data_sample[c] - data_sample[c].mean() + mn
                 data_sample[c] = data_sample[c] / (data_sample[c].std() + 1e-8) * sd

@@ -13,12 +13,12 @@
 # limitations under the License.
 
 
-import unittest2
+import unittest
 import numpy as np
 from batchgenerators.augmentations.crop_and_pad_augmentations import random_crop
 
 
-class TestRandomCrop(unittest2.TestCase):
+class TestRandomCrop(unittest.TestCase):
 
     def setUp(self):
         np.random.seed(1234)

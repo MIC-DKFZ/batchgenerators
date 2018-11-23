@@ -23,7 +23,7 @@ class ContrastAugmentationTransform(AbstractTransform):
         """
         Augments the contrast of data
         :param contrast_range: range from which to sample a random contrast that is applied to the data. If
-        one value is smaller and one is larger than 1, half of the contrast modifiers will be >1 and the other half <0
+        one value is smaller and one is larger than 1, half of the contrast modifiers will be >1 and the other half <1
         (in the inverval that was specified)
         :param preserve_range: if True then the intensity values after contrast augmentation will be cropped to min and
         max values of the data before augmentation.
