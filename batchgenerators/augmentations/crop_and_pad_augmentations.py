@@ -39,7 +39,7 @@ def get_lbs_for_random_crop(crop_size, data_shape, margins):
         if crop_size[i] > data_shape[i + 2]:
             warn("Crop_size > data_shape. data: %s, crop: %s. Data will be padded to accomodate crop_size" % (str(data_shape), str(crop_size)), UserWarning)
 
-        if data_shape[i+2] - crop_size[i] - margins[i] >= margins[i]:
+        if data_shape[i+2] - crop_size[i] - margins[i] > margins[i]:
             lbs.append(np.random.randint(margins[i], data_shape[i+2] - crop_size[i] - margins[i]))
         else:
             warn("Random crop is falling back to center crop because the crop along with the desired margin does "
@@ -144,10 +144,11 @@ def crop(data, seg=None, crop_size=128, margins=(0, 0, 0), crop_type="center"):
 
         lbs = [lbs[d] + need_to_pad[d+1][0] for d in range(dim)]
         assert all([i >= 0 for i in lbs]), "just a failsafe"
-        slicer = [slice(0, data_shape_here[1])] + [slice(lbs[d], lbs[d]+crop_size[d]) for d in range(dim)]
-        data_return[b] = data_2[slicer]
+        slicer_data = [slice(0, data_shape_here[1])] + [slice(lbs[d], lbs[d]+crop_size[d]) for d in range(dim)]
+        data_return[b] = data_2[slicer_data]
         if seg_return is not None:
-            seg_return[b] = seg_2[slicer]
+            slicer_seg = [slice(0, seg_shape[1])] + [slice(lbs[d], lbs[d] + crop_size[d]) for d in range(dim)]
+            seg_return[b] = seg_2[slicer_seg]
 
     return data_return, seg_return
 

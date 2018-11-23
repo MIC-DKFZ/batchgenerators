@@ -10,7 +10,7 @@ from .sample_normalization_transforms import CutOffOutliersTransform, RangeTrans
 from .utility_transforms import ConvertSegToOnehotTransform, ListToTensor, NumpyToTensor, RenameTransform, \
     ConvertMultiSegToOnehotTransform, ConvertSegToArgmaxTransform, ConvertMultiSegToArgmaxTransform
 from .spatial_transforms import ChannelTranslation, MirrorTransform, SpatialTransform, ZoomTransform, TransposeAxesTransform
-from .resample_transforms import ResampleTransform
+from .resample_transforms import SimulateLowResolutionTransform
 
 transform_list = [
     AbstractTransform, Compose, RndTransform, DataChannelSelectionTransform,

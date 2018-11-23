@@ -113,6 +113,8 @@ def augment_gamma(data_sample, gamma_range=(0.5, 2), invert_image=False, epsilon
             if retain_stats:
                 data_sample[c] = data_sample[c] - data_sample[c].mean() + mn
                 data_sample[c] = data_sample[c] / (data_sample[c].std() + 1e-8) * sd
+    if invert_image:
+        data_sample = - data_sample
     return data_sample
 
 

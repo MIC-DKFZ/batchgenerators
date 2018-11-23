@@ -59,7 +59,7 @@ class SimulateLowResolutionTransform(AbstractTransform):
     def __call__(self, **data_dict):
         for b in range(len(data_dict[self.data_key])):
             if np.random.uniform() < self.p_per_sample:
-                data_dict[self.data_key] = augment_linear_downsampling_scipy(data_dict[self.data_key],
+                data_dict[self.data_key][b] = augment_linear_downsampling_scipy(data_dict[self.data_key][b],
                                                                              zoom_range=self.zoom_range,
                                                                              per_channel=self.per_channel,
                                                                              p_per_channel=self.p_per_channel,

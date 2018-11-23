@@ -193,7 +193,6 @@ class MirrorTransform(AbstractTransform):
                              "axes=(2, 3, 4) to mirror along all spatial dimensions of a 5d tensor (b, c, x, y, z) "
                              "is now axes=(0, 1, 2). Please adapt your scripts accordingly.")
 
-
     def __call__(self, **data_dict):
         data = data_dict.get(self.data_key)
         seg = data_dict.get(self.label_key)
@@ -360,7 +359,7 @@ class TransposeAxesTransform(AbstractTransform):
         self.label_key = label_key
         self.transpose_any_of_these = transpose_any_of_these
         if max(transpose_any_of_these) > 2:
-            raise ValueError("MirrorTransform now takes the axes as the spatial dimensions. What previously was "
+            raise ValueError("TransposeAxesTransform now takes the axes as the spatial dimensions. What previously was "
                              "axes=(2, 3, 4) to mirror along all spatial dimensions of a 5d tensor (b, c, x, y, z) "
                              "is now axes=(0, 1, 2). Please adapt your scripts accordingly.")
         assert isinstance(transpose_any_of_these, (list, tuple)), "transpose_any_of_these must be either list or tuple"
