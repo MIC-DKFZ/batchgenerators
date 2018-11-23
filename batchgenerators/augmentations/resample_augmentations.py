@@ -35,7 +35,7 @@ def augment_linear_downsampling_scipy(data_sample, zoom_range=(0.5, 1), per_chan
         each inner tuple will give a sampling interval for each axis (allows for different range of zoom values for
         each axis
 
-        p_per_channel:
+        p_per_channel: probability for downsampling/upsampling a channel
 
         per_channel (bool): whether to draw a new zoom_factor for each channel or keep one for all channels
 
@@ -78,7 +78,7 @@ def augment_linear_downsampling_scipy(data_sample, zoom_range=(0.5, 1), per_chan
 
             downsampled = resize(data_sample[c].astype(float), target_shape, order=order_downsample, mode='edge',
                                  anti_aliasing=False)
-            data_sample[c] = resize(downsampled, shp, order=0, mode='edge',
+            data_sample[c] = resize(downsampled, shp, order=order_upsample, mode='edge',
                                     anti_aliasing=False)
 
     return data_sample
