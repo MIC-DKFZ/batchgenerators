@@ -468,6 +468,9 @@ def convert_seg_to_bounding_box_coordinates(data_dict, dim, get_rois_from_seg_fl
                     n_cands = int(np.max(data_dict['seg'][b]))
                     clusters = data_dict['seg'][b]
 
+                if n_cands > 200 or data_dict['pid'][b] == 244:
+                    print('clusters shape', n_cands, data_dict['pid'][b])
+
                 rois = np.array([(clusters == ii) * 1 for ii in range(1, n_cands + 1)])  # separate clusters and concat
                 for rix, r in enumerate(rois):
                     if np.sum(r !=0) > 0: #check if the lesion survived data augmentation
@@ -491,7 +494,7 @@ def convert_seg_to_bounding_box_coordinates(data_dict, dim, get_rois_from_seg_fl
                     out_seg[b][data_dict['seg'][b] > 0] = 1
 
                 bb_target.append(np.array(p_coords_list))
-                roi_masks.append(np.array(p_roi_masks_list))
+                roi_masks.append(np.array(p_roi_masks_list).astype('uint8'))
                 roi_labels.append(np.array(p_roi_labels_list))
 
 
@@ -507,6 +510,9 @@ def convert_seg_to_bounding_box_coordinates(data_dict, dim, get_rois_from_seg_fl
         data_dict['roi_masks'] = np.array(roi_masks)
         data_dict['roi_labels'] = np.array(roi_labels)
         data_dict['seg'] = out_seg
+
+      #  print('check bg', data_dict['seg'].shape, data_dict['roi_labels'].shape, [ii.shape for ii in data_dict['roi_masks']])
+
         return data_dict
 
 
