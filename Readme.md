@@ -8,7 +8,7 @@ to contact us or open a github issue.
 Batchgenerators makes heavy use of python multithreading and python multithreading on windows is a problem. We are trying to find a solution but as of now batchgenerators won't work on Windows!
 
 ### Important!
-Starting from version 1.14.6 numpy is built against OpenBLAS instead of ATLAS. Mutrix multiplications (as we are using 
+Starting from version 1.14.6 numpy is built against OpenBLAS instead of ATLAS. Matrix multiplications (as we are using 
 to rotate coordinate systems for data augmentation) now run mutlithreaded on all available threads. This can cause chaos 
 if you are using a multithreaded pipeline, beacause each background worker will spawn a lot of threads to do the 
 matrix multiplication (8 workers on a 16Core machine = up to 256 threads. duh.). There is nothing we (dkfz devs) can do to 
