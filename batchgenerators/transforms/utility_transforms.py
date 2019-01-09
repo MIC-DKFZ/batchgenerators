@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import copy
-
+from warnings import warn
 
 from batchgenerators.transforms.abstract_transforms import AbstractTransform
 from batchgenerators.augmentations.utils import convert_seg_image_to_one_hot_encoding
@@ -28,7 +28,7 @@ from batchgenerators.transforms.abstract_transforms import AbstractTransform
 
 
 class NumpyToTensor(AbstractTransform):
-    def __init__(self, keys=None, cast_to=None):
+    def __init__(self, keys=None, cast_to=None, pin_memory=False):
         """Utility function for pytorch. Converts data (and seg) numpy ndarrays to pytorch tensors
         :param keys: specify keys to be converted to tensors. If None then all keys will be converted
         (if value id np.ndarray). Can be a key (typically string) or a list/tuple of keys
@@ -39,6 +39,7 @@ class NumpyToTensor(AbstractTransform):
             keys = [keys]
         self.keys = keys
         self.cast_to = cast_to
+        self.pin_memory = pin_memory
 
     def cast(self, tensor):
         if self.cast_to is not None:
@@ -59,9 +60,13 @@ class NumpyToTensor(AbstractTransform):
             for key, val in data_dict.items():
                 if isinstance(val, np.ndarray):
                     data_dict[key] = self.cast(torch.from_numpy(val))
+                    if self.pin_memory:
+                        data_dict[key] = data_dict[key].pin_memory()
         else:
             for key in self.keys:
                 data_dict[key] = self.cast(torch.from_numpy(data_dict[key]))
+                if self.pin_memory:
+                    data_dict[key] = data_dict[key].pin_memory()
 
         return data_dict
 
@@ -372,4 +377,44 @@ class AddToDictTransform(AbstractTransform):
     def __call__(self, **data_dict):
         if self.in_key not in data_dict or self.strict:
             data_dict[self.in_key] = self.in_val
+        return data_dict
+
+
+class AppendChannelsTransform(AbstractTransform):
+    def __init__(self, input_key, output_key, channel_indexes, remove_from_input=True):
+        """
+        Moves channels specified by channel_indexes from input_key in data_dict to output_key (by appending in the
+        order specified in channel_indexes). The channels will be removed from input if remove_from_input is True
+        :param input_key:
+        :param output_key:
+        :param channel_indexes: must be tuple or list
+        :param remove_from_input:
+        """
+        self.remove_from_input = remove_from_input
+        self.channel_indexes = channel_indexes
+        self.output_key = output_key
+        self.input_key = input_key
+        assert isinstance(self.channel_indexes, (tuple, list)), "channel_indexes must be either tuple or list of int"
+
+    def __call__(self, **data_dict):
+        inp = data_dict.get(self.input_key)
+        outp = data_dict.get(self.output_key)
+
+        assert inp is not None, "input_key %s is not present in data_dict" % self.input_key
+
+        selected_channels = inp[:, self.channel_indexes]
+
+        if outp is None:
+            warn("output key %s is not present in dict, it will be created" % self.output_key)
+            outp = selected_channels
+            data_dict[self.output_key] = outp
+        else:
+            outp = np.concatenate((outp, selected_channels), axis=1)
+            data_dict[self.output_key] = outp
+
+        if self.remove_from_input:
+            remaining = [i for i in range(inp.shape[1]) if i not in self.channel_indexes]
+            inp = inp[:, remaining]
+            data_dict[self.input_key] = inp
+        
         return data_dict
