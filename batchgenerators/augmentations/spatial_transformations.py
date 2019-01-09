@@ -70,9 +70,9 @@ def augment_resize(sample_data, sample_seg, target_size, order=3, order_seg=1, c
 
     if sample_seg is not None:
         if sample_seg is not None:
-            target_seg = np.ones([sample_seg.shape[0]] + target_shape_here)
+            target_seg = np.ones([sample_seg.shape[0]] + target_size_here)
             for c in range(sample_seg.shape[0]):
-                target_seg[c] = resize_segmentation(sample_seg[c], target_shape_here, order_seg, cval_seg)
+                target_seg[c] = resize_segmentation(sample_seg[c], target_size_here, order_seg, cval_seg)
 
     return sample_data, sample_seg
 
