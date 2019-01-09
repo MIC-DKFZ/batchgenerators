@@ -416,5 +416,5 @@ class AppendChannelsTransform(AbstractTransform):
             remaining = [i for i in range(inp.shape[1]) if i not in self.channel_indexes]
             inp = inp[:, remaining]
             data_dict[self.input_key] = inp
-        
+
         return data_dict

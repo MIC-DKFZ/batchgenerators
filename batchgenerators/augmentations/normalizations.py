@@ -14,27 +14,30 @@
 
 import numpy as np
 
-def range_normalization(data, rnge=(0, 1), per_channel=True):
+
+def range_normalization(data, rnge=(0, 1), per_channel=True, eps=1e-8):
     for b in range(data.shape[0]):
         if per_channel:
             for c in range(data.shape[1]):
                 mn = data[b, c].min()
                 mx = data[b, c].max()
                 data[b, c] -= mn
-                data[b, c] /= (mx - mn)
+                old_range = mx - mn + eps
+                data[b, c] /= old_range
                 data[b, c] *= (rnge[1] - rnge[0])
                 data[b, c] += rnge[0]
         else:
             mn = data[b].min()
             mx = data[b].max()
             data[b] -= mn
-            data[b] /= (mx - mn)
+            old_range = mx - mn + eps
+            data[b] /= old_range
             data[b] *= (rnge[1] - rnge[0])
             data[b] += rnge[0]
     return data
 
 
-def zero_mean_unit_variance_normalization(data, per_channel=True, epsilon=1e-7):
+def zero_mean_unit_variance_normalization(data, per_channel=True, epsilon=1e-8):
     for b in range(data.shape[0]):
         if per_channel:
             for c in range(data.shape[1]):
@@ -64,7 +67,6 @@ def mean_std_normalization(data, mean, std, per_channel=True):
         assert len(mean) == data_shape[1]
     elif per_channel and isinstance(std, (tuple, list, np.ndarray)):
         assert len(std) == data_shape[1]
-
 
     for b in range(data_shape[0]):
         if per_channel:
