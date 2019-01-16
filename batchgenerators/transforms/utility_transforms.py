@@ -28,7 +28,7 @@ from batchgenerators.transforms.abstract_transforms import AbstractTransform
 
 
 class NumpyToTensor(AbstractTransform):
-    def __init__(self, keys=None, cast_to=None, pin_memory=False):
+    def __init__(self, keys=None, cast_to=None):
         """Utility function for pytorch. Converts data (and seg) numpy ndarrays to pytorch tensors
         :param keys: specify keys to be converted to tensors. If None then all keys will be converted
         (if value id np.ndarray). Can be a key (typically string) or a list/tuple of keys
@@ -39,7 +39,6 @@ class NumpyToTensor(AbstractTransform):
             keys = [keys]
         self.keys = keys
         self.cast_to = cast_to
-        self.pin_memory = pin_memory
 
     def cast(self, tensor):
         if self.cast_to is not None:
@@ -60,13 +59,9 @@ class NumpyToTensor(AbstractTransform):
             for key, val in data_dict.items():
                 if isinstance(val, np.ndarray):
                     data_dict[key] = self.cast(torch.from_numpy(val))
-                    if self.pin_memory:
-                        data_dict[key] = data_dict[key].pin_memory()
         else:
             for key in self.keys:
                 data_dict[key] = self.cast(torch.from_numpy(data_dict[key]))
-                if self.pin_memory:
-                    data_dict[key] = data_dict[key].pin_memory()
 
         return data_dict
 
