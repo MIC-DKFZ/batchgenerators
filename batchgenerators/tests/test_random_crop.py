@@ -71,31 +71,6 @@ class TestRandomCrop(unittest.TestCase):
         self.assertEqual(np.sum(s == 0), 0, "Zeros encountered in seg meaning that we did padding which should not have"
                                             " happened here!")
 
-    def test_warn_centercrop_fallback(self):
-        data = [np.random.random((4, 64+i, 56+i)) for i in range(32)]
-        seg = [np.random.random((4, 64+i, 56+i)) for i in range(32)]
-
-        with self.assertWarns(UserWarning):
-            d, s = random_crop(data, seg, 32, 32)
-
-        self.assertTrue(all(i == j for i, j in zip((32, 4, 32, 32), d.shape)), "data has unexpected return shape")
-        self.assertTrue(all(i == j for i, j in zip((32, 4, 32, 32), s.shape)), "seg has unexpected return shape")
-
-        self.assertEqual(np.sum(s == 0), 0, "Zeros encountered in seg meaning that we did padding which should not have"
-                                            " happened here!")
-
-    def test_warn_crop_size_too_large(self):
-        data = np.random.random((8, 4, 64, 56))
-        seg = np.ones(data.shape)
-
-        with self.assertWarns(UserWarning):
-            d, s = random_crop(data, seg, 96, 0)
-
-        self.assertTrue(all(i == j for i, j in zip((8, 4, 96, 96), d.shape)), "data has unexpected return shape")
-        self.assertTrue(all(i == j for i, j in zip((8, 4, 96, 96), s.shape)), "seg has unexpected return shape")
-
-        self.assertNotEqual(np.sum(s == 0), 0, "seg was not padded properly")
-
 
 if __name__ == '__main__':
     unittest.main()
