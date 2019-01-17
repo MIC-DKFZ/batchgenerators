@@ -35,7 +35,7 @@ class NumpyToTensor(AbstractTransform):
         :param cast_to: if not None then the values will be cast to what is specified here. Currently only half, float
         and long supported (use string)
         """
-        if not isinstance(keys, (list, tuple)):
+        if keys is not None and not isinstance(keys, (list, tuple)):
             keys = [keys]
         self.keys = keys
         self.cast_to = cast_to
