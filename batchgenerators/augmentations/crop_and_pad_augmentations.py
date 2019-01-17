@@ -63,7 +63,9 @@ def get_lbs_for_center_crop(crop_size, data_shape):
     return lbs
 
 
-def crop(data, seg=None, crop_size=128, margins=(0, 0, 0), crop_type="center"):
+def crop(data, seg=None, crop_size=128, margins=(0, 0, 0), crop_type="center",
+         pad_mode='constant', pad_kwargs={'constant_values': 0},
+         pad_mode_seg='constant', pad_kwargs_seg={'constant_values': 0}):
     """
     crops data and seg (seg may be None) to crop_size. Whether this will be achieved via center or random crop is
     determined by crop_type. Margin will be respected only for random_crop and will prevent the crops form being closer
@@ -71,7 +73,7 @@ def crop(data, seg=None, crop_size=128, margins=(0, 0, 0), crop_type="center"):
     padded with zeros in that case. margins can be negative -> results in padding of data/seg followed by cropping with
     margin=0 for the appropriate axes
 
-    :param data:
+    :param data: b, c, x, y, z
     :param seg:
     :param crop_size:
     :param margins:
@@ -130,9 +132,9 @@ def crop(data, seg=None, crop_size=128, margins=(0, 0, 0), crop_type="center"):
                                   for d in range(dim)]
 
         if any([i > 0 for j in need_to_pad for i in j]):
-            data_2 = np.pad(data[b], need_to_pad, 'constant', constant_values=0)
+            data_2 = np.pad(data[b], need_to_pad, pad_mode, **pad_kwargs)
             if seg_return is not None:
-                seg_2 = np.pad(seg[b], need_to_pad, 'constant', constant_values=0)
+                seg_2 = np.pad(seg[b], need_to_pad, pad_mode_seg, **pad_kwargs_seg)
             else:
                 seg_2 = None
         else:
