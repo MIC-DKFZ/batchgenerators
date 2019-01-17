@@ -13,13 +13,8 @@
 # limitations under the License.
 
 from builtins import range
-import warnings
-from warnings import warn
 import numpy as np
-
 from batchgenerators.augmentations.utils import pad_nd_image
-
-warnings.simplefilter("once", UserWarning)
 
 
 def center_crop(data, crop_size, seg=None):
@@ -36,15 +31,9 @@ def get_lbs_for_random_crop(crop_size, data_shape, margins):
     """
     lbs = []
     for i in range(len(data_shape) - 2):
-        if crop_size[i] > data_shape[i + 2]:
-            warn("Crop_size > data_shape. data: %s, crop: %s. Data will be padded to accomodate crop_size" % (str(data_shape), str(crop_size)), UserWarning)
-
         if data_shape[i+2] - crop_size[i] - margins[i] > margins[i]:
             lbs.append(np.random.randint(margins[i], data_shape[i+2] - crop_size[i] - margins[i]))
         else:
-            warn("Random crop is falling back to center crop because the crop along with the desired margin does "
-                 "not fit the data. "
-                 "data: %s, crop_size: %s, margin: %s" % (str(data_shape), str(crop_size), str(margins)), UserWarning)
             lbs.append((data_shape[i+2] - crop_size[i]) // 2)
     return lbs
 
@@ -57,8 +46,6 @@ def get_lbs_for_center_crop(crop_size, data_shape):
     """
     lbs = []
     for i in range(len(data_shape) - 2):
-        if crop_size[i] > data_shape[i + 2]:
-            warn("Crop_size > data_shape. data: %s, crop: %s. Data will be padded to accomodate crop_size" % (str(data_shape), str(crop_size)), UserWarning)
         lbs.append((data_shape[i + 2] - crop_size[i]) // 2)
     return lbs
 
@@ -105,9 +92,6 @@ def crop(data, seg=None, crop_size=128, margins=(0, 0, 0), crop_type="center"):
 
     if not isinstance(margins, (np.ndarray, tuple, list)):
         margins = [margins] * dim
-
-    if any([crop_size[d] > (data_shape[d+2] + 2*abs(min(0, margins[d]))) for d in range(dim)]):
-        warn("Crop_size + margin > data_shape. Data will be padded to accomodate crop_size")
 
     data_return = np.zeros([data_shape[0], data_shape[1]] + list(crop_size), dtype=data_dtype)
     if seg is not None:
