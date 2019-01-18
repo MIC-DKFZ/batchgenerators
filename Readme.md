@@ -45,12 +45,14 @@ composed transform into our **multithreader**: batchgenerators.dataloading.multi
 
 
 ## How to use it
+
 The working principle is simple: Derive from DataLoaderBase class, reimplement generate_train_batch member function and
 use it to stack your augmentations!
 For an example see `batchgenerators/examples/example_ipynb.ipynb`
 
 
 ## Data Structure
+
 The data structure that is used internally (and with which you have to comply when implementing generate_train_batch)
 is kept simple as well: It is just a regular python dictionary! We did this to allow maximum flexibility in the kind of
 data that is passed along through the pipeline. The dictionary must have a 'data' key:value pair. It optionally can
@@ -89,6 +91,7 @@ from batchgenerators.transforms.color_transforms import ContrastAugmentationTran
 Note: This package also includes 'generators'. Support for those will be dropped in the future. That was our old design.
 
 ##Release Notes
+
 - 0.18:
     - all augmentations (there are some exceptions though) are implemented on a per-sample basis. This should make it 
     easier to use the augmentations outside of the Transforms of batchgenerators 
