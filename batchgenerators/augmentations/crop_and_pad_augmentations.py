@@ -145,6 +145,22 @@ def random_crop(data, seg=None, crop_size=128, margins=[0, 0, 0]):
 
 def pad_nd_image_and_seg(data, seg, new_shape=None, must_be_divisible_by=None, pad_mode_data='constant',
                          np_pad_kwargs_data=None, pad_mode_seg='constant', np_pad_kwargs_seg=None):
+    """
+    Pads data and seg to new_shape. new_shape is thereby understood as min_shape (if data/seg is already larger then
+    new_shape the shape stays the same for the dimensions this applies)
+    :param data:
+    :param seg:
+    :param new_shape: if none then only must_be_divisible_by is applied
+    :param must_be_divisible_by: UNet like architectures sometimes require the input to be divisibly by some number. This
+    will modify new_shape if new_shape is not divisibly by this (by increasing it accordingly).
+    must_be_divisible_by should be a list of int (one for each spatial dimension) and this list must have the same
+    length as new_shape
+    :param pad_mode_data: see np.pad
+    :param np_pad_kwargs_data:see np.pad
+    :param pad_mode_seg:see np.pad
+    :param np_pad_kwargs_seg:see np.pad
+    :return:
+    """
     assert len(new_shape) == len(data.shape), "data_shape and new_shape must have the same dimensionality"
     sample_data = pad_nd_image(data, new_shape, mode=pad_mode_data, kwargs=np_pad_kwargs_data,
                                return_slicer=False, shape_must_be_divisible_by=must_be_divisible_by)
