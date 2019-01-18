@@ -87,3 +87,20 @@ from batchgenerators.transforms.color_transforms import ContrastAugmentationTran
 ```
 
 Note: This package also includes 'generators'. Support for those will be dropped in the future. That was our old design.
+
+##Release Notes
+- 0.18:
+    - all augmentations (there are some exceptions though) are implemented on a per-sample basis. This should make it 
+    easier to use the augmentations outside of the Transforms of batchgenerators 
+    - applicable Transforms now have a keyword p_per_sample with which the user can specify a probability with which this
+     transform is applied to a sample. Before, this was handled by RndTransform and applied to the whole batch (so 
+     either all samples were augmented or none). Now this decision is made on a per-sample basis and increases 
+     variability by a lot.
+    - following the previous point, RndTransform is now deprecated
+    - AlternativeMultiThreadedAugmenter is now deprecated as well (no need to have this anymore)
+    - pytorch users can now transform numpy arrays to pytorch tensors within batchgenerators (NumpyToTensor). For some 
+    reason, inter-process communication is faster with tensors (~factor 4), so this is recommended!
+    - if numpy arrays were converted to pytorch tensors, MultithreadedAugmenter now allows to pin the memory as well 
+    (pin_memory=True). This will happen in a background thread (inspired by pytorch DataLoader). pinned memory can be 
+    copied to the GPU much faster. My (Fabian) classification experiment with Resnet50 got a speed boost of 12% from just 
+    that.
