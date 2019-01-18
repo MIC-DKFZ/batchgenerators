@@ -13,13 +13,8 @@
 # limitations under the License.
 
 from builtins import range
-import warnings
-from warnings import warn
 import numpy as np
-
 from batchgenerators.augmentations.utils import pad_nd_image
-
-warnings.simplefilter("once", UserWarning)
 
 
 def center_crop(data, crop_size, seg=None):
@@ -36,15 +31,9 @@ def get_lbs_for_random_crop(crop_size, data_shape, margins):
     """
     lbs = []
     for i in range(len(data_shape) - 2):
-        if crop_size[i] > data_shape[i + 2]:
-            warn("Crop_size > data_shape. data: %s, crop: %s. Data will be padded to accomodate crop_size" % (str(data_shape), str(crop_size)), UserWarning)
-
         if data_shape[i+2] - crop_size[i] - margins[i] > margins[i]:
             lbs.append(np.random.randint(margins[i], data_shape[i+2] - crop_size[i] - margins[i]))
         else:
-            warn("Random crop is falling back to center crop because the crop along with the desired margin does "
-                 "not fit the data. "
-                 "data: %s, crop_size: %s, margin: %s" % (str(data_shape), str(crop_size), str(margins)), UserWarning)
             lbs.append((data_shape[i+2] - crop_size[i]) // 2)
     return lbs
 
@@ -57,13 +46,13 @@ def get_lbs_for_center_crop(crop_size, data_shape):
     """
     lbs = []
     for i in range(len(data_shape) - 2):
-        if crop_size[i] > data_shape[i + 2]:
-            warn("Crop_size > data_shape. data: %s, crop: %s. Data will be padded to accomodate crop_size" % (str(data_shape), str(crop_size)), UserWarning)
         lbs.append((data_shape[i + 2] - crop_size[i]) // 2)
     return lbs
 
 
-def crop(data, seg=None, crop_size=128, margins=(0, 0, 0), crop_type="center"):
+def crop(data, seg=None, crop_size=128, margins=(0, 0, 0), crop_type="center",
+         pad_mode='constant', pad_kwargs={'constant_values': 0},
+         pad_mode_seg='constant', pad_kwargs_seg={'constant_values': 0}):
     """
     crops data and seg (seg may be None) to crop_size. Whether this will be achieved via center or random crop is
     determined by crop_type. Margin will be respected only for random_crop and will prevent the crops form being closer
@@ -71,7 +60,7 @@ def crop(data, seg=None, crop_size=128, margins=(0, 0, 0), crop_type="center"):
     padded with zeros in that case. margins can be negative -> results in padding of data/seg followed by cropping with
     margin=0 for the appropriate axes
 
-    :param data:
+    :param data: b, c, x, y, z
     :param seg:
     :param crop_size:
     :param margins:
@@ -106,9 +95,6 @@ def crop(data, seg=None, crop_size=128, margins=(0, 0, 0), crop_type="center"):
     if not isinstance(margins, (np.ndarray, tuple, list)):
         margins = [margins] * dim
 
-    if any([crop_size[d] > (data_shape[d+2] + 2*abs(min(0, margins[d]))) for d in range(dim)]):
-        warn("Crop_size + margin > data_shape. Data will be padded to accomodate crop_size")
-
     data_return = np.zeros([data_shape[0], data_shape[1]] + list(crop_size), dtype=data_dtype)
     if seg is not None:
         seg_return = np.zeros([seg_shape[0], seg_shape[1]] + list(crop_size), dtype=seg_dtype)
@@ -130,9 +116,9 @@ def crop(data, seg=None, crop_size=128, margins=(0, 0, 0), crop_type="center"):
                                   for d in range(dim)]
 
         if any([i > 0 for j in need_to_pad for i in j]):
-            data_2 = np.pad(data[b], need_to_pad, 'constant', constant_values=0)
+            data_2 = np.pad(data[b], need_to_pad, pad_mode, **pad_kwargs)
             if seg_return is not None:
-                seg_2 = np.pad(seg[b], need_to_pad, 'constant', constant_values=0)
+                seg_2 = np.pad(seg[b], need_to_pad, pad_mode_seg, **pad_kwargs_seg)
             else:
                 seg_2 = None
         else:
@@ -159,6 +145,22 @@ def random_crop(data, seg=None, crop_size=128, margins=[0, 0, 0]):
 
 def pad_nd_image_and_seg(data, seg, new_shape=None, must_be_divisible_by=None, pad_mode_data='constant',
                          np_pad_kwargs_data=None, pad_mode_seg='constant', np_pad_kwargs_seg=None):
+    """
+    Pads data and seg to new_shape. new_shape is thereby understood as min_shape (if data/seg is already larger then
+    new_shape the shape stays the same for the dimensions this applies)
+    :param data:
+    :param seg:
+    :param new_shape: if none then only must_be_divisible_by is applied
+    :param must_be_divisible_by: UNet like architectures sometimes require the input to be divisibly by some number. This
+    will modify new_shape if new_shape is not divisibly by this (by increasing it accordingly).
+    must_be_divisible_by should be a list of int (one for each spatial dimension) and this list must have the same
+    length as new_shape
+    :param pad_mode_data: see np.pad
+    :param np_pad_kwargs_data:see np.pad
+    :param pad_mode_seg:see np.pad
+    :param np_pad_kwargs_seg:see np.pad
+    :return:
+    """
     assert len(new_shape) == len(data.shape), "data_shape and new_shape must have the same dimensionality"
     sample_data = pad_nd_image(data, new_shape, mode=pad_mode_data, kwargs=np_pad_kwargs_data,
                                return_slicer=False, shape_must_be_divisible_by=must_be_divisible_by)
