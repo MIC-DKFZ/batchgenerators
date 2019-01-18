@@ -15,26 +15,43 @@
 
 from __future__ import print_function
 from future import standard_library
-from batchgenerators.transforms import SpatialTransform
+import threading
 standard_library.install_aliases()
 from builtins import range
-from builtins import object
 from multiprocessing import Process
-from multiprocessing import Queue as MPQueue
+from multiprocessing import Queue
+from queue import Queue as thrQueue
 import numpy as np
 import sys
 import logging
 
 
 def producer(queue, data_loader, transform, thread_id, seed):
-    np.random.seed(seed)
-    data_loader.set_thread_id(thread_id)
-    while True:
-        for item in data_loader:
-            if transform is not None:
-                item = transform(**item)
-            queue.put(item)
+    try:
+        np.random.seed(seed)
+        data_loader.set_thread_id(thread_id)
+        while True:
+            for item in data_loader:
+                if transform is not None:
+                    item = transform(**item)
+                queue.put(item)
+            queue.put("end")
+    except KeyboardInterrupt:
         queue.put("end")
+        raise KeyboardInterrupt
+
+
+def pin_memory_loop(in_queues, out_queue):
+    import torch
+    queue_ctr = 0
+    while True:
+        item = in_queues[queue_ctr % len(in_queues)].get()
+        if isinstance(item, dict):
+            for k in item.keys():
+                if isinstance(item[k], torch.Tensor):
+                    item[k] = item[k].pin_memory()
+        queue_ctr += 1
+        out_queue.put(item)
 
 
 class MultiThreadedAugmenter(object):
@@ -57,8 +74,11 @@ class MultiThreadedAugmenter(object):
 
         seeds (list of int): one seed for each worker. Must have len(num_processes).
         If None then seeds = range(num_processes)
+
+        pin_memory (bool): set to True if all torch tensors in data_dict are to be pinned. Pytorch only.
     """
-    def __init__(self, data_loader, transform, num_processes, num_cached_per_queue=2, seeds=None):
+    def __init__(self, data_loader, transform, num_processes, num_cached_per_queue=2, seeds=None, pin_memory=False):
+        self.pin_memory = pin_memory
         self.transform = transform
         if seeds is not None:
             assert len(seeds) == num_processes
@@ -72,6 +92,8 @@ class MultiThreadedAugmenter(object):
         self._threads = []
         self._end_ctr = 0
         self._queue_loop = 0
+        self.pin_memory_thread = None
+        self.pin_memory_queue = None
 
     def __iter__(self):
         return self
@@ -87,7 +109,11 @@ class MultiThreadedAugmenter(object):
         if len(self._queues) == 0:
             self._start()
         try:
-            item = self._queues[self._next_queue()].get()
+            if not self.pin_memory:
+                item = self._queues[self._next_queue()].get()
+            else:
+                item = self.pin_memory_queue.get()
+
             while item == "end":
                 self._end_ctr += 1
                 if self._end_ctr == self.num_processes:
@@ -97,7 +123,11 @@ class MultiThreadedAugmenter(object):
                     #self._finish()
                     raise StopIteration
 
-                item = self._queues[self._next_queue()].get()
+                if not self.pin_memory:
+                    item = self._queues[self._next_queue()].get()
+                else:
+                    item = self.pin_memory_queue.get()
+
             return item
         except KeyboardInterrupt:
             logging.error("MultiThreadedGenerator: caught exception: {}".format(sys.exc_info()))
@@ -111,10 +141,16 @@ class MultiThreadedAugmenter(object):
             self._end_ctr = 0
 
             for i in range(self.num_processes):
-                self._queues.append(MPQueue(self.num_cached_per_queue))
+                self._queues.append(Queue(self.num_cached_per_queue))
                 self._threads.append(Process(target=producer, args=(self._queues[i], self.generator, self.transform, i, self.seeds[i])))
                 self._threads[-1].daemon = True
                 self._threads[-1].start()
+
+            if self.pin_memory:
+                self.pin_memory_queue = thrQueue(2)
+                self.pin_memory_thread = threading.Thread(target=pin_memory_loop, args=(self._queues, self.pin_memory_queue))
+                self.pin_memory_thread.daemon = True
+                self.pin_memory_thread.start()
         else:
             logging.debug("MultiThreadedGenerator Warning: start() has been called but workers are already running")
 
@@ -263,9 +299,9 @@ class AlternativeMultiThreadedAugmenter(object):
                     rdy_ctr += 1
             [ready_queue.put("end") for ready_queue in ready_queues]
 
-        self.sample_queues = [MPQueue(self.num_raw_cached) for i in range(self.num_processes)]
-        self.transformed_queues = [MPQueue(self.num_transformed_cached) for i in range(self.num_processes)]
-        self.ready_queues = [MPQueue(2) for i in range(2)]
+        self.sample_queues = [Queue(self.num_raw_cached) for i in range(self.num_processes)]
+        self.transformed_queues = [Queue(self.num_transformed_cached) for i in range(self.num_processes)]
+        self.ready_queues = [Queue(2) for i in range(2)]
 
         self.sample_generating_process = ProcessTerminateOnJoin(target=producer, args=(self.sample_queues, self.dataloader))
         self.sample_generating_process.daemon = True
@@ -307,6 +343,7 @@ class AlternativeMultiThreadedAugmenter(object):
 
 if __name__ == "__main__":
     from batchgenerators.dataloading import DataLoaderBase
+    from batchgenerators.transforms import SpatialTransform
 
     class DummyDL(DataLoaderBase):
         def __init__(self, num_threads_in_mt=8):

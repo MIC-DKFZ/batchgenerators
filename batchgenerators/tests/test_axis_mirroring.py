@@ -13,22 +13,20 @@
 # limitations under the License.
 
 
-from __future__ import absolute_import
-from builtins import range
-__author__ = 'Simon Kohl'
-
-import unittest
+import unittest2
 import numpy as np
 from skimage import data
-from ._MockBatchGenerator import MockRepeatBatchGenerator
-from DeepLearningBatchGeneratorUtils.DataAugmentationGenerators import mirror_axis_generator
 
-class TestMirrorAxis(unittest.TestCase):
+from batchgenerators.dataloading import SingleThreadedAugmenter
+from batchgenerators.tests.DataGenerators import BasicDataLoader
+from batchgenerators.transforms.spatial_transforms import MirrorTransform
 
+
+class TestMirrorAxis(unittest2.TestCase):
     def setUp(self):
         self.seed = 1234
 
-        self.BATCH_SIZE = 10
+        self.batch_size = 10
         self.num_batches = 1000
 
         np.random.seed(self.seed)
@@ -38,25 +36,25 @@ class TestMirrorAxis(unittest.TestCase):
         cam = data.camera()
         self.cam = cam[np.newaxis, np.newaxis, :, :]
 
-        self.cam_left = self.cam[:,:,:,::-1]
-        self.cam_updown = self.cam[:,:,::-1,:]
-        self.cam_updown_left = self.cam[:,:,::-1,::-1]
+        self.cam_left = self.cam[:, :, :, ::-1]
+        self.cam_updown = self.cam[:, :, ::-1, :]
+        self.cam_updown_left = self.cam[:, :, ::-1, ::-1]
 
         self.x_2D = self.cam
         self.y_2D = self.cam
 
         ### 3D initialiazations
 
-        self.cam_3D = np.random.rand(20,20,20)[np.newaxis, np.newaxis, :, :, :]
+        self.cam_3D = np.random.rand(20, 20, 20)[np.newaxis, np.newaxis, :, :, :]
 
-        self.cam_3D_left = self.cam_3D[:,:,:,::-1,:]
-        self.cam_3D_updown = self.cam_3D[:,:,::-1,:,:]
-        self.cam_3D_updown_left = self.cam_3D[:,:,::-1,::-1,:]
+        self.cam_3D_left = self.cam_3D[:, :, :, ::-1, :]
+        self.cam_3D_updown = self.cam_3D[:, :, ::-1, :, :]
+        self.cam_3D_updown_left = self.cam_3D[:, :, ::-1, ::-1, :]
 
-        self.cam_3D_left_z = self.cam_3D_left[:,:,:,:,::-1]
-        self.cam_3D_updown_z = self.cam_3D_updown[:,:,:,:,::-1]
-        self.cam_3D_updown_left_z = self.cam_3D_updown_left[:,:,:,:,::-1]
-        self.cam_3D_z = self.cam_3D[:,:,:,:,::-1]
+        self.cam_3D_left_z = self.cam_3D_left[:, :, :, :, ::-1]
+        self.cam_3D_updown_z = self.cam_3D_updown[:, :, :, :, ::-1]
+        self.cam_3D_updown_left_z = self.cam_3D_updown_left[:, :, :, :, ::-1]
+        self.cam_3D_z = self.cam_3D[:, :, :, :, ::-1]
 
         self.x_3D = self.cam_3D
         self.y_3D = self.cam_3D
@@ -65,97 +63,108 @@ class TestMirrorAxis(unittest.TestCase):
     def test_random_distributions_2D(self):
         ### test whether all 4 possible mirrorings occur in approximately equal frquencies in 2D
 
-        batch_gen = MockRepeatBatchGenerator((self.x_2D, self.y_2D), BATCH_SIZE=self.BATCH_SIZE, seed=self.seed, num_batches=self.num_batches)
-        batch_gen = mirror_axis_generator(batch_gen)
+        batch_gen = BasicDataLoader((self.x_2D, self.y_2D), self.batch_size, number_of_threads_in_multithreaded=None)
+        batch_gen = SingleThreadedAugmenter(batch_gen, MirrorTransform((0, 1)))
 
         counts = np.zeros(shape=(4,))
 
-        for batch in batch_gen:
+        for b in range(self.num_batches):
+            batch = next(batch_gen)
 
-            for ix in range(self.BATCH_SIZE):
-                if (batch['data'][ix,:,:,:]==self.cam_left).all():
+            for ix in range(self.batch_size):
+                if (batch['data'][ix, :, :, :] == self.cam_left).all():
                     counts[0] = counts[0] + 1
 
-                elif (batch['data'][ix,:,:,:]==self.cam_updown).all():
+                elif (batch['data'][ix, :, :, :] == self.cam_updown).all():
                     counts[1] = counts[1] + 1
 
-                elif (batch['data'][ix,:,:,:]==self.cam_updown_left).all():
+                elif (batch['data'][ix, :, :, :] == self.cam_updown_left).all():
                     counts[2] = counts[2] + 1
 
-                elif (batch['data'][ix,:,:,:]==self.cam).all():
+                elif (batch['data'][ix, :, :, :] == self.cam).all():
                     counts[3] = counts[3] + 1
 
-        self.assertTrue([1 if (2300 < c < 2700) else 0 for c in counts] == [1]*4)
+        self.assertTrue([1 if (2200 < c < 2800) else 0 for c in counts] == [1]*4, "2D Images were not mirrored along "
+                                                                                  "all axes with equal probability. "
+                                                                                  "This may also indicate that "
+                                                                                  "mirroring is not working")
 
 
     def test_segmentations_2D(self):
-        ### test whether segmentations are rotated coherently with images
+        ### test whether segmentations are mirrored coherently with images
 
-        batch_gen = MockRepeatBatchGenerator((self.x_2D, self.y_2D), BATCH_SIZE=self.BATCH_SIZE, seed=self.seed, num_batches=self.num_batches)
-        batch_gen = mirror_axis_generator(batch_gen)
+        batch_gen = BasicDataLoader((self.x_2D, self.y_2D), self.batch_size, number_of_threads_in_multithreaded=None)
+        batch_gen = SingleThreadedAugmenter(batch_gen, MirrorTransform((0, 1)))
 
         equivalent = True
 
-        for batch in batch_gen:
-            for ix in range(self.BATCH_SIZE):
+        for b in range(self.num_batches):
+            batch = next(batch_gen)
+            for ix in range(self.batch_size):
                 if (batch['data'][ix] != batch['seg'][ix]).all():
                     equivalent = False
 
-        self.assertTrue(equivalent)
+        self.assertTrue(equivalent, "2D images and seg were not mirrored in the same way (they should though because "
+                                    "seg needs to match the corresponding data")
 
 
     def test_random_distributions_3D(self):
         ### test whether all 8 possible mirrorings occur in approximately equal frquencies in 3D case
 
-        batch_gen = MockRepeatBatchGenerator((self.x_3D, self.y_3D), BATCH_SIZE=self.BATCH_SIZE, seed=self.seed, num_batches=self.num_batches)
-        batch_gen = mirror_axis_generator(batch_gen)
+        batch_gen = BasicDataLoader((self.x_3D, self.y_3D), self.batch_size, number_of_threads_in_multithreaded=None)
+        batch_gen = SingleThreadedAugmenter(batch_gen, MirrorTransform((0, 1, 2)))
 
         counts = np.zeros(shape=(8,))
 
-        for batch in batch_gen:
-
-            for ix in range(self.BATCH_SIZE):
-                if (batch['data'][ix,:,:,:,:]==self.cam_3D_left).all():
+        for b in range(self.num_batches):
+            batch = next(batch_gen)
+            for ix in range(self.batch_size):
+                if (batch['data'][ix, :, :, :, :] == self.cam_3D_left).all():
                     counts[0] = counts[0] + 1
 
-                elif (batch['data'][ix,:,:,:,:]==self.cam_3D_updown).all():
+                elif (batch['data'][ix, :, :, :, :] == self.cam_3D_updown).all():
                     counts[1] = counts[1] + 1
 
-                elif (batch['data'][ix,:,:,:,:]==self.cam_3D_updown_left).all():
+                elif (batch['data'][ix, :, :, :, :] == self.cam_3D_updown_left).all():
                     counts[2] = counts[2] + 1
 
-                elif (batch['data'][ix,:,:,:,:]==self.cam_3D).all():
+                elif (batch['data'][ix, :, :, :, :] == self.cam_3D).all():
                     counts[3] = counts[3] + 1
 
-                elif (batch['data'][ix,:,:,:,:]==self.cam_3D_left_z).all():
+                elif (batch['data'][ix, :, :, :, :] == self.cam_3D_left_z).all():
                     counts[4] = counts[1] + 1
 
-                elif (batch['data'][ix,:,:,:,:]==self.cam_3D_updown_z).all():
+                elif (batch['data'][ix, :, :, :, :] == self.cam_3D_updown_z).all():
                     counts[5] = counts[1] + 1
 
-                elif (batch['data'][ix,:,:,:,:]==self.cam_3D_updown_left_z).all():
+                elif (batch['data'][ix, :, :, :, :] == self.cam_3D_updown_left_z).all():
                     counts[6] = counts[2] + 1
 
-                elif (batch['data'][ix,:,:,:,:]==self.cam_3D_z).all():
+                elif (batch['data'][ix, :, :, :, :] == self.cam_3D_z).all():
                     counts[7] = counts[3] + 1
 
-        self.assertTrue([1 if (1100 < c < 1300) else 0 for c in counts] == [1]*8)
+        self.assertTrue([1 if (1000 < c < 1400) else 0 for c in counts] == [1]*8, "3D Images were not mirrored along "
+                                                                                  "all axes with equal probability. "
+                                                                                  "This may also indicate that "
+                                                                                  "mirroring is not working")
 
 
     def test_segmentations_3D(self):
         ### test whether segmentations are rotated coherently with images
 
-        batch_gen = MockRepeatBatchGenerator((self.x_3D, self.y_3D), BATCH_SIZE=self.BATCH_SIZE, seed=self.seed, num_batches=self.num_batches)
-        batch_gen = mirror_axis_generator(batch_gen)
+        batch_gen = BasicDataLoader((self.x_3D, self.y_3D), self.batch_size, number_of_threads_in_multithreaded=None)
+        batch_gen = SingleThreadedAugmenter(batch_gen, MirrorTransform((0, 1, 2)))
 
         equivalent = True
 
-        for batch in batch_gen:
-            for ix in range(self.BATCH_SIZE):
+        for b in range(self.num_batches):
+            batch = next(batch_gen)
+            for ix in range(self.batch_size):
                 if (batch['data'][ix] != batch['seg'][ix]).all():
                     equivalent = False
 
-        self.assertTrue(equivalent)
+        self.assertTrue(equivalent, "3D images and seg were not mirrored in the same way (they should though because "
+                                    "seg needs to match the corresponding data")
 
 
 if __name__ == '__main__':

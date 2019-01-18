@@ -15,7 +15,6 @@
 from __future__ import print_function
 from builtins import range, zip
 import random
-
 import numpy as np
 from copy import deepcopy
 from scipy.ndimage import map_coordinates
@@ -323,6 +322,8 @@ def resize_image_by_padding_batched(image, new_shape, pad_value=None):
                       dtype=image.dtype) * pad_value
         res[:, :, int(start[0]):int(start[0]) + int(shape[0]), int(start[1]):int(start[1]) + int(shape[1]),
         int(start[2]):int(start[2]) + int(shape[2])] = image[:, :]
+    else:
+        raise RuntimeError("unexpected dimension")
     return res
 
 
@@ -511,7 +512,6 @@ def convert_seg_to_bounding_box_coordinates(data_dict, dim, get_rois_from_seg_fl
         return data_dict
 
 
-
 def transpose_channels(batch):
     if len(batch.shape) == 4:
         return np.transpose(batch, axes=[0, 2, 3, 1])
@@ -535,30 +535,30 @@ def resize_segmentation(segmentation, new_shape, order=3, cval=0):
     unique_labels = np.unique(segmentation)
     assert len(segmentation.shape) == len(new_shape), "new shape must have same dimensionality as segmentation"
     if order == 0:
-        return resize(segmentation, new_shape, order, mode="constant", cval=cval, clip=True).astype(tpe)
+        return resize(segmentation, new_shape, order, mode="constant", cval=cval, clip=True, anti_aliasing=False).astype(tpe)
     else:
         reshaped = np.zeros(new_shape, dtype=segmentation.dtype)
 
         for i, c in enumerate(unique_labels):
-            reshaped_multihot = resize((segmentation == c).astype(float), new_shape, order, mode="constant", cval=cval, clip=True)
+            reshaped_multihot = resize((segmentation == c).astype(float), new_shape, order, mode="edge", clip=True, anti_aliasing=False)
             reshaped[reshaped_multihot >= 0.5] = c
         return reshaped
 
 
-def resize_softmax_output(softmax_output, new_shape, order=3):
+def resize_multichannel_image(multichannel_image, new_shape, order=3):
     '''
-    Resizes softmax output. Resizes each channel in c separately and fuses results back together
+    Resizes multichannel_image. Resizes each channel in c separately and fuses results back together
 
-    :param softmax_output: c x x x y x z
-    :param new_shape: x x y x z
+    :param multichannel_image: c x x x y (x z)
+    :param new_shape: x x y (x z)
     :param order:
     :return:
     '''
-    tpe = softmax_output.dtype
-    new_shp = [softmax_output.shape[0]] + list(new_shape)
-    result = np.zeros(new_shp, dtype=softmax_output.dtype)
-    for i in range(softmax_output.shape[0]):
-        result[i] = resize(softmax_output[i].astype(float), new_shape, order, "constant", 0, True)
+    tpe = multichannel_image.dtype
+    new_shp = [multichannel_image.shape[0]] + list(new_shape)
+    result = np.zeros(new_shp, dtype=multichannel_image.dtype)
+    for i in range(multichannel_image.shape[0]):
+        result[i] = resize(multichannel_image[i].astype(float), new_shape, order, "constant", 0, True, anti_aliasing=False)
     return result.astype(tpe)
 
 
@@ -576,9 +576,27 @@ def get_range_val(value, rnd_type="uniform"):
                 n_val = orig_type(n_val)
         elif len(value) == 1:
             n_val = value[0]
+        else:
+            raise RuntimeError("value must be either a single vlaue or a list/tuple of len 2")
         return n_val
     else:
         return value
+
+
+def uniform(low, high, size=None):
+    """
+    wrapper for np.random.uniform to allow it to handle low=high
+    :param low:
+    :param high:
+    :return:
+    """
+    if low == high:
+        if size is None:
+            return low
+        else:
+            return np.ones(size) * low
+    else:
+        return np.random.uniform(low, high, size)
 
 
 def pad_nd_image(image, new_shape=None, mode="edge", kwargs=None, return_slicer=False, shape_must_be_divisible_by=None):
@@ -644,3 +662,50 @@ def pad_nd_image(image, new_shape=None, mode="edge", kwargs=None, return_slicer=
         slicer = list(slice(*i) for i in pad_list)
         return res, slicer
 
+
+
+def mask_random_square(img, square_size, n_val, channel_wise_n_val=False, square_pos=None):
+    """Masks (sets = 0) a random square in an image"""
+
+    img_h = img.shape[-2]
+    img_w = img.shape[-1]
+
+    img = img.copy()
+
+    if square_pos is None:
+        w_start = np.random.randint(0, img_w - square_size)
+        h_start = np.random.randint(0, img_h - square_size)
+    else:
+        pos_wh = square_pos[np.random.randint(0, len(square_pos))]
+        w_start = pos_wh[0]
+        h_start = pos_wh[1]
+
+    if img.ndim == 2:
+        rnd_n_val = get_range_val(n_val)
+        img[h_start:(h_start + square_size), w_start:(w_start + square_size)] = rnd_n_val
+    elif img.ndim == 3:
+        if channel_wise_n_val:
+            for i in range(img.shape[0]):
+                rnd_n_val = get_range_val(n_val)
+                img[i, h_start:(h_start + square_size), w_start:(w_start + square_size)] = rnd_n_val
+        else:
+            rnd_n_val = get_range_val(n_val)
+            img[:, h_start:(h_start + square_size), w_start:(w_start + square_size)] = rnd_n_val
+    elif img.ndim == 4:
+        if channel_wise_n_val:
+            for i in range(img.shape[0]):
+                rnd_n_val = get_range_val(n_val)
+                img[:, i, h_start:(h_start + square_size), w_start:(w_start + square_size)] = rnd_n_val
+        else:
+            rnd_n_val = get_range_val(n_val)
+            img[:, :, h_start:(h_start + square_size), w_start:(w_start + square_size)] = rnd_n_val
+
+    return img
+
+
+def mask_random_squares(img, square_size, n_squares, n_val, channel_wise_n_val=False, square_pos=None):
+    """Masks a given number of squares in an image"""
+    for i in range(n_squares):
+        img = mask_random_square(img, square_size, n_val, channel_wise_n_val=channel_wise_n_val,
+                                 square_pos=square_pos)
+    return img

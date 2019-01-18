@@ -11,57 +11,68 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+from warnings import warn
 
 from batchgenerators.transforms.abstract_transforms import AbstractTransform
 from batchgenerators.augmentations.resample_augmentations import augment_linear_downsampling_scipy
-from batchgenerators.augmentations.resample_augmentations import augment_downsampling_upsampling
+import numpy as np
 
 
-class ResampleTransform(AbstractTransform):
-    '''Downsamples each sample (linearly) by a random factor and upsamples to original resolution again (nearest neighbor)
+class SimulateLowResolutionTransform(AbstractTransform):
+    """Downsamples each sample (linearly) by a random factor and upsamples to original resolution again
+    (nearest neighbor)
 
     Info:
     * Uses scipy zoom for resampling.
-    * Resamples all dimensions (channels, x, y, z) with same downsampling factor (like isotropic=True from linear_downsampling_generator_nilearn)
+    * Resamples all dimensions (channels, x, y, z) with same downsampling factor (like isotropic=True from
+    linear_downsampling_generator_nilearn)
 
     Args:
-        zoom_range (tuple of float): Random downscaling factor in this range. (e.g.: 0.5 halfs the resolution)
-    '''
+        zoom_range: can be either tuple/list/np.ndarray or tuple of tuple. If tuple/list/np.ndarray, then the zoom
+        factor will be sampled from zoom_range[0], zoom_range[1] (zoom < 0 = downsampling!). If tuple of tuple then
+        each inner tuple will give a sampling interval for each axis (allows for different range of zoom values for
+        each axis
 
-    def __init__(self, zoom_range=(0.5, 1), data_key="data"):
+        p_per_channel:
+
+        per_channel (bool): whether to draw a new zoom_factor for each channel or keep one for all channels
+
+        channels (list, tuple): if None then all channels can be augmented. If list then only the channel indices can
+        be augmented (but may not always be depending on p_per_channel)
+
+        order_downsample:
+
+        order_upsample:
+    """
+
+    def __init__(self, zoom_range=(0.5, 1), per_channel=False, p_per_channel=1,
+                 channels=None, order_downsample=1, order_upsample=0, data_key="data", p_per_sample=1):
+        self.order_upsample = order_upsample
+        self.order_downsample = order_downsample
+        self.channels = channels
+        self.per_channel = per_channel
+        self.p_per_channel = p_per_channel
+        self.p_per_sample = p_per_sample
         self.data_key = data_key
         self.zoom_range = zoom_range
 
     def __call__(self, **data_dict):
-        data_dict[self.data_key] = augment_linear_downsampling_scipy(data_dict[self.data_key], zoom_range=self.zoom_range)
+        for b in range(len(data_dict[self.data_key])):
+            if np.random.uniform() < self.p_per_sample:
+                data_dict[self.data_key][b] = augment_linear_downsampling_scipy(data_dict[self.data_key][b],
+                                                                             zoom_range=self.zoom_range,
+                                                                             per_channel=self.per_channel,
+                                                                             p_per_channel=self.p_per_channel,
+                                                                             channels=self.channels,
+                                                                             order_downsample=self.order_downsample,
+                                                                             order_upsample=self.order_upsample)
         return data_dict
 
 
-class SimulateLowResTransform(AbstractTransform):
-    def __init__(self, sampling_range_per_axes=None, order_down=0, order_up=1, per_channel=True, channels=None):
-        """
-        Downsamples along specified axes with factor randomly drawn from rampling_range. Factor 5 hereby means that the output of
-        that axis is downsampled to a fifth of the original size and then sampled back up again. You can control the order
-        of interpolation by using order_down and _up for down/upsampling separately. per_chanel=True will randomly select
-        a downsampling separately for each color channel. If you would like to augment only specific color channels,
-        you can specify to do so via channels.
-        :param data: np array: b x c x x x y( x z)
-        :param sampling_range_per_axes: dict with key:value axes:(tuple) as key_value pairs. Axes is as they are in the batch (2, 3(, 4) for spatial dimensions)
-        :param order_down: int
-        :param order_up: int
-        :param per_channel: bool
-        :return:
-        """
-        self.channels = channels
-        self.per_channel = per_channel
-        self.order_up = order_up
-        self.order_down = order_down
-        self.sampling_range_per_axes = sampling_range_per_axes
-
-    def __call__(self, **data_dict):
-        data = data_dict.get('data')
-        data = augment_downsampling_upsampling(data, self.sampling_range_per_axes, self.order_down, self.order_up,
-                                               self.per_channel, self.channels)
-        data_dict['data'] = data
-        return data_dict
+class ResampleTransform(SimulateLowResolutionTransform):
+    def __init__(self, zoom_range=(0.5, 1), per_channel=False, p_per_channel=1,
+                 channels=None, order_downsample=1, order_upsample=0, data_key="data", p_per_sample=1):
+        warn("This class is deprecated. It was renamed to SimulateLowResolutionTransform. Please change your code",
+             DeprecationWarning)
+        super(ResampleTransform, self).__init__(zoom_range, per_channel, p_per_channel,
+                 channels, order_downsample, order_upsample, data_key, p_per_sample)

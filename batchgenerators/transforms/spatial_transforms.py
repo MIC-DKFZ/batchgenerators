@@ -11,18 +11,51 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import warnings
-from warnings import warn
-
 from batchgenerators.transforms.abstract_transforms import AbstractTransform
 from batchgenerators.augmentations.spatial_transformations import augment_spatial, augment_channel_translation, \
-    augment_mirroring, augment_transpose_axes, augment_zoom, augment_resize, flip_vector_axis
+    augment_mirroring, augment_transpose_axes, augment_zoom, augment_resize, flip_vector_axis, augment_rot90
 import numpy as np
 
 
+class Rot90Transform(AbstractTransform):
+    def __init__(self, num_rot=(1, 2, 3), axes=(0, 1, 2), data_key="data", label_key="seg", p_per_sample=0.3):
+        """
+        :param num_rot: rotate by 90 degrees how often? must be tuple -> nom rot randomly chosen from that tuple
+        :param axes: around which axes will the rotation take place? two axes are chosen randomly from axes.
+        :param data_key:
+        :param label_key:
+        :param p_per_sample:
+        """
+        self.p_per_sample = p_per_sample
+        self.label_key = label_key
+        self.data_key = data_key
+        self.axes = axes
+        self.num_rot = num_rot
+
+    def __call__(self, **data_dict):
+        data = data_dict.get(self.data_key)
+        seg = data_dict.get(self.label_key)
+
+        for b in range(data.shape[0]):
+            if np.random.uniform() < self.p_per_sample:
+                d = data[b]
+                if seg is not None:
+                    s = seg[b]
+                else:
+                    s = None
+                d, s = augment_rot90(d, s, self.num_rot, self.axes)
+                data[b] = d
+                if s is not None:
+                    seg[b] = s
+
+        data_dict[self.data_key] = data
+        if seg is not None:
+            data_dict[self.label_key] = seg
+        return data_dict
+
 
 class ZoomTransform(AbstractTransform):
-    def __init__(self, zoom_factors=1, order=3, order_seg=1, cval_seg=0, data_key="data", label_key="seg"):
+    def __init__(self, zoom_factors=1, order=3, order_seg=1, cval_seg=0, concatenate_list=False, data_key="data", label_key="seg"):
         """
         Zooms 'data' (and 'seg') by zoom_factors
         :param zoom_factors: int or list/tuple of int
@@ -37,6 +70,7 @@ class ZoomTransform(AbstractTransform):
         :param label_key:
 
         """
+        self.concatenate_list = concatenate_list
         self.cval_seg = cval_seg
         self.order_seg = order_seg
         self.data_key = data_key
@@ -48,13 +82,37 @@ class ZoomTransform(AbstractTransform):
         data = data_dict.get(self.data_key)
         seg = data_dict.get(self.label_key)
 
-        ret_val = augment_zoom(data=data, seg=seg, zoom_factors=self.zoom_factors, order=self.order, order_seg=self.order_seg, cval_seg=self.cval_seg)
+        if isinstance(data, np.ndarray):
+            concatenate = True
+        else:
+            concatenate = self.concatenate_list
 
-        data_dict[self.data_key] = ret_val[0]
         if seg is not None:
-            data_dict[self.label_key] = ret_val[1]
-        return data_dict
+            if isinstance(seg, np.ndarray):
+                concatenate_seg = True
+            else:
+                concatenate_seg = self.concatenate_list
+        else:
+            concatenate_seg = None
 
+        results = []
+        for b in range(len(data)):
+            sample_seg = None
+            if seg is not None:
+                sample_seg = seg[b]
+            res_data, res_seg = augment_zoom(data[b], sample_seg, self.zoom_factors, self.order, self.order_seg, self.cval_seg)
+            results.append((res_data, res_seg))
+
+        if concatenate:
+            data = np.vstack([i[0][None] for i in results])
+
+        if concatenate_seg is not None and concatenate_seg:
+            seg = np.vstack([i[1][None] for i in results])
+
+        data_dict[self.data_key] = data
+        if seg is not None:
+            data_dict[self.label_key] = seg
+        return data_dict
 
 class ResizeTransform(AbstractTransform):
 
@@ -85,13 +143,36 @@ class ResizeTransform(AbstractTransform):
         data = data_dict.get(self.data_key)
         seg = data_dict.get(self.label_key)
 
-        ret_val = augment_resize(data=data, seg=seg, target_size=self.target_size, order=self.order,
-                                 order_seg=self.order_seg, cval_seg=self.cval_seg,
-                                 concatenate_list=self.concatenate_list)
+        if isinstance(data, np.ndarray):
+            concatenate = True
+        else:
+            concatenate = self.concatenate_list
 
-        data_dict[self.data_key] = ret_val[0]
         if seg is not None:
-            data_dict[self.label_key] = ret_val[1]
+            if isinstance(seg, np.ndarray):
+                concatenate_seg = True
+            else:
+                concatenate_seg = self.concatenate_list
+        else:
+            concatenate_seg = None
+
+        results = []
+        for b in range(len(data)):
+            sample_seg = None
+            if seg is not None:
+                sample_seg = seg[b]
+            res_data, res_seg = augment_resize(data[b], sample_seg, self.target_size, self.order, self.order_seg, self.cval_seg)
+            results.append((res_data, res_seg))
+
+        if concatenate:
+            data = np.vstack([i[0][None] for i in results])
+
+        if concatenate_seg is not None and concatenate_seg:
+            seg = np.vstack([i[1][None] for i in results])
+
+        data_dict[self.data_key] = data
+        if seg is not None:
+            data_dict[self.label_key] = seg
         return data_dict
 
 
@@ -103,26 +184,31 @@ class MirrorTransform(AbstractTransform):
         axes (tuple of int): axes along which to mirror
 
     """
-    def __init__(self, axes=(2, 3, 4), data_key="data", label_key="seg"):
+    def __init__(self, axes=(0, 1, 2), data_key="data", label_key="seg"):
         self.data_key = data_key
         self.label_key = label_key
         self.axes = axes
-        warnings.simplefilter("once", DeprecationWarning)
-        warn("The axes in MirrorTransform will soon change! Currently for mirroring along any axes of a 5d tensor "
-             "you would set axes=(2, 3, 4). These correspond to the actual axes of a 5d tensor.\n"
-             "The way axes are done in the future is to access the spatial dimensions directly, disregarding b and c. "
-             "For the same 5d tensor you will have to set axes=(0, 1, 2)!!\n"
-             "(don't to anything for now, this is just a warning)")
+        if max(axes) > 2:
+            raise ValueError("MirrorTransform now takes the axes as the spatial dimensions. What previously was "
+                             "axes=(2, 3, 4) to mirror along all spatial dimensions of a 5d tensor (b, c, x, y, z) "
+                             "is now axes=(0, 1, 2). Please adapt your scripts accordingly.")
 
     def __call__(self, **data_dict):
         data = data_dict.get(self.data_key)
         seg = data_dict.get(self.label_key)
 
-        ret_val = augment_mirroring(data=data, seg=seg, axes=self.axes)
+        for b in range(len(data)):
+            sample_seg = None
+            if seg is not None:
+                sample_seg = seg[b]
+            ret_val = augment_mirroring(data[b], sample_seg, axes=self.axes)
+            data[b] = ret_val[0]
+            if seg is not None:
+                seg[b] = ret_val[1]
 
-        data_dict[self.data_key] = ret_val[0]
+        data_dict[self.data_key] = data
         if seg is not None:
-            data_dict[self.label_key] = ret_val[1]
+            data_dict[self.label_key] = seg
 
         return data_dict
 
@@ -261,32 +347,43 @@ class SpatialTransform(AbstractTransform):
 
 
 class TransposeAxesTransform(AbstractTransform):
-    def __init__(self, transpose_any_of_these=(2, 3, 4), data_key="data", label_key="seg"):
+    def __init__(self, transpose_any_of_these=(0, 1, 2), data_key="data", label_key="seg", p_per_sample=1):
         '''
         This transform will randomly shuffle the axes of transpose_any_of_these.
-        :param transpose_any_of_these:
+        :param transpose_any_of_these: spatial dimensions to transpose, 0=x, 1=y, 2=z. Must be a tuple/list of len>=2
         :param data_key:
         :param label_key:
         '''
+        self.p_per_sample = p_per_sample
         self.data_key = data_key
         self.label_key = label_key
         self.transpose_any_of_these = transpose_any_of_these
-        warnings.simplefilter("once", DeprecationWarning)
-        warn("The axes in TransposeAxesTransform will soon change! Currently for transposing any axes of a 5d tensor "
-             "you would set axes=(2, 3, 4). These correspond to the axes of a 5d tensor.\n"
-             "The way axes are done in the future is to access the spatial dimensions directly, disregarding b and c. "
-             "For the same 5d tensor you will have to set axes=(0, 1, 2)!!\n"
-             "(don't to anything for now, this is just a warning)")
+        if max(transpose_any_of_these) > 2:
+            raise ValueError("TransposeAxesTransform now takes the axes as the spatial dimensions. What previously was "
+                             "axes=(2, 3, 4) to mirror along all spatial dimensions of a 5d tensor (b, c, x, y, z) "
+                             "is now axes=(0, 1, 2). Please adapt your scripts accordingly.")
+        assert isinstance(transpose_any_of_these, (list, tuple)), "transpose_any_of_these must be either list or tuple"
+        assert len(transpose_any_of_these) >= 2, "len(transpose_any_of_these) must be >=2 -> we need at least 2 axes we " \
+                                                 "can transpose"
 
     def __call__(self, **data_dict):
         data = data_dict.get(self.data_key)
         seg = data_dict.get(self.label_key)
 
-        ret_val = augment_transpose_axes(data, seg, self.transpose_any_of_these)
+        for b in range(len(data)):
+            if np.random.uniform() < self.p_per_sample:
+                if seg is not None:
+                    s = seg[b]
+                else:
+                    s = None
+                ret_val = augment_transpose_axes(data[b], s, self.transpose_any_of_these)
+                data[b] = ret_val[0]
+                if seg is not None:
+                    seg[b] = ret_val[1]
 
-        data_dict[self.data_key] = ret_val[0]
+        data_dict[self.data_key] = data
         if seg is not None:
-            data_dict[self.label_key] = ret_val[1]
+            data_dict[self.label_key] = seg
         return data_dict
 
 

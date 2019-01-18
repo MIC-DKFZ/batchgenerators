@@ -21,224 +21,117 @@ from builtins import range
 import numpy as np
 from batchgenerators.augmentations.utils import create_zero_centered_coordinate_mesh, elastic_deform_coordinates, \
     interpolate_img, \
-    rotate_coords_2d, rotate_coords_3d, scale_coords, resize_segmentation
-from skimage.transform import resize
+    rotate_coords_2d, rotate_coords_3d, scale_coords, resize_segmentation, resize_multichannel_image
 from batchgenerators.augmentations.crop_and_pad_augmentations import random_crop as random_crop_aug
 from batchgenerators.augmentations.crop_and_pad_augmentations import center_crop as center_crop_aug
 
 
-def augment_resize(data, target_size, order=3, order_seg=1, cval_seg=0, seg=None, concatenate_list=False,
-                   border_mode="constant"):
+def augment_rot90(sample_data, sample_seg, num_rot=(1, 2, 3), axes=(0, 1, 2)):
+    """
+
+    :param sample_data:
+    :param sample_seg:
+    :param num_rot: rotate by 90 degrees how often? must be tuple -> nom rot randomly chosen from that tuple
+    :param axes: around which axes will the rotation take place? two axes are chosen randomly from axes.
+    :return:
+    """
+    num_rot = np.random.choice(num_rot)
+    axes = np.random.choice(axes, size=2, replace=False)
+    axes.sort()
+    axes = [i + 1 for i in axes]
+    sample_data = np.rot90(sample_data, num_rot, axes)
+    if sample_seg is not None:
+        sample_seg = np.rot90(sample_seg, num_rot, axes)
+    return sample_data, sample_seg
+
+
+def augment_resize(sample_data, sample_seg, target_size, order=3, order_seg=1, cval_seg=0):
     """
     Reshapes data (and seg) to target_size
-    :param data: np.ndarray or list/tuple of np.ndarrays, must be (b, c, x, y(, z))) (if list/tuple then each entry
+    :param sample_data: np.ndarray or list/tuple of np.ndarrays, must be (c, x, y(, z))) (if list/tuple then each entry
     must be of this shape!)
     :param target_size: int or list/tuple of int
     :param order: interpolation order for data (see skimage.transform.resize)
     :param order_seg: interpolation order for seg (see skimage.transform.resize)
     :param cval_seg: cval for segmentation (see skimage.transform.resize)
-    :param seg: can be None, if not None then it will also be resampled to target_size. Can also be list/tuple of
-    np.ndarray (just like data). Must also be (b, c, x, y(, z))
-    :param concatenate_list: if you give list/tuple of data/seg and set concatenate_list=True then the result will be
-    concatenated into one large ndarray (once again b, c, x, y(, z))
-    :param border_mode: Points outside the boundaries of the input are filled according to the given mode. {‘constant’, ‘edge’, ‘symmetric’, ‘reflect’, ‘wrap’}, optional
+    :param sample_seg: can be None, if not None then it will also be resampled to target_size. Can also be list/tuple of
+    np.ndarray (just like data). Must also be (c, x, y(, z))
     :return:
     """
-    if isinstance(data, np.ndarray):
-        is_list = False
-        assert (seg is None) or isinstance(seg, np.ndarray), "if data is ndarray then seg must be ndarray as well"
-    elif isinstance(data, (list, tuple)):
-        is_list = True
-        assert (seg is None) or isinstance(seg,  (list, tuple)), "if data is list/tuple then seg must be list/tuple as well"
+    dimensionality = len(sample_data.shape) - 1
+    if not isinstance(target_size, (list, tuple)):
+        target_size_here = [target_size] * dimensionality
     else:
-        raise TypeError("Data has to be either a numpy array or a list")
+        assert len(target_size) == dimensionality, "If you give a tuple/list as target size, make sure it has " \
+                                                   "the same dimensionality as data!"
+        target_size_here = list(target_size)
 
-    if not is_list:
-        data = [data]
-        if seg is not None:
-            seg = [seg]
-        concatenate_list = True
+    sample_data = resize_multichannel_image(sample_data, target_size_here, order)
 
-    result_data = []
-    for i in range(len(data)):
-        dimensionality = len(data[i].shape) - 2
-        if not isinstance(target_size, (list, tuple)):
-            target_size_here = [target_size] * dimensionality
-        else:
-            assert len(target_size) == dimensionality, "If you give a tuple/list as target size, make sure it has " \
-                                                       "the same dimensionality as data!"
-            target_size_here = list(target_size)
+    if sample_seg is not None:
+        if sample_seg is not None:
+            target_seg = np.ones([sample_seg.shape[0]] + target_size_here)
+            for c in range(sample_seg.shape[0]):
+                target_seg[c] = resize_segmentation(sample_seg[c], target_size_here, order_seg, cval_seg)
 
-        # resize only supports 3d images. And it makes sense to treat each color channel of each sample separately
-        result_this_data = []
-        for b in range(data[i].shape[0]):
-            result_this_sample = []
-            for c in range(data[i].shape[1]):
-                result_this_sample.append(
-                    resize(image=data[i][b, c].astype(float),
-                           output_shape=target_size_here,
-                           order=order,
-                           mode=border_mode
-                           ).astype(data[i].dtype)[None])
-            result_this_sample = np.vstack(result_this_sample)
-            result_this_data.append(result_this_sample[None])
-        result_this_data = np.vstack(result_this_data)
-        result_data.append(result_this_data)
-
-    if concatenate_list:
-        result_data = np.vstack(result_data)
-
-    if seg is not None:
-        result_seg = []
-        for i in range(len(seg)):
-            dimensionality = len(seg[i].shape) - 2
-            if not isinstance(target_size, (list, tuple)):
-                target_size_here = [target_size] * dimensionality
-            else:
-                assert len(target_size) == dimensionality, "If you give a tuple/list as target size, make sure it has " \
-                                                           "the same dimensionality as seg!"
-                target_size_here = list(target_size)
-
-            # resize only supports 3d images. And it makes sense to treat each color channel of each sample separately
-            result_this_seg = []
-            for b in range(seg[i].shape[0]):
-                result_this_sample = []
-                for c in range(seg[i].shape[1]):
-                    result_this_sample.append(
-                        resize_segmentation(seg[i][b, c].astype(float), target_size_here, order_seg, cval_seg)[None])
-                result_this_sample = np.vstack(result_this_sample)
-                result_this_seg.append(result_this_sample[None])
-            result_this_seg = np.vstack(result_this_seg)
-            result_seg.append(result_this_seg)
-
-        if concatenate_list:
-            result_seg = np.vstack(result_seg)
-    else:
-        result_seg = None
-
-    return result_data, result_seg
+    return sample_data, sample_seg
 
 
-def augment_zoom(data, zoom_factors, order=3, order_seg=1, cval_seg=0, seg=None, concatenate_list=False):
+def augment_zoom(sample_data, sample_seg, zoom_factors, order=3, order_seg=1, cval_seg=0):
     """
     zooms data (and seg) by factor zoom_factors
-    :param data: np.ndarray or list/tuple of np.ndarrays, must be (b, c, x, y(, z))) (if list/tuple then each entry
+    :param sample_data: np.ndarray or list/tuple of np.ndarrays, must be (c, x, y(, z))) (if list/tuple then each entry
     must be of this shape!)
-    :param zoom_factors: int or list/tuple of int
+    :param zoom_factors: int or list/tuple of int (multiplication factor for the input size)
     :param order: interpolation order for data (see skimage.transform.resize)
     :param order_seg: interpolation order for seg (see skimage.transform.resize)
     :param cval_seg: cval for segmentation (see skimage.transform.resize)
-    :param seg: can be None, if not None then it will also be zoomed by zoom_factors. Can also be list/tuple of
-    np.ndarray (just like data). Must also be (b, c, x, y(, z))
-    :param concatenate_list: if you give list/tuple of data/seg and set concatenate_list=True then the result will be
-    concatenated into one large ndarray (once again b, c, x, y(, z))
+    :param sample_seg: can be None, if not None then it will also be zoomed by zoom_factors. Can also be list/tuple of
+    np.ndarray (just like data). Must also be (c, x, y(, z))
     :return:
     """
-    if isinstance(data, np.ndarray):
-        is_list = False
-    elif isinstance(data, (list, tuple)):
-        is_list = True
-        assert len(data) > 0 and all([isinstance(i, np.ndarray) for i in data])
+
+    dimensionality = len(sample_data.shape) - 1
+    shape = np.array(sample_data.shape[1:])
+    if not isinstance(zoom_factors, (list, tuple)):
+        zoom_factors_here = np.array([zoom_factors] * dimensionality)
     else:
-        raise TypeError("Data has to be either a numpy array or a list")
+        assert len(zoom_factors) == dimensionality, "If you give a tuple/list as target size, make sure it has " \
+                                                    "the same dimensionality as data!"
+        zoom_factors_here = np.array(zoom_factors)
+    target_shape_here = list(np.round(shape * zoom_factors_here).astype(int))
 
-    if seg is not None:
-        if is_list:
-            assert isinstance(seg, (list, tuple)), "if data is list/tuple then seg must be, too"
-            assert len(seg) > 0 and all([isinstance(i, np.ndarray) for i in seg])
-        else:
-            assert isinstance(seg, np.ndarray)
+    sample_data = resize_multichannel_image(sample_data, target_shape_here, order)
 
-    if not is_list:
-        data = [data]
-        if seg is not None:
-            seg = [seg]
-        concatenate_list = True
-
-    result_data = []
-    for i in range(len(data)):
-        dimensionality = len(data[i].shape) - 2
-        shape = np.array(data[i].shape[2:])
-        if not isinstance(zoom_factors, (list, tuple)):
-            zoom_factors_here = np.array([zoom_factors] * dimensionality)
-        else:
-            assert len(zoom_factors) == dimensionality, "If you give a tuple/list as target size, make sure it has " \
-                                                        "the same dimensionality as data!"
-            zoom_factors_here = np.array(zoom_factors)
-        target_shape_here = np.round(shape * zoom_factors_here).astype(int)
-
-        # resize only supports 3d images. And it makes sense to treat each color channel of each sample separately
-        result_this_data = []
-        for b in range(data[i].shape[0]):
-            result_this_sample = []
-            for c in range(data[i].shape[1]):
-                result_this_sample.append(
-                    resize(data[i][b, c].astype(float), target_shape_here, order).astype(data[i].dtype)[None])
-            result_this_sample = np.vstack(result_this_sample)
-            result_this_data.append(result_this_sample[None])
-        result_this_data = np.vstack(result_this_data)
-        result_data.append(result_this_data)
-
-    if concatenate_list:
-        result_data = np.vstack(result_data)
-
-    if seg is not None:
-        result_seg = []
-        for i in range(len(seg)):
-            dimensionality = len(seg[i].shape) - 2
-            shape = np.array(seg[i].shape[2:])
-            if not isinstance(zoom_factors, (list, tuple)):
-                zoom_factors_here = np.array([zoom_factors] * dimensionality)
-            else:
-                assert len(zoom_factors) == dimensionality, "If you give a tuple/list as target size, make sure it has " \
-                                                            "the same dimensionality as seg!"
-                zoom_factors_here = np.array(zoom_factors)
-            target_shape_here = np.round(shape * zoom_factors_here).astype(int)
-
-            # resize only supports 3d images. And it makes sense to treat each color channel of each sample separately
-            result_this_seg = []
-            for b in range(seg[i].shape[0]):
-                result_this_sample = []
-                for c in range(seg[i].shape[1]):
-                    result_this_sample.append(
-                        resize_segmentation(seg[i][b, c].astype(float), target_shape_here, order_seg, cval_seg).astype(seg[i].dtype)[None])
-                result_this_sample = np.vstack(result_this_sample)
-                result_this_seg.append(result_this_sample[None])
-            result_this_seg = np.vstack(result_this_seg)
-            result_seg.append(result_this_seg)
-
-        if concatenate_list:
-            result_seg = np.vstack(result_seg)
+    if sample_seg is not None:
+        target_seg = np.ones([sample_seg.shape[0]] + target_shape_here)
+        for c in range(sample_seg.shape[0]):
+            target_seg[c] = resize_segmentation(sample_seg[c], target_shape_here, order_seg, cval_seg)
     else:
-        result_seg = None
+        target_seg = None
 
-    return result_data, result_seg
+    return sample_data, target_seg
 
 
-def augment_mirroring(data, seg=None, axes=(2, 3, 4)):
-    data = np.copy(data)
-    if seg is not None:
-        seg = np.copy(seg)
-    if (len(data.shape) != 4) and (len(data.shape) != 5):
+def augment_mirroring(sample_data, sample_seg=None, axes=(0, 1, 2)):
+    if (len(sample_data.shape) != 3) and (len(sample_data.shape) != 4):
         raise Exception(
-            "Invalid dimension for data and seg. data and seg should be either [BATCH_SIZE, channels, x, y] or [BATCH_SIZE, channels, x, y, z]")
-    BATCH_SIZE = data.shape[0]
-    idx = np.arange(BATCH_SIZE)
-    for id in idx:
-        if 2 in axes and np.random.uniform() < 0.5:
-            data[id, :, :] = data[id, :, ::-1]
-            if seg is not None:
-                seg[id, :, :] = seg[id, :, ::-1]
-        if 3 in axes and np.random.uniform() < 0.5:
-            data[id, :, :, :] = data[id, :, :, ::-1]
-            if seg is not None:
-                seg[id, :, :, :] = seg[id, :, :, ::-1]
-        if 4 in axes and len(data.shape) == 5:
-            if np.random.uniform() < 0.5:
-                data[id, :, :, :, :] = data[id, :, :, :, ::-1]
-                if seg is not None:
-                    seg[id, :, :, :, :] = seg[id, :, :, :, ::-1]
-    return data, seg
+            "Invalid dimension for sample_data and sample_seg. sample_data and sample_seg should be either "
+            "[channels, x, y] or [channels, x, y, z]")
+    if 0 in axes and np.random.uniform() < 0.5:
+        sample_data[:, :] = sample_data[:, ::-1]
+        if sample_seg is not None:
+            sample_seg[:, :] = sample_seg[:, ::-1]
+    if 1 in axes and np.random.uniform() < 0.5:
+        sample_data[:, :, :] = sample_data[:, :, ::-1]
+        if sample_seg is not None:
+            sample_seg[:, :, :] = sample_seg[:, :, ::-1]
+    if 2 in axes and len(sample_data.shape) == 4:
+        if np.random.uniform() < 0.5:
+            sample_data[:, :, :, :] = sample_data[:, :, :, ::-1]
+            if sample_seg is not None:
+                sample_seg[:, :, :, :] = sample_seg[:, :, :, ::-1]
+    return sample_data, sample_seg
 
 
 def augment_channel_translation(data, const_channel=0, max_shifts=None):
@@ -380,20 +273,31 @@ def augment_spatial(data, seg, patch_size, patch_center_dist_from_border=30,
     return data_result, seg_result
 
 
-def augment_transpose_axes(data, seg, axes=(2, 3, 4)):
-    axes = list(np.array(axes) - 1)  # need list to allow shuffle; -1 because we iterate over samples in batch
-    data_res = np.copy(data)
-    seg_res = None
-    if seg is not None:
-        seg_res = np.copy(seg)
+def augment_transpose_axes(data_sample, seg_sample, axes=(0, 1, 2)):
+    """
 
-    assert np.max(axes) <= len(data.shape), "axes must only contain valid axis ids"
-    for b in range(data.shape[0]):
-        np.random.shuffle(axes)
-        data_res[b] = data_res[b].transpose(*([0] + axes))
-        if seg is not None:
-            seg_res[b] = seg_res[b].transpose(*([0] + axes))
-    return data_res, seg_res
+    :param data_sample: c,x,y(,z)
+    :param seg_sample: c,x,y(,z)
+    :param axes: list/tuple
+    :return:
+    """
+    axes = list(np.array(axes) + 1)  # need list to allow shuffle; +1 to accomodate for color channel
+
+    assert np.max(axes) <= len(data_sample.shape), "axes must only contain valid axis ids"
+    static_axes = list(range(len(data_sample.shape)))
+    for i in axes: static_axes[i] = -1
+    np.random.shuffle(axes)
+
+    ctr = 0
+    for j, i in enumerate(static_axes):
+        if i == -1:
+            static_axes[j] = axes[ctr]
+            ctr += 1
+
+    data_sample = data_sample.transpose(*static_axes)
+    if seg_sample is not None:
+        seg_sample = seg_sample.transpose(*static_axes)
+    return data_sample, seg_sample
 
 
 def flip_vector_axis(data):
