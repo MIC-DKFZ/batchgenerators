@@ -65,7 +65,7 @@ pipeline unmodified.
 'seg' value must have shape (b, c, x, y) for 2D or shape (b, c, x, y, z) for 3D! Color channel may be used here to
 allow for several segmentation maps. If you have only one segmentation, make sure to have shape (b, 1, x, y (, z))
 
-##How to install locally
+## How to install locally
 
 Install dependencies (some of them are only needed for certain functionalities)
 ```
@@ -90,7 +90,7 @@ from batchgenerators.transforms.color_transforms import ContrastAugmentationTran
 
 Note: This package also includes 'generators'. Support for those will be dropped in the future. That was our old design.
 
-##Release Notes
+## Release Notes
 
 - 0.18:
     - all augmentations (there are some exceptions though) are implemented on a per-sample basis. This should make it 
