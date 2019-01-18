@@ -151,8 +151,7 @@ class TestCrop(unittest.TestCase):
         seg = np.random.random(data.shape)
         crop_size = 50
 
-        with self.assertWarns(UserWarning):
-            d, s = center_crop(data, crop_size=crop_size, seg=seg)
+        d, s = center_crop(data, crop_size=crop_size, seg=seg)
 
         self.assertTrue(all(i == j for i, j in zip((8, 4, crop_size, crop_size), d.shape)),
                         "data has unexpected return shape")
