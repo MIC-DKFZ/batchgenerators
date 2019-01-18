@@ -147,3 +147,33 @@ class SegChannelRandomDuplicateTransform(AbstractTransform):
                 seg[:, [self.axis, -1]] = seg[:, [-1, self.axis]]
             data_dict[self.label_key] = seg
         return data_dict
+
+
+class SegLabelSelectionBinarizeTransform(AbstractTransform):
+    """Will create a binary segmentation, with the selected labels in the foreground.
+
+    Args:
+        label (int, list of int): Foreground label(s)
+
+    """
+
+    def __init__(self, label, label_key="seg"):
+        self.label_key = label_key
+        if isinstance(label, int):
+            self.label = [label]
+        else:
+            self.label = sorted(label)
+
+    def __call__(self, **data_dict):
+        seg = data_dict.get(self.label_key)
+
+        if seg is None:
+            warn("You used SegLabelSelectionBinarizeTransform but there is no 'seg' key in your data_dict, returning data_dict unmodified", Warning)
+        else:
+            discard_labels = set(np.unique(seg)) - set(self.label) - set([0])
+            for label in discard_labels:
+                seg[seg == label] = 0
+            for label in self.label:
+                seg[seg == label] = 1
+            data_dict[self.label_key] = seg
+        return data_dict

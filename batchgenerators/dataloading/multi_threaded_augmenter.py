@@ -14,18 +14,14 @@
 
 
 from __future__ import print_function
+from warnings import warn
 from future import standard_library
-from batchgenerators.transforms import SpatialTransform
 import threading
 standard_library.install_aliases()
 from builtins import range
-from builtins import object
-
 from multiprocessing import Process
 from multiprocessing import Queue
 from queue import Queue as thrQueue
-# from multiprocessing import Queue as MPQueue
-
 import numpy as np
 import sys
 import logging
@@ -239,6 +235,10 @@ class AlternativeMultiThreadedAugmenter(object):
         :param seeds:
         :param verbose:
         """
+        warn("This is deprecated. Please use MultiThreadedAugmenter instead. As of 0.18, all augmentations have a "
+             "p_per_sample keyword, making augmentations on a per-sample basis in the multithreaded augmenter "
+             "superfluous. Also, this one is much slower than MultiThreadedAugmenter",
+             DeprecationWarning)
         self.verbose = verbose
         self.batch_joiner = batch_joiner
         self.num_transformed_cached = num_transformed_cached
@@ -348,6 +348,7 @@ class AlternativeMultiThreadedAugmenter(object):
 
 if __name__ == "__main__":
     from batchgenerators.dataloading import DataLoaderBase
+    from batchgenerators.transforms import SpatialTransform
 
     class DummyDL(DataLoaderBase):
         def __init__(self, num_threads_in_mt=8):

@@ -15,7 +15,6 @@
 from __future__ import print_function
 from builtins import range, zip
 import random
-
 import numpy as np
 from copy import deepcopy
 from scipy.ndimage import map_coordinates
@@ -323,6 +322,8 @@ def resize_image_by_padding_batched(image, new_shape, pad_value=None):
                       dtype=image.dtype) * pad_value
         res[:, :, int(start[0]):int(start[0]) + int(shape[0]), int(start[1]):int(start[1]) + int(shape[1]),
         int(start[2]):int(start[2]) + int(shape[2])] = image[:, :]
+    else:
+        raise RuntimeError("unexpected dimension")
     return res
 
 
@@ -491,7 +492,7 @@ def convert_seg_to_bounding_box_coordinates(data_dict, dim, get_rois_from_seg_fl
                     out_seg[b][data_dict['seg'][b] > 0] = 1
 
                 bb_target.append(np.array(p_coords_list))
-                roi_masks.append(np.array(p_roi_masks_list))
+                roi_masks.append(np.array(p_roi_masks_list).astype('uint8'))
                 roi_labels.append(np.array(p_roi_labels_list))
 
 
@@ -507,8 +508,8 @@ def convert_seg_to_bounding_box_coordinates(data_dict, dim, get_rois_from_seg_fl
         data_dict['roi_masks'] = np.array(roi_masks)
         data_dict['roi_labels'] = np.array(roi_labels)
         data_dict['seg'] = out_seg
-        return data_dict
 
+        return data_dict
 
 
 def transpose_channels(batch):
@@ -575,6 +576,8 @@ def get_range_val(value, rnd_type="uniform"):
                 n_val = orig_type(n_val)
         elif len(value) == 1:
             n_val = value[0]
+        else:
+            raise RuntimeError("value must be either a single vlaue or a list/tuple of len 2")
         return n_val
     else:
         return value
@@ -658,6 +661,7 @@ def pad_nd_image(image, new_shape=None, mode="edge", kwargs=None, return_slicer=
         pad_list[:, 1] = np.array(res.shape) - pad_list[:, 1]
         slicer = list(slice(*i) for i in pad_list)
         return res, slicer
+
 
 
 def mask_random_square(img, square_size, n_val, channel_wise_n_val=False, square_pos=None):

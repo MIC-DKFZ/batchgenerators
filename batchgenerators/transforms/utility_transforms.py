@@ -66,6 +66,7 @@ class NumpyToTensor(AbstractTransform):
         return data_dict
 
 
+
 class ListToNumpy(AbstractTransform):
     """Utility function for pytorch. Converts data (and seg) numpy ndarrays to pytorch tensors
     """
