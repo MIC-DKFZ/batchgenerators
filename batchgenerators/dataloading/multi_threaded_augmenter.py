@@ -14,6 +14,7 @@
 
 
 from __future__ import print_function
+from warnings import warn
 from future import standard_library
 import threading
 standard_library.install_aliases()
@@ -234,6 +235,10 @@ class AlternativeMultiThreadedAugmenter(object):
         :param seeds:
         :param verbose:
         """
+        warn("This is deprecated. Please use MultiThreadedAugmenter instead. As of 0.18, all augmentations have a "
+             "p_per_sample keyword, making augmentations on a per-sample basis in the multithreaded augmenter "
+             "superfluous. Also, this one is much slower than MultiThreadedAugmenter",
+             DeprecationWarning)
         self.verbose = verbose
         self.batch_joiner = batch_joiner
         self.num_transformed_cached = num_transformed_cached
