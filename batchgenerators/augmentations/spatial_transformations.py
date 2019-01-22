@@ -69,12 +69,13 @@ def augment_resize(sample_data, sample_seg, target_size, order=3, order_seg=1, c
     sample_data = resize_multichannel_image(sample_data, target_size_here, order)
 
     if sample_seg is not None:
-        if sample_seg is not None:
-            target_seg = np.ones([sample_seg.shape[0]] + target_size_here)
-            for c in range(sample_seg.shape[0]):
-                target_seg[c] = resize_segmentation(sample_seg[c], target_size_here, order_seg, cval_seg)
+        target_seg = np.ones([sample_seg.shape[0]] + target_size_here)
+        for c in range(sample_seg.shape[0]):
+            target_seg[c] = resize_segmentation(sample_seg[c], target_size_here, order_seg, cval_seg)
+    else:
+        target_seg = None
 
-    return sample_data, sample_seg
+    return sample_data, target_seg
 
 
 def augment_zoom(sample_data, sample_seg, zoom_factors, order=3, order_seg=1, cval_seg=0):
