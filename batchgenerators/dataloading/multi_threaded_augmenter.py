@@ -25,34 +25,97 @@ from queue import Queue as thrQueue
 import numpy as np
 import sys
 import logging
+from multiprocessing import Event
+from queue import Empty, Full
+import traceback
 
 
-def producer(queue, data_loader, transform, thread_id, seed):
+def producer(queue, data_loader, transform, thread_id, seed, abort_event):
     try:
         np.random.seed(seed)
         data_loader.set_thread_id(thread_id)
+        item = None
+
         while True:
-            for item in data_loader:
-                if transform is not None:
-                    item = transform(**item)
-                queue.put(item)
-            queue.put("end")
+            # check if abort event was set
+            if not abort_event.is_set():
+
+                if item is None:
+
+                    try:
+                        item = next(data_loader)
+                        if transform is not None:
+                            item = transform(**item)
+                    except StopIteration:
+                        item = "end"
+
+                try:
+                    queue.put(item, timeout=5)
+                    item = None
+                except Full:
+                    # queue was full because items in it were not consumed. Try again.
+                    pass
+            else:
+                print("dying")
+                # abort_event was set. Drain queue, then give 'end'
+                while True:
+                    try:
+                        _ = queue.get(timeout=0.5)
+                    except Empty:
+                        break
+                queue.put("end")
+                break
+
     except KeyboardInterrupt:
+        # drain queue, then give 'end', set abort flag and reraise KeyboardInterrupt
+        while True:
+            try:
+                _ = queue.get(timeout=0.5)
+            except:
+                break
         queue.put("end")
+
+        abort_event.set()
+
         raise KeyboardInterrupt
 
+    except Exception:
+        print("Exception in worker", thread_id)
+        traceback.print_exc()
+        # drain queue, give 'end', send abort_event so that other workers know to exit
+        while True:
+            try:
+                _ = queue.get(timeout=0.5)
+            except:
+                break
 
-def pin_memory_loop(in_queues, out_queue):
+        queue.put("end")
+
+        abort_event.set()
+
+
+def pin_memory_loop(in_queues, out_queue, abort_event):
     import torch
     queue_ctr = 0
+    item = None
     while True:
-        item = in_queues[queue_ctr % len(in_queues)].get()
-        if isinstance(item, dict):
-            for k in item.keys():
-                if isinstance(item[k], torch.Tensor):
-                    item[k] = item[k].pin_memory()
-        queue_ctr += 1
-        out_queue.put(item)
+        try:
+            if not abort_event.is_set():
+                if item is None:
+                    item = in_queues[queue_ctr % len(in_queues)].get(timeout=2)
+                    if isinstance(item, dict):
+                        for k in item.keys():
+                            if isinstance(item[k], torch.Tensor):
+                                item[k] = item[k].pin_memory()
+                    queue_ctr += 1
+                out_queue.put(item, timeout=2)
+                item = None
+            else:
+                break
+        except Empty:
+            pass
+        except Full:
+            pass
 
 
 class MultiThreadedAugmenter(object):
@@ -90,11 +153,12 @@ class MultiThreadedAugmenter(object):
         self.num_processes = num_processes
         self.num_cached_per_queue = num_cached_per_queue
         self._queues = []
-        self._threads = []
+        self._processes = []
         self._end_ctr = 0
         self._queue_loop = 0
         self.pin_memory_thread = None
         self.pin_memory_queue = None
+        self.abort_event = Event()
 
     def __iter__(self):
         return self
@@ -106,14 +170,33 @@ class MultiThreadedAugmenter(object):
             self._queue_loop = 0
         return r
 
+    def __get_next_item(self):
+        success = False
+        item = None
+
+        while not success:
+            try:
+                if self.abort_event.is_set():
+                    self._finish()
+                    raise RuntimeError("MultiThreadedAugmenter.abort_event was set, something went wrong. Maybe one of "
+                                       "your workers crashed")
+                else:
+                    if not self.pin_memory:
+                        item = self._queues[self._next_queue()].get(timeout=1)
+                        success = True
+                    else:
+                        item = self.pin_memory_queue.get(timeout=1)
+                        success = True
+            except Empty:
+                pass
+
+        return item
+
     def __next__(self):
         if len(self._queues) == 0:
             self._start()
         try:
-            if not self.pin_memory:
-                item = self._queues[self._next_queue()].get()
-            else:
-                item = self.pin_memory_queue.get()
+            item = self.__get_next_item()
 
             while item == "end":
                 self._end_ctr += 1
@@ -121,48 +204,48 @@ class MultiThreadedAugmenter(object):
                     self._end_ctr = 0
                     self._queue_loop = 0
                     logging.debug("MultiThreadedGenerator: finished data generation")
-                    #self._finish()
                     raise StopIteration
 
-                if not self.pin_memory:
-                    item = self._queues[self._next_queue()].get()
-                else:
-                    item = self.pin_memory_queue.get()
+                item = self.__get_next_item()
 
             return item
+
         except KeyboardInterrupt:
             logging.error("MultiThreadedGenerator: caught exception: {}".format(sys.exc_info()))
             self._finish()
             raise KeyboardInterrupt
 
     def _start(self):
-        if len(self._threads) == 0:
+        if len(self._processes) == 0:
+            self.abort_event.clear()
+
             logging.debug("starting workers")
             self._queue_loop = 0
             self._end_ctr = 0
 
             for i in range(self.num_processes):
                 self._queues.append(Queue(self.num_cached_per_queue))
-                self._threads.append(Process(target=producer, args=(self._queues[i], self.generator, self.transform, i, self.seeds[i])))
-                self._threads[-1].daemon = True
-                self._threads[-1].start()
+                self._processes.append(Process(target=producer, args=(self._queues[i], self.generator, self.transform, i, self.seeds[i], self.abort_event)))
+                self._processes[-1].daemon = True
+                self._processes[-1].start()
 
             if self.pin_memory:
                 self.pin_memory_queue = thrQueue(2)
-                self.pin_memory_thread = threading.Thread(target=pin_memory_loop, args=(self._queues, self.pin_memory_queue))
+                self.pin_memory_thread = threading.Thread(target=pin_memory_loop, args=(self._queues, self.pin_memory_queue, self.abort_event))
                 self.pin_memory_thread.daemon = True
                 self.pin_memory_thread.start()
         else:
             logging.debug("MultiThreadedGenerator Warning: start() has been called but workers are already running")
 
     def _finish(self):
-        if len(self._threads) != 0:
+        self.abort_event.set()
+        if len(self._processes) != 0:
             logging.debug("MultiThreadedGenerator: workers terminated")
-            for i, thread in enumerate(self._threads):
-                thread.terminate()
+            for i, p in enumerate(self._processes):
+                p.terminate()
                 self._queues[i].close()
             self._queues = []
-            self._threads = []
+            self._processes = []
             self._queue = None
             self._end_ctr = 0
             self._queue_loop = 0
