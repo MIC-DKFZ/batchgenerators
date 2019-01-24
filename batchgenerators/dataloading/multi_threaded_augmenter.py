@@ -28,6 +28,8 @@ import logging
 from multiprocessing import Event
 from queue import Empty, Full
 import traceback
+from time import sleep
+
 
 
 def producer(queue, data_loader, transform, thread_id, seed, abort_event):
@@ -50,31 +52,17 @@ def producer(queue, data_loader, transform, thread_id, seed, abort_event):
                         item = "end"
 
                 try:
-                    queue.put(item, timeout=5)
+                    queue.put(item, timeout=2)
                     item = None
                 except Full:
                     # queue was full because items in it were not consumed. Try again.
                     pass
             else:
-                print("dying")
                 # abort_event was set. Drain queue, then give 'end'
-                while True:
-                    try:
-                        _ = queue.get(timeout=0.5)
-                    except Empty:
-                        break
-                queue.put("end")
                 break
 
     except KeyboardInterrupt:
         # drain queue, then give 'end', set abort flag and reraise KeyboardInterrupt
-        while True:
-            try:
-                _ = queue.get(timeout=0.5)
-            except:
-                break
-        queue.put("end")
-
         abort_event.set()
 
         raise KeyboardInterrupt
@@ -83,13 +71,6 @@ def producer(queue, data_loader, transform, thread_id, seed, abort_event):
         print("Exception in worker", thread_id)
         traceback.print_exc()
         # drain queue, give 'end', send abort_event so that other workers know to exit
-        while True:
-            try:
-                _ = queue.get(timeout=0.5)
-            except:
-                break
-
-        queue.put("end")
 
         abort_event.set()
 
@@ -102,15 +83,16 @@ def pin_memory_loop(in_queues, out_queue, abort_event):
         try:
             if not abort_event.is_set():
                 if item is None:
-                    item = in_queues[queue_ctr % len(in_queues)].get(timeout=2)
+                    item = in_queues[queue_ctr % len(in_queues)].get(timeout=1)
                     if isinstance(item, dict):
                         for k in item.keys():
                             if isinstance(item[k], torch.Tensor):
                                 item[k] = item[k].pin_memory()
                     queue_ctr += 1
-                out_queue.put(item, timeout=2)
+                out_queue.put(item, timeout=1)
                 item = None
             else:
+                print('pin_memory_loop exiting...')
                 break
         except Empty:
             pass
@@ -239,11 +221,15 @@ class MultiThreadedAugmenter(object):
 
     def _finish(self):
         self.abort_event.set()
+        sleep(2) # allow pin memory thread to finish
         if len(self._processes) != 0:
             logging.debug("MultiThreadedGenerator: workers terminated")
             for i, p in enumerate(self._processes):
                 p.terminate()
+
                 self._queues[i].close()
+                self._queues[i].join_thread()
+
             self._queues = []
             self._processes = []
             self._queue = None
@@ -468,6 +454,7 @@ if __name__ == "__main__":
     #tr = GaussianBlurTransform(3)
     tr = SpatialTransform((128, 128, 128), (64, 64, 64), False, do_rotation=False, do_scale=True, scale=(0.6, 0.60000001))
     from time import time
+
     num_batches = 10
     num_threads = 8
 
