@@ -169,4 +169,3 @@ def pad_nd_image_and_seg(data, seg, new_shape=None, must_be_divisible_by=None, p
     else:
         sample_seg = None
     return sample_data, sample_seg
-

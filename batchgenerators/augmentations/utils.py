@@ -599,7 +599,7 @@ def uniform(low, high, size=None):
         return np.random.uniform(low, high, size)
 
 
-def pad_nd_image(image, new_shape=None, mode="edge", kwargs=None, return_slicer=False, shape_must_be_divisible_by=None):
+def pad_nd_image(image, new_shape=None, mode="constant", kwargs=None, return_slicer=False, shape_must_be_divisible_by=None):
     """
     one padder to pad them all. Documentation? Well okay. A little bit
 
@@ -620,7 +620,7 @@ def pad_nd_image(image, new_shape=None, mode="edge", kwargs=None, return_slicer=
     :param kwargs: see np.pad for documentation
     """
     if kwargs is None:
-        kwargs = {}
+        kwargs = {'constant_values': 0}
 
     if new_shape is not None:
         old_shape = np.array(image.shape[-len(new_shape):])

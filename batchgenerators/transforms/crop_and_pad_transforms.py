@@ -97,7 +97,7 @@ class RandomCropTransform(AbstractTransform):
 
 
 class PadTransform(AbstractTransform):
-    def __init__(self, new_size, pad_value_data=None, pad_value_seg=None, data_key="data", label_key="seg"):
+    def __init__(self, new_size, pad_value_data=0, pad_value_seg=0, data_key="data", label_key="seg"):
         """
         Pads data and seg to new_size. Only supports numpy arrays for data and seg.
 
