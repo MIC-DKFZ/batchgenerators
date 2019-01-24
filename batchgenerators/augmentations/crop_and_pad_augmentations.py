@@ -161,7 +161,6 @@ def pad_nd_image_and_seg(data, seg, new_shape=None, must_be_divisible_by=None, p
     :param np_pad_kwargs_seg:see np.pad
     :return:
     """
-    assert len(new_shape) == len(data.shape), "data_shape and new_shape must have the same dimensionality"
     sample_data = pad_nd_image(data, new_shape, mode=pad_mode_data, kwargs=np_pad_kwargs_data,
                                return_slicer=False, shape_must_be_divisible_by=must_be_divisible_by)
     if seg is not None:
