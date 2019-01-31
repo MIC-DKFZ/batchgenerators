@@ -50,8 +50,6 @@ class DummyDLWithShuffle(DummyDL):
 
 
 if __name__ == "__main__":
-    import multiprocessing
-    multiprocessing.set_start_method('spawn', force=True)
     """
     Why is is so hard to iterate only once over my entire training dataset when MultiThreadedAugmenter is used?
     This is because MultiThreadedAugmenter will spawn num_threads workers and each worker will hold a copy of the entire
