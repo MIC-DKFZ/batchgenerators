@@ -7,7 +7,8 @@ to contact us or open a github issue.
 [![Build Status](https://travis-ci.org/MIC-DKFZ/batchgenerators.svg?branch=master)](https://travis-ci.org/MIC-DKFZ/batchgenerators)
 
 ## Windows is not (yet) supported!!
-Batchgenerators makes heavy use of python multithreading and python multithreading on windows is a problem. We are trying to find a solution but as of now batchgenerators won't work on Windows!
+Batchgenerators makes heavy use of python multiprocessing and python multiprocessing on windows is a problem. 
+We are trying to find a solution but as of now batchgenerators won't work on Windows!
 
 ### Important!
 Starting from version 1.14.6 numpy has issues with multiprocessing. Mutrix multiplications (as we are using 
