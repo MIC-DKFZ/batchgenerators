@@ -291,7 +291,7 @@ class TestCrop(unittest.TestCase):
 
         data_cropped_back, seg_cropped_back = center_crop(data_cropped, (30, 30, 30), seg_cropped)
 
-        self.assertAlmostEqual(np.sum(data_cropped_back) / np.sum(data), 16 / 30)
+        self.assertAlmostEqual(np.sum(data_cropped_back) / np.sum(data), 16 / 30.)
 
     def test_randomness_1(self):
         data = np.ones((1, 2, 30, 30, 30))
