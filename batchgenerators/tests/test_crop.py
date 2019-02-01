@@ -293,6 +293,33 @@ class TestCrop(unittest.TestCase):
 
         self.assertAlmostEqual(np.sum(data_cropped_back) / np.sum(data), 16 / 30)
 
+    def test_randomness_1(self):
+        data = np.ones((1, 2, 30, 30, 30))
+        crop_size = (16, 16, 16)
+        margin = (-4, -4, -4)
+
+        sums = [] # these should always be different
+        for _ in range(50):
+            data_cropped, _ = random_crop(data, crop_size=crop_size, margins=margin)
+            s = np.sum(data_cropped[0, 0, 8, 8, :])
+            assert 12 <= s <= 16
+            sums.append(s)
+
+        assert len(np.unique(sums)) != 0
+
+    def test_randomness_2(self):
+        data = np.random.random((1, 1, 30, 30, 30))
+        crop_size = (16, 18, 7)
+        margin = (-4, -6, 5)
+
+        sums = []  # these should always be different
+        for _ in range(50):
+            data_cropped, _ = random_crop(data, crop_size=crop_size, margins=margin)
+            s = np.sum(data_cropped)
+            sums.append(s)
+
+        assert len(np.unique(sums)) == 50
+
 
 if __name__ == '__main__':
     unittest.main()
