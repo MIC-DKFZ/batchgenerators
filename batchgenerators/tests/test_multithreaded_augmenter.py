@@ -80,7 +80,7 @@ class TestMultiThreadedAugmenter(unittest.TestCase):
         mt_dl = MultiThreadedAugmenter(dl, None, self.num_threads, 1, None, False)
 
         for _ in range(20):
-            _ = next(mt_dl)
+            _ = mt_dl.next()
 
     def test_DummyDL(self):
         """
@@ -182,7 +182,7 @@ class TestMultiThreadedAugmenter(unittest.TestCase):
         mt = MultiThreadedAugmenter(dl, composed, 4, 1, None, True)
 
         for _ in range(50):
-            res = next(mt)
+            res = mt.next()
 
         assert isinstance(res['data'], torch.Tensor)
         assert res['data'].is_pinned()
@@ -208,7 +208,7 @@ class TestMultiThreadedAugmenter(unittest.TestCase):
         mt = MultiThreadedAugmenter(dl, composed, 4, 1, None, False)
 
         for _ in range(50):
-            res = next(mt)
+            res = mt.next()
 
         # let mt finish caching, otherwise it's going to print an error (which is not a problem and will not prevent
         # the success of the test but it does not look pretty)

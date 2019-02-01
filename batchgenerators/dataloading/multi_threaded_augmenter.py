@@ -145,6 +145,9 @@ class MultiThreadedAugmenter(object):
     def __iter__(self):
         return self
 
+    def next(self):
+        return self.__next__()
+
     def _next_queue(self):
         r = self._queue_loop
         self._queue_loop += 1
