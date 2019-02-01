@@ -15,7 +15,8 @@
 
 import unittest
 import numpy as np
-from batchgenerators.augmentations.crop_and_pad_augmentations import random_crop, center_crop, pad_nd_image_and_seg
+from batchgenerators.augmentations.crop_and_pad_augmentations import random_crop, center_crop, pad_nd_image_and_seg, \
+    crop
 
 
 class TestCrop(unittest.TestCase):
@@ -75,8 +76,7 @@ class TestCrop(unittest.TestCase):
         data = [np.random.random((4, 64+i, 56+i)) for i in range(32)]
         seg = [np.random.random((4, 64+i, 56+i)) for i in range(32)]
 
-        with self.assertWarns(UserWarning):
-            d, s = random_crop(data, seg, 32, 32)
+        d, s = random_crop(data, seg, 32, 32)
 
         self.assertTrue(all(i == j for i, j in zip((32, 4, 32, 32), d.shape)), "data has unexpected return shape")
         self.assertTrue(all(i == j for i, j in zip((32, 4, 32, 32), s.shape)), "seg has unexpected return shape")
@@ -88,8 +88,7 @@ class TestCrop(unittest.TestCase):
         data = np.random.random((8, 4, 64, 56))
         seg = np.ones(data.shape)
 
-        with self.assertWarns(UserWarning):
-            d, s = random_crop(data, seg, 96, 0)
+        d, s = random_crop(data, seg, 96, 0)
 
         self.assertTrue(all(i == j for i, j in zip((8, 4, 96, 96), d.shape)), "data has unexpected return shape")
         self.assertTrue(all(i == j for i, j in zip((8, 4, 96, 96), s.shape)), "seg has unexpected return shape")
@@ -217,6 +216,78 @@ class TestCrop(unittest.TestCase):
         self.assertTrue(all(i == j for i, j in zip(input_shape, s2.shape)), "seg has unexpected shape")
         np.testing.assert_array_equal(d2, data, err_msg="data wrongly padded for smaller output shape than input shape")
         np.testing.assert_array_equal(s2, seg, err_msg="seg wrongly padded for smaller output shape than input shape")
+
+    def test_center_crop_even(self):
+        """
+        This test will check if center crop really crops the center
+        :return:
+        """
+        data = np.zeros((8, 4, 30, 30, 30))
+        seg = np.zeros(data.shape)
+
+        # we set the center that we expect to be cropped to 1 and then check if we only get 1's in the result
+        # crop_size is [10, 20, 16] and data_shape is [30, 30, 30]
+        crop_size = np.array([10, 20, 16])
+        shp = np.array(data.shape[2:])
+        border = (shp - crop_size) // 2
+        data[:, :, border[0]:(shp[0] + crop_size[0]), border[1]:(shp[1] + crop_size[0]),
+        border[2]:(shp[2] + crop_size[0])] = 1
+        # same with seg
+        seg[:, :, border[0]:(shp[0] + crop_size[0]), border[1]:(shp[1] + crop_size[0]),
+        border[2]:(shp[2] + crop_size[0])] = 1
+
+        data_cropped, seg_cropped = crop(data, seg, crop_size, margins=(0, 0, 0), crop_type="center")
+
+        assert np.sum(data_cropped == 0) == 0, "Center crop did not crop the center of data " \
+                                               "(even data and crop size)"
+        assert np.sum(seg_cropped == 0) == 0, "Center crop did not crop the center of seg (even data and crop size)"
+
+    def test_center_crop_odd(self):
+        """
+        This test will check if center crop really crops the center
+        :return:
+        """
+        data = np.zeros((8, 4, 30, 30, 30))
+        seg = np.zeros(data.shape)
+
+        # we set the center that we expect to be cropped to 1 and then check if we only get 1's in the result
+        # crop_size is [10, 20, 16] and data_shape is [30, 30, 30]
+        crop_size = np.array([9, 19, 13])
+        shp = np.array(data.shape[2:])
+        border = (shp - crop_size) // 2
+        data[:, :, border[0]:(shp[0] + crop_size[0]), border[1]:(shp[1] + crop_size[0]),
+        border[2]:(shp[2] + crop_size[0])] = 1
+        # same with seg
+        seg[:, :, border[0]:(shp[0] + crop_size[0]), border[1]:(shp[1] + crop_size[0]),
+        border[2]:(shp[2] + crop_size[0])] = 1
+
+        data_cropped, seg_cropped = crop(data, seg, crop_size, margins=(0, 0, 0), crop_type="center")
+
+        assert np.sum(data_cropped == 0) == 0, "Center crop did not crop the center of data (even data " \
+                                               "and odd crop size)"
+        assert np.sum(seg_cropped == 0) == 0, "Center crop did not crop the center of seg (even data and odd crop size)"
+
+    def test_center_crop_negative_margin(self):
+        """
+        Negative margin means that we are effectively padding if necessary
+        :return:
+        """
+        data = np.ones((8, 4, 30, 30, 30))
+        seg = np.ones(data.shape)
+        crop_size = np.array([36, 40, 16])
+        data_cropped, seg_cropped = center_crop(data, crop_size, seg)
+
+        # data and set are just ones and will be padded of necessary, so the border will be 0
+        border = (crop_size - np.array(data.shape[2:])) // 2
+        assert np.sum(data_cropped[:, :, 0:border[0]]) == 0
+        assert np.sum(data_cropped[:, :, border[0] + crop_size[0]:]) == 0
+
+        assert np.sum(data_cropped[:, :, :, 0:border[1]]) == 0
+        assert np.sum(data_cropped[:, :, :, border[1] + crop_size[1]:]) == 0
+
+        data_cropped_back, seg_cropped_back = center_crop(data_cropped, (30, 30, 30), seg_cropped)
+
+        self.assertAlmostEqual(np.sum(data_cropped_back) / np.sum(data), 16 / 30)
 
 
 if __name__ == '__main__':
