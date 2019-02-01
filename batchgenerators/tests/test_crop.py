@@ -72,7 +72,11 @@ class TestCrop(unittest.TestCase):
         self.assertEqual(np.sum(s == 0), 0, "Zeros encountered in seg meaning that we did padding which should not have"
                                             " happened here!")
 
-    def test_warn_centercrop_fallback(self):
+    def test_random_crop_with_cropsize_larger_image(self):
+        '''
+        should fall back to center crop
+        :return:
+        '''
         data = [np.random.random((4, 64+i, 56+i)) for i in range(32)]
         seg = [np.random.random((4, 64+i, 56+i)) for i in range(32)]
 
@@ -84,7 +88,7 @@ class TestCrop(unittest.TestCase):
         self.assertEqual(np.sum(s == 0), 0, "Zeros encountered in seg meaning that we did padding which should not have"
                                             " happened here!")
 
-    def test_warn_crop_size_too_large(self):
+    def test_crop_size_larger_than_image(self):
         data = np.random.random((8, 4, 64, 56))
         seg = np.ones(data.shape)
 
