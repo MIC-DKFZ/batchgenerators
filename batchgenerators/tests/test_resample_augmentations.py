@@ -49,3 +49,7 @@ class TestAugmentResample(unittest.TestCase):
                          "channel that should be augmented is not changed (3D)")
         self.assertFalse(np.all(self.d_2D_channel[0] == self.data_2D[0]),
                          "channel that should be augmented is not changed (2D)")
+
+
+if __name__ == '__main__':
+    unittest.main()
