@@ -327,6 +327,9 @@ class AlternativeMultiThreadedAugmenter(object):
         self.transformers = None
         self.joining_process = None
 
+    def next(self):
+        return self.__next__()
+
     def start(self):
         print("started")
 
