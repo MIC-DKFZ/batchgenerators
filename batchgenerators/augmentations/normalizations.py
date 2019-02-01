@@ -39,20 +39,22 @@ def min_max_normalization(data, eps):
     return data_normalized
 
 def zero_mean_unit_variance_normalization(data, per_channel=True, epsilon=1e-8):
+    data_normalized = np.zeros(data.shape)
     for b in range(data.shape[0]):
         if per_channel:
             for c in range(data.shape[1]):
                 mean = data[b, c].mean()
                 std = data[b, c].std() + epsilon
-                data[b, c] = (data[b, c] - mean) / std
+                data_normalized[b, c] = (data[b, c] - mean) / std
         else:
             mean = data[b].mean()
             std = data[b].std() + epsilon
-            data[b] = (data[b] - mean) / std
-    return data
+            data_normalized[b] = (data[b] - mean) / std
+    return data_normalized
 
 
 def mean_std_normalization(data, mean, std, per_channel=True):
+    data_normalized = np.zeros(data.shape)
     if isinstance(data, np.ndarray):
         data_shape = tuple(list(data.shape))
     elif isinstance(data, (list, tuple)):
@@ -72,10 +74,10 @@ def mean_std_normalization(data, mean, std, per_channel=True):
     for b in range(data_shape[0]):
         if per_channel:
             for c in range(data_shape[1]):
-                data[b][c] = (data[b][c] - mean[c]) / std[c]
+                data_normalized[b][c] = (data[b][c] - mean[c]) / std[c]
         else:
-            data[b] = (data[b] - mean) / std
-    return data
+            data_normalized[b] = (data[b] - mean) / std
+    return data_normalized
 
 
 def cut_off_outliers(data, percentile_lower=0.2, percentile_upper=99.8, per_channel=False):

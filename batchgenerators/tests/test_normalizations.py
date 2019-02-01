@@ -1,7 +1,8 @@
 import unittest
 import numpy as np
-from batchgenerators.augmentations.normalizations import range_normalization, zero_mean_unit_variance_normalization,\
-    mean_std_normalization
+from batchgenerators.augmentations.normalizations import range_normalization, zero_mean_unit_variance_normalization, \
+    mean_std_normalization, cut_off_outliers
+
 
 class TestNormalization(unittest.TestCase):
 
@@ -172,6 +173,35 @@ class TestNormalization(unittest.TestCase):
 
         print('Test test_zero_mean_unit_variance_whole_image. [DONE]')
 
+    def test_cut_off_outliers_per_channel(self):
+        print('Test test_cut_off_outliers_per_channel. [START]')
+        data = np.ones((32, 4, 64, 56, 48))
+
+        data[:, :, 1, 1, 1] = 999999
+        data[:, :, 1, 1, 2] = -999999
+
+        data_normalized = cut_off_outliers(data, per_channel=True)
+        for b in range(data.shape[0]):
+            for c in range(data.shape[1]):
+                self.assertAlmostEqual(data_normalized[b, c].min(), 1.0, msg="Lowe outlier not removed.")
+                self.assertAlmostEqual(data_normalized[b, c].max(), 1.0, msg="Upper outlier not removed.")
+
+        print('Test test_cut_off_outliers_per_channel. [START]')
+
+
+    def test_cut_off_outliers_whole_image(self):
+        print('Test test_cut_off_outliers_whole_image. [START]')
+        data = np.ones((32, 4, 64, 56, 48))
+
+        data[:, :, 1, 1, 1] = 999999
+        data[:, :, 1, 1, 2] = -999999
+
+        data_normalized = cut_off_outliers(data, per_channel=False)
+        for b in range(data.shape[0]):
+            self.assertAlmostEqual(data_normalized[b].min(), 1.0, msg="Lowe outlier not removed.")
+            self.assertAlmostEqual(data_normalized[b].max(), 1.0, msg="Upper outlier not removed.")
+
+        print('Test test_cut_off_outliers_whole_image. [START]')
 
 if __name__ == '__main__':
     unittest.main()
