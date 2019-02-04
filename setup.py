@@ -27,13 +27,7 @@ setup(name='batchgenerators',
           'Programming Language :: Python :: 3.6',
           'Programming Language :: Python :: 2.7',
       ],
-      keywords = ['deep learning', 'image segmentation', 'image classification', 'medical image analysis',
+      keywords=['deep learning', 'image segmentation', 'image classification', 'medical image analysis',
                   'medical image segmentation', 'data augmentation'],
+      download_url="https://github.com/MIC-DKFZ/batchgenerators/archive/v0.18.tar.gz"
       )
-
-setup(
-
-  download_url = 'https://github.com/user/reponame/archive/v_01.tar.gz',    # I explain this later on
-
-
-)
