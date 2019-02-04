@@ -97,7 +97,7 @@ class RandomCropTransform(AbstractTransform):
 
 
 class PadTransform(AbstractTransform):
-    def __init__(self, new_size, pad_value_data=None, pad_value_seg=None, data_key="data", label_key="seg"):
+    def __init__(self, new_size, pad_value_data=0, pad_value_seg=0, data_key="data", label_key="seg"):
         """
         Pads data and seg to new_size. Only supports numpy arrays for data and seg.
 
@@ -118,7 +118,7 @@ class PadTransform(AbstractTransform):
         data = data_dict.get(self.data_key)
         seg = data_dict.get(self.label_key)
 
-        assert len(self.new_size) + 2 == len(data), "new size must be a tuple/list/np.ndarray with shape " \
+        assert len(self.new_size) + 2 == len(data.shape), "new size must be a tuple/list/np.ndarray with shape " \
                                                     "(x, y(, z))"
         data, seg = pad_nd_image_and_seg(data, seg, self.new_size, None,
                                          np_pad_kwargs_data={'constant_values': self.pad_value_data},

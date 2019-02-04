@@ -18,6 +18,7 @@ import numpy as np
 from batchgenerators.augmentations.color_augmentations import augment_contrast, augment_brightness_additive,\
     augment_brightness_multiplicative, augment_gamma
 
+
 class TestAugmentContrast(unittest.TestCase):
 
     def setUp(self):
@@ -70,6 +71,7 @@ class TestAugmentContrast(unittest.TestCase):
         self.assertTrue(np.all(np.logical_and(self.d_2D[idx1] >= contrast_lower_limit_1,
                                               self.d_2D[idx1] <= contrast_upper_limit_1)),
                         "Augmented contrast above mean not within range")
+
 
 class TestAugmentBrightness(unittest.TestCase):
 

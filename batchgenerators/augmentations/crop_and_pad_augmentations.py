@@ -60,11 +60,12 @@ def crop(data, seg=None, crop_size=128, margins=(0, 0, 0), crop_type="center",
     padded with zeros in that case. margins can be negative -> results in padding of data/seg followed by cropping with
     margin=0 for the appropriate axes
 
-    :param data: b, c, x, y, z
+    :param data: b, c, x, y(, z)
     :param seg:
     :param crop_size:
-    :param margins:
-    :param crop_type:
+    :param margins: distance from each border, can be int or list/tuple of ints (one element for each dimension).
+    Can be negative (data/seg will be padded if needed)
+    :param crop_type: random or center
     :return:
     """
     if not isinstance(data, (list, tuple, np.ndarray)):
@@ -103,6 +104,8 @@ def crop(data, seg=None, crop_size=128, margins=(0, 0, 0), crop_type="center",
 
     for b in range(data_shape[0]):
         data_shape_here = [data_shape[0]] + list(data[b].shape)
+        if seg is not None:
+            seg_shape_here = [seg_shape[0]] + list(seg[b].shape)
 
         if crop_type == "center":
             lbs = get_lbs_for_center_crop(crop_size, data_shape_here)
@@ -115,26 +118,25 @@ def crop(data, seg=None, crop_size=128, margins=(0, 0, 0), crop_type="center",
                                    abs(min(0, data_shape_here[d + 2] - (lbs[d] + crop_size[d])))]
                                   for d in range(dim)]
 
-        if any([i > 0 for j in need_to_pad for i in j]):
-            data_2 = np.pad(data[b], need_to_pad, pad_mode, **pad_kwargs)
-            if seg_return is not None:
-                seg_2 = np.pad(seg[b], need_to_pad, pad_mode_seg, **pad_kwargs_seg)
-            else:
-                seg_2 = None
-        else:
-            data_2 = data[b]
-            if seg_return is not None:
-                seg_2 = seg[b]
-            else:
-                seg_2 = None
+        # we should crop first, then pad -> reduces i/o for memmaps, reduces RAM usage and improves speed
+        ubs = [min(lbs[d] + crop_size[d], data_shape_here[d+2]) for d in range(dim)]
+        lbs = [max(0, lbs[d]) for d in range(dim)]
 
-        lbs = [lbs[d] + need_to_pad[d+1][0] for d in range(dim)]
-        assert all([i >= 0 for i in lbs]), "just a failsafe"
-        slicer_data = [slice(0, data_shape_here[1])] + [slice(lbs[d], lbs[d]+crop_size[d]) for d in range(dim)]
-        data_return[b] = data_2[slicer_data]
+        slicer_data = [slice(0, data_shape_here[1])] + [slice(lbs[d], ubs[d]) for d in range(dim)]
+        data_cropped = data[b][slicer_data]
+
         if seg_return is not None:
-            slicer_seg = [slice(0, seg_shape[1])] + [slice(lbs[d], lbs[d] + crop_size[d]) for d in range(dim)]
-            seg_return[b] = seg_2[slicer_seg]
+            slicer_seg = [slice(0, seg_shape_here[1])] + [slice(lbs[d], ubs[d]) for d in range(dim)]
+            seg_cropped = seg[b][slicer_seg]
+
+        if any([i > 0 for j in need_to_pad for i in j]):
+            data_return[b] = np.pad(data_cropped, need_to_pad, pad_mode, **pad_kwargs)
+            if seg_return is not None:
+                seg_return[b] = np.pad(seg_cropped, need_to_pad, pad_mode_seg, **pad_kwargs_seg)
+        else:
+            data_return[b] = data_cropped
+            if seg_return is not None:
+                seg_return[b] = seg_cropped
 
     return data_return, seg_return
 
@@ -161,7 +163,6 @@ def pad_nd_image_and_seg(data, seg, new_shape=None, must_be_divisible_by=None, p
     :param np_pad_kwargs_seg:see np.pad
     :return:
     """
-    assert len(new_shape) == len(data.shape), "data_shape and new_shape must have the same dimensionality"
     sample_data = pad_nd_image(data, new_shape, mode=pad_mode_data, kwargs=np_pad_kwargs_data,
                                return_slicer=False, shape_must_be_divisible_by=must_be_divisible_by)
     if seg is not None:
@@ -170,4 +171,3 @@ def pad_nd_image_and_seg(data, seg, new_shape=None, must_be_divisible_by=None, p
     else:
         sample_seg = None
     return sample_data, sample_seg
-
