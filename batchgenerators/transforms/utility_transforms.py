@@ -14,12 +14,6 @@
 
 import copy
 from warnings import warn
-
-from batchgenerators.transforms.abstract_transforms import AbstractTransform
-from batchgenerators.augmentations.utils import convert_seg_image_to_one_hot_encoding
-from batchgenerators.augmentations.utils import convert_seg_to_bounding_box_coordinates
-from batchgenerators.augmentations.utils import transpose_channels
-
 import numpy as np
 
 from batchgenerators.augmentations.utils import convert_seg_image_to_one_hot_encoding, \
@@ -58,10 +52,11 @@ class NumpyToTensor(AbstractTransform):
         if self.keys is None:
             for key, val in data_dict.items():
                 if isinstance(val, np.ndarray):
-                    data_dict[key] = self.cast(torch.from_numpy(val))
+                    data_dict[key] = self.cast(torch.from_numpy(val)).contiguous()
         else:
             for key in self.keys:
-                data_dict[key] = self.cast(torch.from_numpy(data_dict[key]))
+                if isinstance(data_dict[key], np.ndarray):
+                    data_dict[key] = self.cast(torch.from_numpy(data_dict[key])).contiguous()
 
         return data_dict
 

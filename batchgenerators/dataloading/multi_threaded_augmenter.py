@@ -52,7 +52,7 @@ def producer(queue, data_loader, transform, thread_id, seed, abort_event):
                         item = "end"
 
                 try:
-                    queue.put(item, timeout=2)
+                    queue.put(item, timeout=0.2)
                     item = None
                 except Full:
                     # queue was full because items in it were not consumed. Try again.
@@ -83,13 +83,13 @@ def pin_memory_loop(in_queues, out_queue, abort_event):
         try:
             if not abort_event.is_set():
                 if item is None:
-                    item = in_queues[queue_ctr % len(in_queues)].get(timeout=1)
+                    item = in_queues[queue_ctr % len(in_queues)].get(timeout=0.2)
                     if isinstance(item, dict):
                         for k in item.keys():
                             if isinstance(item[k], torch.Tensor):
                                 item[k] = item[k].pin_memory()
                     queue_ctr += 1
-                out_queue.put(item, timeout=1)
+                out_queue.put(item, timeout=0.2)
                 item = None
             else:
                 print('pin_memory_loop exiting...')
@@ -164,10 +164,10 @@ class MultiThreadedAugmenter(object):
                                        "your workers crashed")
                 else:
                     if not self.pin_memory:
-                        item = self._queues[self._next_queue()].get(timeout=1)
+                        item = self._queues[self._next_queue()].get(timeout=0.2)
                         success = True
                     else:
-                        item = self.pin_memory_queue.get(timeout=1)
+                        item = self.pin_memory_queue.get(timeout=0.2)
                         success = True
             except Empty:
                 pass
