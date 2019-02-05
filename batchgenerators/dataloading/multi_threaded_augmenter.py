@@ -206,6 +206,9 @@ class MultiThreadedAugmenter(object):
             self._queue_loop = 0
             self._end_ctr = 0
 
+            if hasattr(self.generator, 'reset'):
+                self.generator.reset()
+
             for i in range(self.num_processes):
                 self._queues.append(Queue(self.num_cached_per_queue))
                 self._processes.append(Process(target=producer, args=(self._queues[i], self.generator, self.transform, i, self.seeds[i], self.abort_event)))
