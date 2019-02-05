@@ -134,7 +134,7 @@ class SlimDataLoaderBase(object):
 
 
 class DataLoader(SlimDataLoaderBase):
-    def __init__(self, data, batch_size, num_threads_in_multithreaded, seed_for_shuffle=1, return_incomplete=False,
+    def __init__(self, data, batch_size, num_threads_in_multithreaded=1, seed_for_shuffle=1, return_incomplete=False,
                  shuffle=True, infinite=False):
         super().__init__(data, batch_size, num_threads_in_multithreaded)
         self.infinite = infinite
@@ -150,7 +150,7 @@ class DataLoader(SlimDataLoaderBase):
 
     def reset(self):
         assert self.indices is not None
-        self.current_position = self.thread_id
+        self.current_position = self.thread_id * self.batch_size
         self.was_initialized = True
         self.rs.seed(self.rs.randint(0, 999999999))
         if self.shuffle:
@@ -172,14 +172,15 @@ class DataLoader(SlimDataLoaderBase):
 
         for b in range(self.batch_size):
             if self.current_position < len(self.indices):
-                indices.append(self.current_position)
+                indices.append(self.indices[self.current_position])
 
-                self.current_position += self.number_of_threads_in_multithreaded
+                self.current_position += 1
             else:
                 self.last_reached = True
                 break
 
-        if not self.last_reached or self.return_incomplete:
+        if len(indices) > 0 and (not self.last_reached or self.return_incomplete):
+            self.current_position += (self.number_of_threads_in_multithreaded - 1) * self.batch_size
             return indices
         else:
             self.reset()

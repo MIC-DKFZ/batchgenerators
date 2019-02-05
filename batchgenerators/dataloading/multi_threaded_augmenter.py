@@ -181,7 +181,7 @@ class MultiThreadedAugmenter(object):
         try:
             item = self.__get_next_item()
 
-            while item == "end":
+            while isinstance(item, str) and (item == "end"):
                 self._end_ctr += 1
                 if self._end_ctr == self.num_processes:
                     self._end_ctr = 0
@@ -206,8 +206,8 @@ class MultiThreadedAugmenter(object):
             self._queue_loop = 0
             self._end_ctr = 0
 
-            if hasattr(self.generator, 'reset'):
-                self.generator.reset()
+            if hasattr(self.generator, 'was_initialized'):
+                self.generator.was_initialized = False
 
             for i in range(self.num_processes):
                 self._queues.append(Queue(self.num_cached_per_queue))
@@ -225,7 +225,7 @@ class MultiThreadedAugmenter(object):
 
     def _finish(self):
         self.abort_event.set()
-        sleep(2) # allow pin memory thread to finish
+        sleep(0.2) # allow pin memory thread to finish
         if len(self._processes) != 0:
             logging.debug("MultiThreadedGenerator: workers terminated")
             for i, p in enumerate(self._processes):
