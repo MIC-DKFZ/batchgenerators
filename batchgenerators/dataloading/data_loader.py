@@ -136,7 +136,7 @@ class SlimDataLoaderBase(object):
 class DataLoader(SlimDataLoaderBase):
     def __init__(self, data, batch_size, num_threads_in_multithreaded=1, seed_for_shuffle=1, return_incomplete=False,
                  shuffle=True, infinite=False):
-        super().__init__(data, batch_size, num_threads_in_multithreaded)
+        super(DataLoader, self).__init__(data, batch_size, num_threads_in_multithreaded)
         self.infinite = infinite
         self.shuffle = shuffle
         self.return_incomplete = return_incomplete
@@ -231,7 +231,7 @@ class DataLoaderFromDataset(DataLoader):
         :param num_threads_in_multithreaded:
         :param seed_for_shuffle:
         '''
-        super().__init__(data, batch_size, num_threads_in_multithreaded, seed_for_shuffle)
+        super(DataLoaderFromDataset, self).__init__(data, batch_size, num_threads_in_multithreaded, seed_for_shuffle)
         self.collate_fn = collate_fn
         assert isinstance(self._data, Dataset)
         self.indices = np.arange(len(data))

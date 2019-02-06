@@ -21,7 +21,7 @@ from batchgenerators.dataloading import MultiThreadedAugmenter
 class DummyDataLoader(DataLoader):
     def __init__(self, data, batch_size, num_threads_in_multithreaded, seed_for_shuffle=1, return_incomplete=False,
                  shuffle=True, infinite=False):
-        super().__init__(data, batch_size, num_threads_in_multithreaded, seed_for_shuffle, return_incomplete, shuffle,
+        super(DummyDataLoader, self).__init__(data, batch_size, num_threads_in_multithreaded, seed_for_shuffle, return_incomplete, shuffle,
                          infinite)
         self.indices = data
 

@@ -70,7 +70,7 @@ def maybe_download_and_prepare_cifar(target_dir, cifar=10):
 
 class CifarDataset(Dataset):
     def __init__(self, dataset_directory, train=True, transform=None, cifar=10):
-        super().__init__()
+        super(CifarDataset, self).__init__()
         self.transform = transform
         maybe_download_and_prepare_cifar(dataset_directory)
 
@@ -100,7 +100,7 @@ class CifarDataset(Dataset):
 
 class HighPerformanceCIFARLoader(DataLoader):
     def __init__(self, data, batch_size, num_threads_in_multithreaded, seed_for_shuffle=1):
-        super().__init__(data, batch_size, num_threads_in_multithreaded, seed_for_shuffle)
+        super(HighPerformanceCIFARLoader, self).__init__(data, batch_size, num_threads_in_multithreaded, seed_for_shuffle)
         self.indices = np.arange(len(data[0]))
 
     def generate_train_batch(self):
