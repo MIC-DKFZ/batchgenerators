@@ -445,10 +445,22 @@ def general_cc_var_num_channels(img, diff_order=0, mink_norm=1, sigma=1, mask_im
 def convert_seg_to_bounding_box_coordinates(data_dict, dim, get_rois_from_seg_flag=False, class_specific_seg_flag=False):
 
         '''
-        :param data_dict:
-        :param dim:
-        :param get_rois_from_seg:
-        :return: coords (y1, x1, y2, x2)
+        This function generates bounding box annotations from given pixel-wise annotations.
+        :param data_dict: Input data dictionary as returned by the batch generator.
+        :param dim: Dimension in which the model operates (2 or 3).
+        :param get_rois_from_seg: Flag specifying one of the following scenarios:
+        1. A label map with individual ROIs identified by increasing label values, accompanied by a vector containing
+        in each position the class target for the lesion with the corresponding label (set flag to False)
+        2. A binary label map. There is only one foreground class and single lesions are not identified.
+        All lesions have the same class target (foreground). In this case the Dataloader runs a Connected Component
+        Labelling algorithm to create processable lesion - class target pairs on the fly (set flag to True).
+        :param class_specific_seg_flag: if True, returns the pixelwise-annotations in class specific manner,
+        e.g. a multi-class label map. If False, returns a binary annotation map (only foreground vs. background).
+        :return: data_dict: same as input, with additional keys:
+        - 'bb_target': bounding box coordinates (b, n_boxes, (y1, x1, y2, x2, (z1), (z2)))
+        - 'roi_labels': corresponding class labels for each box (b, n_boxes, class_label)
+        - 'roi_masks': corresponding binary segmentation mask for each lesion (box). Only used in Mask RCNN. (b, n_boxes, y, x, (z))
+        - 'seg': now label map (see class_specific_seg_flag)
         '''
 
         bb_target = []
