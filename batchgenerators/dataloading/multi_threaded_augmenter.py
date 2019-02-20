@@ -73,8 +73,10 @@ def producer(queue, data_loader, transform, thread_id, seed, abort_event):
         abort_event.set()
 
 
-def pin_memory_loop(in_queues, out_queue, abort_event):
+def pin_memory_loop(in_queues, out_queue, abort_event, gpu):
     import torch
+    torch.cuda.set_device(gpu)
+    print("gpu", torch.cuda.current_device())
     queue_ctr = 0
     item = None
     while True:
@@ -216,8 +218,9 @@ class MultiThreadedAugmenter(object):
                 self._processes[-1].start()
 
             if self.pin_memory:
+                import torch
                 self.pin_memory_queue = thrQueue(2)
-                self.pin_memory_thread = threading.Thread(target=pin_memory_loop, args=(self._queues, self.pin_memory_queue, self.abort_event))
+                self.pin_memory_thread = threading.Thread(target=pin_memory_loop, args=(self._queues, self.pin_memory_queue, self.abort_event, torch.cuda.current_device()))
                 self.pin_memory_thread.daemon = True
                 self.pin_memory_thread.start()
         else:
