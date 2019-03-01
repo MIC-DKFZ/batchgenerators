@@ -123,11 +123,11 @@ def crop(data, seg=None, crop_size=128, margins=(0, 0, 0), crop_type="center",
         lbs = [max(0, lbs[d]) for d in range(dim)]
 
         slicer_data = [slice(0, data_shape_here[1])] + [slice(lbs[d], ubs[d]) for d in range(dim)]
-        data_cropped = data[b][slicer_data]
+        data_cropped = data[b][tuple(slicer_data)]
 
         if seg_return is not None:
             slicer_seg = [slice(0, seg_shape_here[1])] + [slice(lbs[d], ubs[d]) for d in range(dim)]
-            seg_cropped = seg[b][slicer_seg]
+            seg_cropped = seg[b][tuple(slicer_seg)]
 
         if any([i > 0 for j in need_to_pad for i in j]):
             data_return[b] = np.pad(data_cropped, need_to_pad, pad_mode, **pad_kwargs)
