@@ -13,10 +13,7 @@
 # limitations under the License.
 
 from builtins import range
-
 import numpy as np
-import random
-
 from batchgenerators.augmentations.utils import general_cc_var_num_channels, illumination_jitter
 
 
@@ -63,12 +60,12 @@ def augment_brightness_additive(data_sample, mu, sigma, per_channel=True):
 
 
 def augment_brightness_multiplicative(data_sample, multiplier_range=(0.5, 2), per_channel=True):
-    multiplier = random.uniform(multiplier_range[0], multiplier_range[1])
+    multiplier = np.random.uniform(multiplier_range[0], multiplier_range[1])
     if not per_channel:
         data_sample *= multiplier
     else:
         for c in range(data_sample.shape[0]):
-            multiplier = random.uniform(multiplier_range[0], multiplier_range[1])
+            multiplier = np.random.uniform(multiplier_range[0], multiplier_range[1])
             data_sample[c] *= multiplier
     return data_sample
 
