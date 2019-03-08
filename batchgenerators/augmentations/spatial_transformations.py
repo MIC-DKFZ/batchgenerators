@@ -354,7 +354,7 @@ def augment_spatial_2(data, seg, patch_size, patch_center_dist_from_border=30,
                 mag_real = np.clip(mag_real, 0, max_magnitude)
 
                 mag.append(mag_real)
-            print(np.round(sigmas, decimals=3), np.round(mag, decimals=3))
+            #print(np.round(sigmas, decimals=3), np.round(mag, decimals=3))
             coords = elastic_deform_coordinates_2(coords, sigmas, mag)
             modified_coords = True
         if np.random.uniform() < p_rot_per_sample and do_rotation:
