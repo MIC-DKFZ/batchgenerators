@@ -67,6 +67,30 @@ def elastic_deform_coordinates(coordinates, alpha, sigma):
     return indices
 
 
+def elastic_deform_coordinates_2(coordinates, sigmas, magnitudes):
+    '''
+    magnitude can be a tuple/list
+    :param coordinates:
+    :param sigma:
+    :param magnitude:
+    :return:
+    '''
+    if not isinstance(magnitudes, (tuple, list)):
+        magnitudes = [magnitudes] * (len(coordinates) - 1)
+    if not isinstance(sigmas, (tuple, list)):
+        sigmas = [sigmas] * (len(coordinates) - 1)
+    n_dim = len(coordinates)
+    offsets = []
+    for d in range(n_dim):
+        offsets.append(
+            gaussian_filter((np.random.random(coordinates.shape[1:]) * 2 - 1), sigmas, mode="constant", cval=0))
+        mx = np.max(np.abs(offsets[-1]))
+        offsets[-1] = offsets[-1] / (mx / (magnitudes[d] + 1e-8))
+    offsets = np.array(offsets)
+    indices = offsets + coordinates
+    return indices
+
+
 def rotate_coords_3d(coords, angle_x, angle_y, angle_z):
     rot_matrix = np.identity(len(coords))
     rot_matrix = create_matrix_rotation_x_3d(angle_x, rot_matrix)
