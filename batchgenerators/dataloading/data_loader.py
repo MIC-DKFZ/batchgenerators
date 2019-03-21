@@ -134,7 +134,7 @@ class SlimDataLoaderBase(object):
 
 
 class DataLoader(SlimDataLoaderBase):
-    def __init__(self, data, batch_size, num_threads_in_multithreaded=1, seed_for_shuffle=1, return_incomplete=False,
+    def __init__(self, data, batch_size, num_threads_in_multithreaded=1, seed_for_shuffle=None, return_incomplete=False,
                  shuffle=True, infinite=False):
         super(DataLoader, self).__init__(data, batch_size, num_threads_in_multithreaded)
         self.infinite = infinite
