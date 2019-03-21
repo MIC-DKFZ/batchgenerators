@@ -221,7 +221,8 @@ def default_collate(batch):
 
 
 class DataLoaderFromDataset(DataLoader):
-    def __init__(self, data, batch_size, num_threads_in_multithreaded, seed_for_shuffle=1, collate_fn=default_collate):
+    def __init__(self, data, batch_size, num_threads_in_multithreaded, seed_for_shuffle=1, collate_fn=default_collate,
+                 return_incomplete=False, shuffle=True, infinite=False):
         '''
         A simple dataloader that can take a Dataset as data.
         It is not super efficient because I cannot make too many hard assumptions about what data_dict will contain.
@@ -231,7 +232,9 @@ class DataLoaderFromDataset(DataLoader):
         :param num_threads_in_multithreaded:
         :param seed_for_shuffle:
         '''
-        super(DataLoaderFromDataset, self).__init__(data, batch_size, num_threads_in_multithreaded, seed_for_shuffle)
+        super(DataLoaderFromDataset, self).__init__(data, batch_size, num_threads_in_multithreaded, seed_for_shuffle,
+                                                    return_incomplete=return_incomplete, shuffle=shuffle,
+                                                    infinite=infinite)
         self.collate_fn = collate_fn
         assert isinstance(self._data, Dataset)
         self.indices = np.arange(len(data))

@@ -129,7 +129,7 @@ class MultiThreadedAugmenter(object):
         if seeds is not None:
             assert len(seeds) == num_processes
         else:
-            seeds = list(range(num_processes))
+            seeds = [None] * num_processes
         self.seeds = seeds
         self.generator = data_loader
         self.num_processes = num_processes
