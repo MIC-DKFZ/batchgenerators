@@ -159,6 +159,8 @@ class MultiThreadedAugmenter(object):
         success = False
         item = None
 
+        use_this_queue = self._next_queue()
+
         while not success:
             try:
                 if self.abort_event.is_set():
@@ -167,7 +169,7 @@ class MultiThreadedAugmenter(object):
                                        "your workers crashed")
                 else:
                     if not self.pin_memory:
-                        item = self._queues[self._next_queue()].get(timeout=0.2)
+                        item = self._queues[use_this_queue].get(timeout=0.2)
                         success = True
                     else:
                         item = self.pin_memory_queue.get(timeout=0.2)
