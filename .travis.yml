@@ -1,9 +1,18 @@
-dist: trusty
 language: python
+
 matrix:
   include:
-  - python: "2.7"
-  - python: "3.6"
+  - os: linux
+    python: "2.7"
+    dist: trusty
+  - os: linux
+    python: "3.6"
+    dist: trusty
+#  - os: windows
+#    python: "2.7"
+#  - os: windows
+#    python: "3.6"
+
 install:
   - pip install .
 script:

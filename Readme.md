@@ -6,9 +6,21 @@ to contact us or open a github issue.
 
 [![Build Status](https://travis-ci.org/MIC-DKFZ/batchgenerators.svg?branch=master)](https://travis-ci.org/MIC-DKFZ/batchgenerators)
 
-## Windows is not (yet) supported!!
-Batchgenerators makes heavy use of python multiprocessing and python multiprocessing on windows is a problem. 
-We are trying to find a solution but as of now batchgenerators won't work on Windows!
+## Windows Support is very experimental!
+Batchgenerators makes heavy use of python multiprocessing and python multiprocessing on windows is different from linux. 
+To prevent the workers from freezing in windows, you have to guard your code with `if __name__ == '__main__'` and use multiprocessing's [`freeze_support`](https://docs.python.org/3/library/multiprocessing.html#multiprocessing.freeze_support). The executed script may then look like this:
+
+```
+# some imports and functions here
+
+def main():
+    # do some stuff
+
+if __name__ == '__main__':
+    from multiprocessing import freeze_support
+    freeze_support()
+    main()
+```
 
 ### Important!
 Starting from version 1.14.6 numpy has issues with multiprocessing. Mutrix multiplications (which we are using 
