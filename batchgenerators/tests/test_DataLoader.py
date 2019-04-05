@@ -195,4 +195,6 @@ class TestDataLoader(unittest.TestCase):
 
 
 if __name__ == "__main__":
+    from multiprocessing import freeze_support
+    freeze_support()
     unittest.main()
