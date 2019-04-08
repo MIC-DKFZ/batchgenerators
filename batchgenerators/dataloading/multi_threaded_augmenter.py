@@ -98,6 +98,10 @@ def pin_memory_loop(in_queues, out_queue, abort_event, gpu):
             pass
         except Full:
             pass
+        except Exception:
+            print("Exception in pin_memory_loop")
+            traceback.print_exc()
+            abort_event.set()
 
 
 class MultiThreadedAugmenter(object):
