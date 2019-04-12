@@ -50,7 +50,7 @@ def producer(queue, data_loader, transform, thread_id, seed, abort_event):
                         item = "end"
 
                 try:
-                    queue.put(item, timeout=0.2)
+                    queue.put(item, timeout=2)
                     item = None
                 except Full:
                     # queue was full because items in it were not consumed. Try again.
@@ -73,21 +73,23 @@ def producer(queue, data_loader, transform, thread_id, seed, abort_event):
         abort_event.set()
 
 
-def pin_memory_loop(in_queues, out_queue, abort_event):
+def pin_memory_loop(in_queues, out_queue, abort_event, gpu):
     import torch
+    torch.cuda.set_device(gpu)
+    print("gpu", torch.cuda.current_device())
     queue_ctr = 0
     item = None
     while True:
         try:
             if not abort_event.is_set():
                 if item is None:
-                    item = in_queues[queue_ctr % len(in_queues)].get(timeout=0.2)
+                    item = in_queues[queue_ctr % len(in_queues)].get(timeout=2)
                     if isinstance(item, dict):
                         for k in item.keys():
                             if isinstance(item[k], torch.Tensor):
                                 item[k] = item[k].pin_memory()
                     queue_ctr += 1
-                out_queue.put(item, timeout=0.2)
+                out_queue.put(item, timeout=2)
                 item = None
             else:
                 print('pin_memory_loop exiting...')
@@ -96,6 +98,10 @@ def pin_memory_loop(in_queues, out_queue, abort_event):
             pass
         except Full:
             pass
+        except Exception:
+            print("Exception in pin_memory_loop")
+            traceback.print_exc()
+            abort_event.set()
 
 
 class MultiThreadedAugmenter(object):
@@ -127,7 +133,7 @@ class MultiThreadedAugmenter(object):
         if seeds is not None:
             assert len(seeds) == num_processes
         else:
-            seeds = list(range(num_processes))
+            seeds = [None] * num_processes
         self.seeds = seeds
         self.generator = data_loader
         self.num_processes = num_processes
@@ -157,6 +163,8 @@ class MultiThreadedAugmenter(object):
         success = False
         item = None
 
+        use_this_queue = self._next_queue()
+
         while not success:
             try:
                 if self.abort_event.is_set():
@@ -165,10 +173,10 @@ class MultiThreadedAugmenter(object):
                                        "your workers crashed")
                 else:
                     if not self.pin_memory:
-                        item = self._queues[self._next_queue()].get(timeout=0.2)
+                        item = self._queues[use_this_queue].get(timeout=2)
                         success = True
                     else:
-                        item = self.pin_memory_queue.get(timeout=0.2)
+                        item = self.pin_memory_queue.get(timeout=2)
                         success = True
             except Empty:
                 pass
@@ -181,7 +189,7 @@ class MultiThreadedAugmenter(object):
         try:
             item = self.__get_next_item()
 
-            while item == "end":
+            while isinstance(item, str) and (item == "end"):
                 self._end_ctr += 1
                 if self._end_ctr == self.num_processes:
                     self._end_ctr = 0
@@ -206,6 +214,9 @@ class MultiThreadedAugmenter(object):
             self._queue_loop = 0
             self._end_ctr = 0
 
+            if hasattr(self.generator, 'was_initialized'):
+                self.generator.was_initialized = False
+
             for i in range(self.num_processes):
                 self._queues.append(Queue(self.num_cached_per_queue))
                 self._processes.append(Process(target=producer, args=(self._queues[i], self.generator, self.transform, i, self.seeds[i], self.abort_event)))
@@ -213,8 +224,9 @@ class MultiThreadedAugmenter(object):
                 self._processes[-1].start()
 
             if self.pin_memory:
+                import torch
                 self.pin_memory_queue = thrQueue(2)
-                self.pin_memory_thread = threading.Thread(target=pin_memory_loop, args=(self._queues, self.pin_memory_queue, self.abort_event))
+                self.pin_memory_thread = threading.Thread(target=pin_memory_loop, args=(self._queues, self.pin_memory_queue, self.abort_event, torch.cuda.current_device()))
                 self.pin_memory_thread.daemon = True
                 self.pin_memory_thread.start()
         else:
@@ -222,7 +234,7 @@ class MultiThreadedAugmenter(object):
 
     def _finish(self):
         self.abort_event.set()
-        sleep(2) # allow pin memory thread to finish
+        sleep(0.2) # allow pin memory thread to finish
         if len(self._processes) != 0:
             logging.debug("MultiThreadedGenerator: workers terminated")
             for i, p in enumerate(self._processes):

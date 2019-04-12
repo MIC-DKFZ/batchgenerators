@@ -67,6 +67,30 @@ def elastic_deform_coordinates(coordinates, alpha, sigma):
     return indices
 
 
+def elastic_deform_coordinates_2(coordinates, sigmas, magnitudes):
+    '''
+    magnitude can be a tuple/list
+    :param coordinates:
+    :param sigma:
+    :param magnitude:
+    :return:
+    '''
+    if not isinstance(magnitudes, (tuple, list)):
+        magnitudes = [magnitudes] * (len(coordinates) - 1)
+    if not isinstance(sigmas, (tuple, list)):
+        sigmas = [sigmas] * (len(coordinates) - 1)
+    n_dim = len(coordinates)
+    offsets = []
+    for d in range(n_dim):
+        offsets.append(
+            gaussian_filter((np.random.random(coordinates.shape[1:]) * 2 - 1), sigmas, mode="constant", cval=0))
+        mx = np.max(np.abs(offsets[-1]))
+        offsets[-1] = offsets[-1] / (mx / (magnitudes[d] + 1e-8))
+    offsets = np.array(offsets)
+    indices = offsets + coordinates
+    return indices
+
+
 def rotate_coords_3d(coords, angle_x, angle_y, angle_z):
     rot_matrix = np.identity(len(coords))
     rot_matrix = create_matrix_rotation_x_3d(angle_x, rot_matrix)
@@ -665,7 +689,12 @@ def pad_nd_image(image, new_shape=None, mode="constant", kwargs=None, return_sli
     pad_below = difference // 2
     pad_above = difference // 2 + difference % 2
     pad_list = [[0, 0]]*num_axes_nopad + list([list(i) for i in zip(pad_below, pad_above)])
-    res = np.pad(image, pad_list, mode, **kwargs)
+
+    if (not all([[i == 0] for i in pad_below])) and (not all([[i == 0] for i in pad_above])):
+        res = np.pad(image, pad_list, mode, **kwargs)
+    else:
+        res = image
+
     if not return_slicer:
         return res
     else:

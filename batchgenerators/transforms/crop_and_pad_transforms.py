@@ -97,7 +97,9 @@ class RandomCropTransform(AbstractTransform):
 
 
 class PadTransform(AbstractTransform):
-    def __init__(self, new_size, pad_value_data=0, pad_value_seg=0, data_key="data", label_key="seg"):
+    def __init__(self, new_size, pad_mode_data='constant', pad_mode_seg='contant',
+                 np_pad_kwargs_data=None, np_pad_kwargs_seg=None,
+                 data_key="data", label_key="seg"):
         """
         Pads data and seg to new_size. Only supports numpy arrays for data and seg.
 
@@ -109,9 +111,16 @@ class PadTransform(AbstractTransform):
         """
         self.data_key = data_key
         self.label_key = label_key
-        self.pad_value_seg = pad_value_seg
-        self.pad_value_data = pad_value_data
         self.new_size = new_size
+        self.pad_mode_data = pad_mode_data
+        self.pad_mode_seg = pad_mode_seg
+        if np_pad_kwargs_data is None:
+            np_pad_kwargs_data = {}
+        if np_pad_kwargs_seg is None:
+            np_pad_kwargs_seg = {}
+        self.np_pad_kwargs_data = np_pad_kwargs_data
+        self.np_pad_kwargs_seg = np_pad_kwargs_seg
+
         assert isinstance(self.new_size, (tuple, list, np.ndarray)), "new_size must be tuple, list or np.ndarray"
 
     def __call__(self, **data_dict):
@@ -121,8 +130,10 @@ class PadTransform(AbstractTransform):
         assert len(self.new_size) + 2 == len(data.shape), "new size must be a tuple/list/np.ndarray with shape " \
                                                     "(x, y(, z))"
         data, seg = pad_nd_image_and_seg(data, seg, self.new_size, None,
-                                         np_pad_kwargs_data={'constant_values': self.pad_value_data},
-                                         np_pad_kwargs_seg={'constant_values': self.pad_value_seg})
+                                         np_pad_kwargs_data=self.np_pad_kwargs_data,
+                                         np_pad_kwargs_seg=self.np_pad_kwargs_seg,
+                                         pad_mode_data=self.pad_mode_data,
+                                         pad_mode_seg=self.pad_mode_seg)
 
         data_dict[self.data_key] = data
         if seg is not None:

@@ -15,9 +15,12 @@
 
 from builtins import object
 import warnings
+from collections import OrderedDict
 from warnings import warn
 import numpy as np
 from abc import ABCMeta, abstractmethod
+
+from batchgenerators.dataloading.dataset import Dataset
 
 
 class DataLoaderBase(object):
@@ -128,3 +131,117 @@ class SlimDataLoaderBase(object):
         Generate your batch from self._data .Make sure you generate the correct batch size (self.BATCH_SIZE)
         '''
         pass
+
+
+class DataLoader(SlimDataLoaderBase):
+    def __init__(self, data, batch_size, num_threads_in_multithreaded=1, seed_for_shuffle=None, return_incomplete=False,
+                 shuffle=True, infinite=False):
+        super(DataLoader, self).__init__(data, batch_size, num_threads_in_multithreaded)
+        self.infinite = infinite
+        self.shuffle = shuffle
+        self.return_incomplete = return_incomplete
+        self.rs = np.random.RandomState(seed_for_shuffle)
+        self.current_position = None
+        self.was_initialized = False
+        self.last_reached = False
+
+        # when you derive, make sure to set this! We can't set it here because we don't know what data will be like
+        self.indices = None
+
+    def reset(self):
+        assert self.indices is not None
+        self.current_position = self.thread_id * self.batch_size
+        self.was_initialized = True
+        self.rs.seed(self.rs.randint(0, 999999999))
+        if self.shuffle:
+            self.rs.shuffle(self.indices)
+        self.last_reached = False
+
+    def get_indices(self):
+        if self.last_reached:
+            self.reset()
+            raise StopIteration
+
+        if not self.was_initialized:
+            self.reset()
+
+        if self.infinite:
+            return np.random.choice(self.indices, self.batch_size, replace=True, p=None)
+
+        indices = []
+
+        for b in range(self.batch_size):
+            if self.current_position < len(self.indices):
+                indices.append(self.indices[self.current_position])
+
+                self.current_position += 1
+            else:
+                self.last_reached = True
+                break
+
+        if len(indices) > 0 and (not self.last_reached or self.return_incomplete):
+            self.current_position += (self.number_of_threads_in_multithreaded - 1) * self.batch_size
+            return indices
+        else:
+            self.reset()
+            raise StopIteration
+
+    @abstractmethod
+    def generate_train_batch(self):
+        '''
+        make use of self.get_indices() to know what indices to work on!
+        :return:
+        '''
+        pass
+
+
+def default_collate(batch):
+    '''
+    heavily inspired by the default_collate function of pytorch
+    :param batch:
+    :return:
+    '''
+    if isinstance(batch[0], np.ndarray):
+        return np.vstack(batch)
+    elif isinstance(batch[0], (int, np.int64)):
+        return np.array(batch).astype(np.int32)
+    elif isinstance(batch[0], (float, np.float32)):
+        return np.array(batch).astype(np.float32)
+    elif isinstance(batch[0], (np.float64,)):
+        return np.array(batch).astype(np.float64)
+    elif isinstance(batch[0], (dict, OrderedDict)):
+        return {key: default_collate([d[key] for d in batch]) for key in batch[0]}
+    elif isinstance(batch[0], (tuple, list)):
+        transposed = zip(*batch)
+        return [default_collate(samples) for samples in transposed]
+    elif isinstance(batch[0], str):
+        return batch
+    else:
+        raise TypeError('unknown type for batch:', type(batch))
+
+
+class DataLoaderFromDataset(DataLoader):
+    def __init__(self, data, batch_size, num_threads_in_multithreaded, seed_for_shuffle=1, collate_fn=default_collate,
+                 return_incomplete=False, shuffle=True, infinite=False):
+        '''
+        A simple dataloader that can take a Dataset as data.
+        It is not super efficient because I cannot make too many hard assumptions about what data_dict will contain.
+        If you know what you need, implement your own!
+        :param data:
+        :param batch_size:
+        :param num_threads_in_multithreaded:
+        :param seed_for_shuffle:
+        '''
+        super(DataLoaderFromDataset, self).__init__(data, batch_size, num_threads_in_multithreaded, seed_for_shuffle,
+                                                    return_incomplete=return_incomplete, shuffle=shuffle,
+                                                    infinite=infinite)
+        self.collate_fn = collate_fn
+        assert isinstance(self._data, Dataset)
+        self.indices = np.arange(len(data))
+
+    def generate_train_batch(self):
+        indices = self.get_indices()
+
+        batch = [self._data[i] for i in indices]
+
+        return self.collate_fn(batch)

@@ -48,6 +48,19 @@ class ContrastAugmentationTransform(AbstractTransform):
         return data_dict
 
 
+class NormalizeTransform(AbstractTransform):
+    def __init__(self, means, stds, data_key='data'):
+        self.data_key = data_key
+        self.stds = stds
+        self.means = means
+
+    def __call__(self, **data_dict):
+        for c in range(data_dict[self.data_key].shape[1]):
+            data_dict[self.data_key][:, c] -= self.means[c]
+            data_dict[self.data_key][:, c] /= self.stds[c]
+        return data_dict
+
+
 class BrightnessTransform(AbstractTransform):
     def __init__(self, mu, sigma, per_channel=True, data_key="data", p_per_sample=1):
         """
