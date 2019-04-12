@@ -704,7 +704,6 @@ def pad_nd_image(image, new_shape=None, mode="constant", kwargs=None, return_sli
         return res, slicer
 
 
-
 def mask_random_square(img, square_size, n_val, channel_wise_n_val=False, square_pos=None):
     """Masks (sets = 0) a random square in an image"""
 
