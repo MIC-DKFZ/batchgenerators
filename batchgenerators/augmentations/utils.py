@@ -689,7 +689,12 @@ def pad_nd_image(image, new_shape=None, mode="constant", kwargs=None, return_sli
     pad_below = difference // 2
     pad_above = difference // 2 + difference % 2
     pad_list = [[0, 0]]*num_axes_nopad + list([list(i) for i in zip(pad_below, pad_above)])
-    res = np.pad(image, pad_list, mode, **kwargs)
+
+    if (not all([[i == 0] for i in pad_below])) and (not all([[i == 0] for i in pad_above])):
+        res = np.pad(image, pad_list, mode, **kwargs)
+    else:
+        res = image
+
     if not return_slicer:
         return res
     else:

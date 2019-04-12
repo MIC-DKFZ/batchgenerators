@@ -1,6 +1,12 @@
 import numpy as np
 from batchgenerators.utilities.file_and_folder_operations import *
-import SimpleITK as sitk
+
+try:
+    import SimpleITK as sitk
+except ImportError:
+    print("You need to have SimpleITK installed to run this example!")
+    raise ImportError("SimpleITK not found")
+
 from multiprocessing import Pool
 
 
@@ -93,6 +99,10 @@ def load_and_preprocess(case, patient_name, output_folder):
         imgs_npy[i] = (imgs_npy[i] - mean) / (std + 1e-8)
         imgs_npy[i][brain_mask == 0] = 0
 
+    # the segmentation of brats has the values 0, 1, 2 and 4. This is pretty inconvenient to say the least.
+    # We move everything that is 4 to 3
+    imgs_npy[-1][imgs_npy[-1] == 4] = 3
+
     # now save as npz
     np.save(join(output_folder, patient_name + ".npy"), imgs_npy)
 
@@ -109,6 +119,24 @@ def load_and_preprocess(case, patient_name, output_folder):
 
 if __name__ == "__main__":
     # This is the same preprocessing I used for our contributions to the BraTS 2017 and 2018 challenges.
+    # Preprocessing is described in the documentation of load_and_preprocess
+
+    # The training data is identical between BraTS 2017 and 2018. You can request access here:
+    # https://ipp.cbica.upenn.edu/#BraTS18_registration
+
+    # brats_base points to where the extracted downloaded training data is
+
+    # preprocessed data is saved as npy. This may seem odd if you are familiar with medical images, but trust me it's
+    # the best way to do this for deep learning. It does not make much of a difference for BraTS, but if you are
+    # dealing with larger images this is crusial for your pipelines to not get stuck in CPU bottleneck. What we can do
+    # with numpy arrays is we can load them via np.load(file, mmap_mode="r") and then read just parts of it on the fly
+    # during training. This is super important if your patch size is smaller than the size of the entire patient (for
+    # example if you work with large CT data or if you need 2D slices).
+    # For this to work properly the output_folder (or wherever the data is stored during training) must be on an SSD!
+    # HDDs are usually too slow and you also wouldn't want to do this over a network share (there are exceptions but
+    # take this as a rule of thumb)
+
+    # Why is this not an IPython Notebook you may ask? Because I HATE IPython Notebooks. Simple :-)
 
     brats_base = "/media/fabian/DeepLearningData/Brats17TrainingData"
     list_of_lists = get_list_of_files(brats_base)
