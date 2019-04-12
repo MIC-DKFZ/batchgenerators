@@ -1,4 +1,6 @@
 import numpy as np
+from batchgenerators.examples.brats2017.config import brats_preprocessed_folder, \
+    brats_folder_with_downloaded_train_data, num_threads_for_brats_example
 from batchgenerators.utilities.file_and_folder_operations import *
 
 try:
@@ -117,6 +119,21 @@ def load_and_preprocess(case, patient_name, output_folder):
     save_pickle(metadata, join(output_folder, patient_name + ".pkl"))
 
 
+def save_segmentation_as_nifti(segmentation, metadata, output_file):
+    original_shape = metadata['original_shape']
+    seg_original_shape = np.zeros(original_shape, dtype=np.uint8)
+    nonzero = metadata['nonzero_region']
+    seg_original_shape[nonzero[0, 0] : nonzero[0, 1] + 1,
+               nonzero[1, 0]: nonzero[1, 1] + 1,
+               nonzero[2, 0]: nonzero[2, 1] + 1] = segmentation
+    sitk_image = sitk.GetImageFromArray(seg_original_shape)
+    sitk_image.SetDirection(metadata['direction'])
+    sitk_image.SetOrigin(metadata['origin'])
+    # remember to revert spacing back to sitk order again
+    sitk_image.SetSpacing(tuple(metadata['spacing'][[2, 1, 0]]))
+    sitk.WriteImage(sitk_image, output_file)
+
+
 if __name__ == "__main__":
     # This is the same preprocessing I used for our contributions to the BraTS 2017 and 2018 challenges.
     # Preprocessing is described in the documentation of load_and_preprocess
@@ -138,15 +155,25 @@ if __name__ == "__main__":
 
     # Why is this not an IPython Notebook you may ask? Because I HATE IPython Notebooks. Simple :-)
 
-    brats_base = "/media/fabian/DeepLearningData/Brats17TrainingData"
-    list_of_lists = get_list_of_files(brats_base)
+    list_of_lists = get_list_of_files(brats_folder_with_downloaded_train_data)
 
-    output_folder = "/media/fabian/DeepLearningData/BraTS2017_preprocessed"
-    maybe_mkdir_p(output_folder)
+    maybe_mkdir_p(brats_preprocessed_folder)
 
     patient_names = [i[0].split("/")[-2] for i in list_of_lists]
 
-    p = Pool(processes=8)
-    p.starmap(load_and_preprocess, zip(list_of_lists, patient_names, [output_folder] * len(list_of_lists)))
+    p = Pool(processes=num_threads_for_brats_example)
+    p.starmap(load_and_preprocess, zip(list_of_lists, patient_names, [brats_preprocessed_folder] * len(list_of_lists)))
     p.close()
     p.join()
+
+    # remember that we cropped the data before preprocessing. If we predict the test cases, we want to run the same
+    # preprocessing for them. We need to then put the segmentation back into its original position (due to cropping).
+    # Here is how you can do that:
+
+    # lets use Brats17_2013_0_1 for this example
+    img = np.load(join(brats_preprocessed_folder, "Brats17_2013_0_1.npy"))
+    metadata = load_pickle(join(brats_preprocessed_folder, "Brats17_2013_0_1.pkl"))
+    # remember that we changed the segmentation labels from 0, 1, 2, 4 to 0, 1, 2, 3. We need to change that back to
+    # get the correct format
+    img[-1][img[-1] == 3] = 4
+    save_segmentation_as_nifti(img[-1], metadata, join(brats_preprocessed_folder, "delete_me.nii.gz"))

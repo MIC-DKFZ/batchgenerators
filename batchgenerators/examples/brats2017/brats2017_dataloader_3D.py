@@ -1,6 +1,7 @@
 from time import time
 from batchgenerators.augmentations.crop_and_pad_augmentations import crop
 from batchgenerators.dataloading import MultiThreadedAugmenter
+from batchgenerators.examples.brats2017.config import brats_preprocessed_folder, num_threads_for_brats_example
 from batchgenerators.transforms import Compose
 from batchgenerators.utilities.data_splitting import get_split_deterministic
 from batchgenerators.utilities.file_and_folder_operations import *
@@ -20,8 +21,8 @@ def get_list_of_patients(preprocessed_data_folder):
 
 
 class BraTS2017DataLoader3D(DataLoader):
-    def __init__(self, data, batch_size, patch_size, num_threads_in_multithreaded, seed_for_shuffle=1234, return_incomplete=False,
-                 shuffle=True, infinite=True):
+    def __init__(self, data, batch_size, patch_size, num_threads_in_multithreaded, seed_for_shuffle=1234,
+                 return_incomplete=False, shuffle=True, infinite=True):
         """
         data must be a list of patients as returned by get_list_of_patients (and split by get_split_deterministic)
 
@@ -127,7 +128,6 @@ def get_train_transform(patch_size):
 
 
 if __name__ == "__main__":
-    brats_preprocessed_folder = "/media/fabian/DeepLearningData/BraTS2017_preprocessed"
     patients = get_list_of_patients(brats_preprocessed_folder)
 
     train, val = get_split_deterministic(patients, fold=0, num_splits=5, random_state=12345)
@@ -175,10 +175,13 @@ if __name__ == "__main__":
 
     # finally we can create multithreaded transforms that we can actually use for training
     # we don't pin memory here because this is pytorch specific.
-    tr_gen = MultiThreadedAugmenter(dataloader_train, tr_transforms, num_processes=8, num_cached_per_queue=3,
+    tr_gen = MultiThreadedAugmenter(dataloader_train, tr_transforms, num_processes=num_threads_for_brats_example,
+                                    num_cached_per_queue=3,
                                     seeds=None, pin_memory=False)
     # we need less processes for vlaidation because we dont apply transformations
-    val_gen = MultiThreadedAugmenter(dataloader_validation, None, num_processes=3, num_cached_per_queue=1, seeds=None,
+    val_gen = MultiThreadedAugmenter(dataloader_validation, None,
+                                     num_processes=max(1, num_threads_for_brats_example // 2), num_cached_per_queue=1,
+                                     seeds=None,
                                      pin_memory=False)
 
     # lets start the MultiThreadedAugmenter. This is not necessary but allows them to start generating training
