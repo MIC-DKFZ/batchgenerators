@@ -107,6 +107,15 @@ Note: This package also includes 'generators'. Support for those will be dropped
 
 ## Release Notes
 
+
+- 0.19:
+   - There is now a complete example for BraTS2017/8 available for both 2D and 3D. Use this if you would like to get 
+   some insights on how I (Fabian) do my experiments
+   - Windows is now supported! Thanks @justusschock for your support!
+   - new, simple parametrization of elastic deformation. Use SpatialTransform_2!
+   - CIFAR10/100 DataLoader are now available for your convenience
+   - a bug in MultiThreadedAugmenter that could interfere with reproducibility is now fixed
+
 - 0.18:
     - all augmentations (there are some exceptions though) are implemented on a per-sample basis. This should make it 
     easier to use the augmentations outside of the Transforms of batchgenerators 
