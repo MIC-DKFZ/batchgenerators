@@ -63,8 +63,12 @@ composed transform into our **multithreader**: batchgenerators.dataloading.multi
 
 The working principle is simple: Derive from DataLoaderBase class, reimplement generate_train_batch member function and
 use it to stack your augmentations!
-For an example see `batchgenerators/examples/example_ipynb.ipynb`
+For simple example see `batchgenerators/examples/example_ipynb.ipynb`
 
+We also now have an extensive example for BraTS2017/2018 with both 2D and 3D DataLoader and augmentations: 
+`batchgenerators/examples/brats2017/`
+
+There are also CIFAR10/100 datasets and DataLoader available at `batchgenerators/datasets/cifar.py`
 
 ## Data Structure
 
