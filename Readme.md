@@ -61,21 +61,10 @@ allow for several segmentation maps. If you have only one segmentation, make sur
 
 ## How to install locally
 
-Install dependencies (some of them are only needed for certain functionalities)
-```
-pip install numpy scipy nilearn matplotlib scikit-image nibabel
-```
-
 Install batchgenerators
 ```
-git clone https://github.com/MIC-DKFZ/batchgenerators
-cd batchgenerators
-pip install -e .
+pip install --upgrade batchgenerators
 ```
-
-Using `-e` will make pip use a symlink to the source. So when you pull the newest changes of the repo your pip
-installation will automatically use the newest code. If not using -e, using --upgrade is recommended because we may push
-changes/bugfixes without changing the version number.
 
 Import as follows
 ```

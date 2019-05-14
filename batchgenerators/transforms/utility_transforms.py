@@ -225,16 +225,13 @@ class ConvertSegToBoundingBoxCoordinates(AbstractTransform):
         data_dict = convert_seg_to_bounding_box_coordinates(data_dict, self.dim, self.get_rois_from_seg_flag, class_specific_seg_flag=self.class_specific_seg_flag)
         return data_dict
 
+
 class MoveSegToDataChannel(AbstractTransform):
     """ Converts segmentation masks into bounding box coordinates. Works only for one object per image
     """
-
-
     def __call__(self, **data_dict):
         data_dict['data'] = np.concatenate((data_dict['data'], data_dict['seg']), axis=1)
         return data_dict
-
-
 
 
 class TransposeChannels(AbstractTransform):
