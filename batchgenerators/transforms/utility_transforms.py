@@ -406,3 +406,30 @@ class AppendChannelsTransform(AbstractTransform):
             data_dict[self.input_key] = inp
 
         return data_dict
+
+
+class ConvertToChannelLastTransform(AbstractTransform):
+    def __init__(self, input_keys):
+        """
+        converts all keys listed in input_keys from (b, c, x, y(, z)) to (b, x, y(, z), c).
+        """
+        self.input_keys = input_keys
+
+    def __call__(self, **data_dict):
+        for k in self.input_keys:
+            data = data_dict.get(k)
+            if data is None:
+                print("WARNING in ConvertToChannelLastTransform: data_dict has no key named", k)
+            else:
+                if len(data.shape) == 4:
+                    new_ordering = (0, 2, 3, 1)
+                elif len(data.shape) == 5:
+                    new_ordering = (0, 2, 3, 4, 1)
+                else:
+                    raise RuntimeError("unsupported dimensionality for ConvertToChannelLastTransform:",
+                                       len(data.shape),
+                                       ". Only 2d (b, c, x, y) and 3d (b, c, x, y, z) are supported for now.")
+                assert isinstance(data, np.ndarray), "data_dict[k] must be a numpy array"
+                data = data.transpose(new_ordering)
+                data_dict[k] = data
+        return data_dict
