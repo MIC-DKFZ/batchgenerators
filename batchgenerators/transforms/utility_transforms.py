@@ -53,10 +53,14 @@ class NumpyToTensor(AbstractTransform):
             for key, val in data_dict.items():
                 if isinstance(val, np.ndarray):
                     data_dict[key] = self.cast(torch.from_numpy(val)).contiguous()
+                elif isinstance(val, (list, tuple)) and all([isinstance(i, np.ndarray) for i in val]):
+                    data_dict[key] = [self.cast(torch.from_numpy(i)).contiguous() for i in val]
         else:
             for key in self.keys:
                 if isinstance(data_dict[key], np.ndarray):
                     data_dict[key] = self.cast(torch.from_numpy(data_dict[key])).contiguous()
+                elif isinstance(data_dict[key], (list, tuple)) and all([isinstance(i, np.ndarray) for i in data_dict[key]]):
+                    data_dict[key] = [self.cast(torch.from_numpy(i)).contiguous() for i in data_dict[key]]
 
         return data_dict
 

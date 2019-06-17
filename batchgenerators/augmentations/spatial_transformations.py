@@ -210,14 +210,17 @@ def augment_spatial(data, seg, patch_size, patch_center_dist_from_border=30,
 
     if not isinstance(patch_center_dist_from_border, (list, tuple, np.ndarray)):
         patch_center_dist_from_border = dim * [patch_center_dist_from_border]
+        
     for sample_id in range(data.shape[0]):
         coords = create_zero_centered_coordinate_mesh(patch_size)
         modified_coords = False
+
         if np.random.uniform() < p_el_per_sample and do_elastic_deform:
             a = np.random.uniform(alpha[0], alpha[1])
             s = np.random.uniform(sigma[0], sigma[1])
             coords = elastic_deform_coordinates(coords, a, s)
             modified_coords = True
+
         if np.random.uniform() < p_rot_per_sample and do_rotation:
             if angle_x[0] == angle_x[1]:
                 a_x = angle_x[0]
@@ -236,6 +239,7 @@ def augment_spatial(data, seg, patch_size, patch_center_dist_from_border=30,
             else:
                 coords = rotate_coords_2d(coords, a_x)
             modified_coords = True
+
         if np.random.uniform() < p_scale_per_sample and do_scale:
             if np.random.random() < 0.5 and scale[0] < 1:
                 sc = np.random.uniform(scale[0], 1)
@@ -243,6 +247,7 @@ def augment_spatial(data, seg, patch_size, patch_center_dist_from_border=30,
                 sc = np.random.uniform(max(scale[0], 1), scale[1])
             coords = scale_coords(coords, sc)
             modified_coords = True
+
         # now find a nice center location
         if modified_coords:
             for d in range(dim):
@@ -328,9 +333,11 @@ def augment_spatial_2(data, seg, patch_size, patch_center_dist_from_border=30,
 
     if not isinstance(patch_center_dist_from_border, (list, tuple, np.ndarray)):
         patch_center_dist_from_border = dim * [patch_center_dist_from_border]
+
     for sample_id in range(data.shape[0]):
         coords = create_zero_centered_coordinate_mesh(patch_size)
         modified_coords = False
+
         if np.random.uniform() < p_el_per_sample and do_elastic_deform:
             mag = []
             sigmas = []
@@ -357,6 +364,7 @@ def augment_spatial_2(data, seg, patch_size, patch_center_dist_from_border=30,
             #print(np.round(sigmas, decimals=3), np.round(mag, decimals=3))
             coords = elastic_deform_coordinates_2(coords, sigmas, mag)
             modified_coords = True
+
         if np.random.uniform() < p_rot_per_sample and do_rotation:
             if angle_x[0] == angle_x[1]:
                 a_x = angle_x[0]
@@ -375,6 +383,7 @@ def augment_spatial_2(data, seg, patch_size, patch_center_dist_from_border=30,
             else:
                 coords = rotate_coords_2d(coords, a_x)
             modified_coords = True
+
         if np.random.uniform() < p_scale_per_sample and do_scale:
             if np.random.random() < 0.5 and scale[0] < 1:
                 sc = np.random.uniform(scale[0], 1)
@@ -382,6 +391,7 @@ def augment_spatial_2(data, seg, patch_size, patch_center_dist_from_border=30,
                 sc = np.random.uniform(max(scale[0], 1), scale[1])
             coords = scale_coords(coords, sc)
             modified_coords = True
+
         # now find a nice center location
         if modified_coords:
             # recenter coordinates

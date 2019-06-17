@@ -222,4 +222,5 @@ if __name__ == "__main__":
             batch = next(tr_gen)
             view_batch(batch['data'][0], batch['seg'][0])
     else:
-        print("Cannot visualize batches, install batchviewer first")
+        print("Cannot visualize batches, install batchviewer first. It's a nice and handy tool. You can get it here: "
+              "https://github.com/FabianIsensee/BatchViewer")
