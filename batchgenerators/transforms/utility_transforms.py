@@ -397,7 +397,7 @@ class AppendChannelsTransform(AbstractTransform):
         selected_channels = inp[:, self.channel_indexes]
 
         if outp is None:
-            warn("output key %s is not present in dict, it will be created" % self.output_key)
+            #warn("output key %s is not present in dict, it will be created" % self.output_key)
             outp = selected_channels
             data_dict[self.output_key] = outp
         else:
