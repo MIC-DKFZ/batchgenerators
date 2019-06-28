@@ -97,7 +97,7 @@ class RandomCropTransform(AbstractTransform):
 
 
 class PadTransform(AbstractTransform):
-    def __init__(self, new_size, pad_mode_data='constant', pad_mode_seg='contant',
+    def __init__(self, new_size, pad_mode_data='constant', pad_mode_seg='constant',
                  np_pad_kwargs_data=None, np_pad_kwargs_seg=None,
                  data_key="data", label_key="seg"):
         """
