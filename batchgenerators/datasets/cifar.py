@@ -6,6 +6,7 @@ from urllib.request import urlretrieve
 import numpy as np
 from batchgenerators.dataloading.data_loader import DataLoader
 from batchgenerators.dataloading.dataset import Dataset
+from batchgenerators.utilities.file_and_folder_operations import join
 
 
 def unpickle(file):
@@ -32,10 +33,10 @@ def maybe_download_and_prepare_cifar(target_dir, cifar=10):
     if not os.path.isfile(os.path.join(target_dir, 'cifar%d_test_data.npz' % cifar)) or not \
             os.path.isfile(os.path.join(target_dir, 'cifar%d_training_data.npz' % cifar)):
         print('downloading CIFAR%d...' % cifar)
-        urlretrieve('http://www.cs.toronto.edu/~kriz/cifar-%d-python.tar.gz' % cifar, target_dir)
+        urlretrieve('http://www.cs.toronto.edu/~kriz/cifar-%d-python.tar.gz' % cifar, join(target_dir, 'cifar-%d-python.tar.gz' % cifar))
 
         tar = tarfile.open(os.path.join(target_dir, 'cifar-%d-python.tar.gz' % cifar), "r:gz")
-        tar.extractall()
+        tar.extractall(path=target_dir)
         tar.close()
 
         data = []
