@@ -27,7 +27,7 @@ import logging
 from multiprocessing import Event
 from queue import Empty, Full
 import traceback
-from time import sleep
+from time import sleep, time
 
 
 def producer(queue, data_loader, transform, thread_id, seed, abort_event):
@@ -56,7 +56,6 @@ def producer(queue, data_loader, transform, thread_id, seed, abort_event):
                     # queue was full because items in it were not consumed. Try again.
                     pass
             else:
-                # abort_event was set. Drain queue, then give 'end'
                 break
 
     except KeyboardInterrupt:
@@ -234,11 +233,16 @@ class MultiThreadedAugmenter(object):
 
     def _finish(self):
         self.abort_event.set()
-        sleep(0.2) # allow pin memory thread to finish
         if len(self._processes) != 0:
-            logging.debug("MultiThreadedGenerator: workers terminated")
+            timeout = 60  # one minute for all workers to stop
+            start = time()
+            logging.debug("MultiThreadedGenerator: shutting down workers...")
+            while any([i.is_alive() for i in self._processes]) and time() - start < timeout:
+                sleep(0.5)
+
             for i, p in enumerate(self._processes):
-                p.terminate()
+                if p.is_alive():
+                    p.terminate()
 
                 self._queues[i].close()
                 self._queues[i].join_thread()
