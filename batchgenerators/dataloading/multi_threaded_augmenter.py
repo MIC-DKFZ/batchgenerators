@@ -82,6 +82,7 @@ def pin_memory_loop(in_queues, out_queue, abort_event, gpu):
         try:
             if not abort_event.is_set():
                 if item is None:
+                    # @TODO fabian here we can jump queues and we dont want that!!!!!
                     item = in_queues[queue_ctr % len(in_queues)].get(timeout=2)
                     if isinstance(item, dict):
                         for k in item.keys():
@@ -239,6 +240,12 @@ class MultiThreadedAugmenter(object):
             logging.debug("MultiThreadedGenerator: shutting down workers...")
             while any([i.is_alive() for i in self._processes]) and time() - start < timeout:
                 sleep(0.5)
+
+            # let pin_memory loop exit
+            if self.pin_memory and self.pin_memory_thread is not None:
+                start = time()
+                while self.pin_memory_thread.is_alive() and time() - start < timeout:
+                    sleep(0.5)
 
             for i, p in enumerate(self._processes):
                 if p.is_alive():
