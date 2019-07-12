@@ -164,12 +164,12 @@ if __name__ == "__main__":
     # can be up to 500x500x500 voxels large then you should do this differently. There, instead of using max_shape you
     # should estimate what shape you need to extract so that subsequent SpatialTransform does not introduce border
     # artifacts
-    dataloader_train = BraTS2017DataLoader3D(train, batch_size, max_shape, 1)
+    dataloader_train = BraTS2017DataLoader3D(train, batch_size, max_shape, num_threads_for_brats_example)
 
     # during training I like to run a validation from time to time to see where I am standing. This is not a correct
     # validation because just like training this is patch-based but it's good enough. We don't do augmentation for the
     # validation, so patch_size is used as shape target here
-    dataloader_validation = BraTS2017DataLoader3D(val, batch_size, patch_size, 1)
+    dataloader_validation = BraTS2017DataLoader3D(val, batch_size, patch_size, max(1, num_threads_for_brats_example // 2))
 
     tr_transforms = get_train_transform(patch_size)
 
