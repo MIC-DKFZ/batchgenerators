@@ -60,7 +60,7 @@ class CenterCropSegTransform(AbstractTransform):
         seg = data_dict.get(self.label_key)
 
         if seg is not None:
-            data_dict[self.label_key] = center_crop(seg, self.output_size, None)
+            data_dict[self.label_key] = center_crop(seg, self.output_size, None)[0]
         else:
             from warnings import warn
             warn("You shall not pass data_dict without seg: Used CenterCropSegTransform, but there is no seg", Warning)
