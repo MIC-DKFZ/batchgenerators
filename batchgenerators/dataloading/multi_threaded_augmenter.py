@@ -101,6 +101,12 @@ def pin_memory_loop(in_queues, out_queue, abort_event, gpu):
             abort_event.set()
             print('pin_memory_loop exiting (KeyboardInterrupt)')
             raise KeyboardInterrupt
+        except ConnectionResetError:
+            print('ConnectionResetError in pin_memory_loop. This can happen when workers are terminated. Don\'t worry')
+            return
+        except EOFError:
+            print('EOFError in pin_memory_loop. This can happen when workers are terminated. Don\'t worry')
+            return
         except Exception:
             print("Exception in pin_memory_loop")
             traceback.print_exc()
@@ -110,25 +116,18 @@ def pin_memory_loop(in_queues, out_queue, abort_event, gpu):
 
 class MultiThreadedAugmenter(object):
     """ Makes your pipeline multi threaded. Yeah!
-
     If seeded we guarantee that batches are retunred in the same order and with the same augmentation every time this
     is run. This is realized internally by using une queue per worker and querying the queues one ofter the other.
-
     Args:
         data_loader (generator or DataLoaderBase instance): Your data loader. Must have a .next() function and return
         a dict that complies with our data structure
-
         transform (Transform instance): Any of our transformations. If you want to use multiple transformations then
         use our Compose transform! Can be None (in that case no transform will be applied)
-
         num_processes (int): number of processes
-
         num_cached_per_queue (int): number of batches cached per process (each process has its own
         multiprocessing.Queue). We found 2 to be ideal.
-
         seeds (list of int): one seed for each worker. Must have len(num_processes).
         If None then seeds = range(num_processes)
-
         pin_memory (bool): set to True if all torch tensors in data_dict are to be pinned. Pytorch only.
     """
     def __init__(self, data_loader, transform, num_processes, num_cached_per_queue=2, seeds=None, pin_memory=False):
@@ -238,16 +237,13 @@ class MultiThreadedAugmenter(object):
 
     def _finish(self):
         self.abort_event.set()
+
         if len(self._processes) != 0:
             timeout = 60  # one minute for all workers to stop
             start = time()
             logging.debug("MultiThreadedGenerator: shutting down workers...")
             while any([i.is_alive() for i in self._processes]) and time() - start < timeout:
                 sleep(0.5)
-
-            # let pin_memory loop exit
-            if self.pin_memory and self.pin_memory_thread is not None:
-                sleep(3)
 
             for i, p in enumerate(self._processes):
                 if p.is_alive():
@@ -261,6 +257,8 @@ class MultiThreadedAugmenter(object):
             self._queue = None
             self._end_ctr = 0
             self._queue_loop = 0
+
+            del self.pin_memory_queue
 
     def restart(self):
         self._finish()
