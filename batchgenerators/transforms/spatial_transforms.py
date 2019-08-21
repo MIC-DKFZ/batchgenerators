@@ -507,16 +507,3 @@ class TransposeAxesTransform(AbstractTransform):
             data_dict[self.label_key] = seg
         return data_dict
 
-
-class FlipVectorAxisTransform(AbstractTransform):
-    """ Expects as input an image with 3 3D-vectors at each voxels, encoded as a nine-channel image. Will randomly
-    flip sign of one dimension of all 3 vectors (x, y or z).
-    """
-
-    def __init__(self, axes=(2, 3, 4), data_key="data"):
-        self.data_key = data_key
-        self.axes = axes
-
-    def __call__(self, **data_dict):
-        data_dict[self.data_key] = flip_vector_axis(data=data_dict[self.data_key])
-        return data_dict

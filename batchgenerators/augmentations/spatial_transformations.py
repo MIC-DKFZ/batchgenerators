@@ -454,27 +454,3 @@ def augment_transpose_axes(data_sample, seg_sample, axes=(0, 1, 2)):
     if seg_sample is not None:
         seg_sample = seg_sample.transpose(*static_axes)
     return data_sample, seg_sample
-
-
-def flip_vector_axis(data):
-    data = np.copy(data)
-    if (len(data.shape) != 4) and (len(data.shape) != 5) or data.shape[1] != 9:
-        raise Exception("Invalid dimension for data. Data should be either [BATCH_SIZE, 9, x, y] or [BATCH_SIZE, 9, x, y, z]")
-    axis = np.random.choice(["x", "y", "z"])   #chose axes to flip
-    BATCH_SIZE = data.shape[0]
-    for id in np.arange(BATCH_SIZE):
-        if np.random.uniform() < 0.5:
-            if axis == "x":
-                data[id, 0] *= -1
-                data[id, 3] *= -1
-                data[id, 6] *= -1
-            elif axis == "y":
-                data[id, 1] *= -1
-                data[id, 4] *= -1
-                data[id, 7] *= -1
-            elif axis == "z":
-                data[id, 2] *= -1
-                data[id, 5] *= -1
-                data[id, 8] *= -1
-
-    return data
