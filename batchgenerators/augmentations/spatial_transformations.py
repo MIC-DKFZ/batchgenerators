@@ -349,16 +349,18 @@ def augment_spatial_2(data, seg, patch_size, patch_center_dist_from_border=30,
                 # transform relative def_scale in pixels
                 sigmas.append(def_scale * patch_size[d])
 
-                # define max magnitude
-                max_magnitude = sigmas[-1] * (3 / 4.)
+                # define max magnitude and min_magnitude
+                max_magnitude = sigmas[-1] * (1 / 2)
+                min_magnitude = sigmas[-1] * (1 / 8)
 
                 # the magnitude needs to depend on the scale, otherwise not much is going to happen most of the time.
                 # we want the magnitude to be high, but not higher than max_magnitude (otherwise the deformations
                 # become very ugly). Let's sample mag_real with a gaussian
-                mag_real = np.random.normal(max_magnitude * (2 / 3), scale=max_magnitude / 3)
-
+                #mag_real = np.random.normal(max_magnitude * (2 / 3), scale=max_magnitude / 3)
                 # clip to make sure we stay reasonable
-                mag_real = np.clip(mag_real, 0, max_magnitude)
+                #mag_real = np.clip(mag_real, 0, max_magnitude)
+
+                mag_real = np.random.uniform(min_magnitude, max_magnitude)
 
                 mag.append(mag_real)
             #print(np.round(sigmas, decimals=3), np.round(mag, decimals=3))
