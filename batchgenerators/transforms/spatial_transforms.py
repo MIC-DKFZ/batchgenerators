@@ -14,7 +14,7 @@
 from batchgenerators.transforms.abstract_transforms import AbstractTransform
 from batchgenerators.augmentations.spatial_transformations import augment_spatial, augment_spatial_2, \
     augment_channel_translation, \
-    augment_mirroring, augment_transpose_axes, augment_zoom, augment_resize, flip_vector_axis, augment_rot90
+    augment_mirroring, augment_transpose_axes, augment_zoom, augment_resize, augment_rot90
 import numpy as np
 
 
