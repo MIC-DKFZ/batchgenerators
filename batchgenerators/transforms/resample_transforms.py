@@ -62,12 +62,12 @@ class SimulateLowResolutionTransform(AbstractTransform):
         for b in range(len(data_dict[self.data_key])):
             if np.random.uniform() < self.p_per_sample:
                 data_dict[self.data_key][b] = augment_linear_downsampling_scipy(data_dict[self.data_key][b],
-                                                                             zoom_range=self.zoom_range,
-                                                                             per_channel=self.per_channel,
-                                                                             p_per_channel=self.p_per_channel,
-                                                                             channels=self.channels,
-                                                                             order_downsample=self.order_downsample,
-                                                                             order_upsample=self.order_upsample,
+                                                                                zoom_range=self.zoom_range,
+                                                                                per_channel=self.per_channel,
+                                                                                p_per_channel=self.p_per_channel,
+                                                                                channels=self.channels,
+                                                                                order_downsample=self.order_downsample,
+                                                                                order_upsample=self.order_upsample,
                                                                                 ignore_axes=self.ignore_axes)
         return data_dict
 
@@ -78,4 +78,4 @@ class ResampleTransform(SimulateLowResolutionTransform):
         warn("This class is deprecated. It was renamed to SimulateLowResolutionTransform. Please change your code",
              DeprecationWarning)
         super(ResampleTransform, self).__init__(zoom_range, per_channel, p_per_channel,
-                 channels, order_downsample, order_upsample, data_key, p_per_sample)
+                                                channels, order_downsample, order_upsample, data_key, p_per_sample)

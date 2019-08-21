@@ -19,7 +19,8 @@ from batchgenerators.transforms.abstract_transforms import AbstractTransform
 
 
 class ContrastAugmentationTransform(AbstractTransform):
-    def __init__(self, contrast_range=(0.75, 1.25), preserve_range=True, per_channel=True, data_key="data", p_per_sample=1):
+    def __init__(self, contrast_range=(0.75, 1.25), preserve_range=True, per_channel=True, data_key="data",
+                 p_per_sample=1):
         """
         Augments the contrast of data
         :param contrast_range: range from which to sample a random contrast that is applied to the data. If
@@ -114,7 +115,8 @@ class BrightnessMultiplicativeTransform(AbstractTransform):
 
 
 class GammaTransform(AbstractTransform):
-    def __init__(self, gamma_range=(0.5, 2), invert_image=False, per_channel=False, data_key="data", retain_stats=False, p_per_sample=1):
+    def __init__(self, gamma_range=(0.5, 2), invert_image=False, per_channel=False, data_key="data", retain_stats=False,
+                 p_per_sample=1):
         """
         Augments by changing 'gamma' of the image (same as gamma correction in photos or computer monitors
 
@@ -139,13 +141,16 @@ class GammaTransform(AbstractTransform):
     def __call__(self, **data_dict):
         for b in range(len(data_dict[self.data_key])):
             if np.random.uniform() < self.p_per_sample:
-                data_dict[self.data_key][b] = augment_gamma(data_dict[self.data_key][b], self.gamma_range, self.invert_image,
-                                                         per_channel=self.per_channel, retain_stats=self.retain_stats)
+                data_dict[self.data_key][b] = augment_gamma(data_dict[self.data_key][b], self.gamma_range,
+                                                            self.invert_image,
+                                                            per_channel=self.per_channel,
+                                                            retain_stats=self.retain_stats)
         return data_dict
 
 
 class IlluminationTransform(AbstractTransform):
     """Do not use this for now"""
+
     def __init__(self, white_rgb, data_key="data"):
         self.data_key = data_key
         self.white_rgb = white_rgb
@@ -157,6 +162,7 @@ class IlluminationTransform(AbstractTransform):
 
 class FancyColorTransform(AbstractTransform):
     """Do not use this for now"""
+
     def __init__(self, U, s, sigma=0.2, data_key="data"):
         self.data_key = data_key
         self.s = s
@@ -183,5 +189,3 @@ class ClipValueRange(AbstractTransform):
     def __call__(self, **data_dict):
         data_dict[self.data_key] = np.clip(data_dict[self.data_key], self.min, self.max)
         return data_dict
-
-

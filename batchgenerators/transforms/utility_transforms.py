@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import copy
-from warnings import warn
 import numpy as np
 
 from batchgenerators.augmentations.utils import convert_seg_image_to_one_hot_encoding, \
@@ -231,15 +230,19 @@ class ConvertSegToBoundingBoxCoordinates(AbstractTransform):
 
 
 class MoveSegToDataChannel(AbstractTransform):
-    """ Converts segmentation masks into bounding box coordinates. Works only for one object per image
+    """
+    concatenates data_dict['seg'] to data_dict['data']
     """
     def __call__(self, **data_dict):
         data_dict['data'] = np.concatenate((data_dict['data'], data_dict['seg']), axis=1)
         return data_dict
 
 
-class TransposeChannels(AbstractTransform):
-    """ Converts segmentation masks into bounding box coordinates. Works only for one object per image
+class ColorChannelToLastAxisTransform(AbstractTransform):
+    """
+    moves the color channel to the last axis
+    For example:
+    shape (b, c, x, y, z) -> shape (b, x, y, z, c)
     """
 
     def __call__(self, **data_dict):

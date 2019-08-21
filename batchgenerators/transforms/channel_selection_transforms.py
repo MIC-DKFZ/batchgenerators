@@ -51,7 +51,8 @@ class SegChannelSelectionTransform(AbstractTransform):
         seg = data_dict.get(self.label_key)
 
         if seg is None:
-            warn("You used SegChannelSelectionTransform but there is no 'seg' key in your data_dict, returning data_dict unmodified", Warning)
+            warn("You used SegChannelSelectionTransform but there is no 'seg' key in your data_dict, returning "
+                 "data_dict unmodified", Warning)
         else:
             if self.keep_discarded:
                 discarded_seg_idx = [i for i in range(len(seg[0])) if i not in self.channels]
@@ -110,7 +111,8 @@ class SegChannelRandomSwapTransform(AbstractTransform):
         seg = data_dict.get(self.label_key)
 
         if seg is None:
-            warn("You used SegChannelSelectionTransform but there is no 'seg' key in your data_dict, returning data_dict unmodified", Warning)
+            warn("You used SegChannelSelectionTransform but there is no 'seg' key in your data_dict, returning "
+                 "data_dict unmodified", Warning)
         else:
             random_number = np.random.rand()
             if random_number < self.swap_probability:
@@ -137,7 +139,8 @@ class SegChannelRandomDuplicateTransform(AbstractTransform):
         seg = data_dict.get(self.label_key)
 
         if seg is None:
-            warn("You used SegChannelSelectionTransform but there is no 'seg' key in your data_dict, returning data_dict unmodified", Warning)
+            warn("You used SegChannelSelectionTransform but there is no 'seg' key in your data_dict, returning "
+                 "data_dict unmodified", Warning)
         else:
             seg_shape = list(seg.shape)
             seg_shape[1] = 1
@@ -168,7 +171,8 @@ class SegLabelSelectionBinarizeTransform(AbstractTransform):
         seg = data_dict.get(self.label_key)
 
         if seg is None:
-            warn("You used SegLabelSelectionBinarizeTransform but there is no 'seg' key in your data_dict, returning data_dict unmodified", Warning)
+            warn("You used SegLabelSelectionBinarizeTransform but there is no 'seg' key in your data_dict, returning "
+                 "data_dict unmodified", Warning)
         else:
             discard_labels = set(np.unique(seg)) - set(self.label) - set([0])
             for label in discard_labels:
