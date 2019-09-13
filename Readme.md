@@ -91,25 +91,10 @@ if __name__ == '__main__':
 
 This is not required on Linux.
 
-## Important!
-Starting from version 1.14.6 numpy has issues with multiprocessing (it's supposed to be a feature...). 
-Mutrix multiplications (which we are using to rotate coordinate systems for data augmentation) now run mutlithreaded on all available threads. 
-This can cause chaos if you are using a multiprocessing pipeline, beacause each background worker will spawn a lot of 
-threads to do the matrix multiplication (8 workers on a 16 Core machine = up to 8*16=256 threads. duh.). There is nothing we (dkfz devs) can do to 
-tackle that problem, but this will only be a real issue in very specific configurations of data augmentation. If you 
-notice unnecessarily high CPU load, there are two things you can do:
-
-- (recommended) run all your experiments with `OMP_NUM_THREADS=1` or (even better) add this to your environment 
-variables (`export OMP_NUM_THREADS=1` in .bashrc on linux)
-- downgrade numpy to 1.14.5 (pip install numpy==1.14.5) to solve the issue
-
-Numpy devs are aware of this problem and trying to find a solution 
-(see https://github.com/numpy/numpy/issues/11826#issuecomment-425087772)
-
 
 ## Release Notes
 
-
+- 0.19.5: fixed OMP_NUM_THREADS issue by using threadpoolctl package
 - 0.19:
    - There is now a complete example for BraTS2017/8 available for both 2D and 3D. Use this if you would like to get 
    some insights on how I (Fabian) do my experiments

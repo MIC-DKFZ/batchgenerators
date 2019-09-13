@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='batchgenerators',
-      version='0.19.4',
+      version='0.19.5',
       description='Data augmentation toolkit',
       url='https://github.com/MIC-DKFZ/batchgenerators',
       author='Division of Medical Image Computing, German Cancer Research Center',
@@ -16,7 +16,8 @@ setup(name='batchgenerators',
             "scikit-image",
             "scikit-learn",
             "future",
-            "unittest2"
+            "unittest2",
+            "threadpoolctl"
       ],
       keywords=['deep learning', 'image segmentation', 'image classification', 'medical image analysis',
                   'medical image segmentation', 'data augmentation'],
