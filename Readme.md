@@ -71,8 +71,6 @@ Import as follows
 from batchgenerators.transforms.color_transforms import ContrastAugmentationTransform
 ```
 
-Note: This package also includes 'generators'. Support for those will be dropped in the future. That was our old design.
-
 ## Windows Support is very experimental!
 Batchgenerators makes heavy use of python multiprocessing and python multiprocessing on windows is different from linux. 
 To prevent the workers from freezing in windows, you have to guard your code with `if __name__ == '__main__'` and use multiprocessing's [`freeze_support`](https://docs.python.org/3/library/multiprocessing.html#multiprocessing.freeze_support). The executed script may then look like this:
