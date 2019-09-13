@@ -18,7 +18,7 @@ import numpy as np
 from skimage import data
 
 from batchgenerators.dataloading import SingleThreadedAugmenter
-from batchgenerators.tests.DataGenerators import BasicDataLoader
+from tests.DataGenerators import BasicDataLoader
 from batchgenerators.transforms.spatial_transforms import MirrorTransform
 
 

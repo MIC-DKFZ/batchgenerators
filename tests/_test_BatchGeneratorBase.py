@@ -19,7 +19,6 @@ from builtins import range
 import unittest
 import numpy as np
 import sys
-from batchgenerators.tests.DataGenerators import BasicDataLoader
 
 
 class TestMultiThreading(unittest.TestCase):
