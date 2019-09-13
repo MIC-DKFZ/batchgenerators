@@ -19,5 +19,5 @@ setup(name='batchgenerators',
       ],
       keywords=['deep learning', 'image segmentation', 'image classification', 'medical image analysis',
                   'medical image segmentation', 'data augmentation'],
-      download_url="https://github.com/MIC-DKFZ/batchgenerators/archive/v0.19.3.tar.gz"
+      download_url="https://github.com/MIC-DKFZ/batchgenerators/archive/v0.19.5.tar.gz"
       )

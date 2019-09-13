@@ -3,13 +3,8 @@ language: python
 matrix:
   include:
   - os: linux
-    python: "2.7"
-    dist: trusty
-  - os: linux
     python: "3.6"
     dist: trusty
-#  - os: windows
-#    python: "2.7"
 #  - os: windows
 #    python: "3.6"
 

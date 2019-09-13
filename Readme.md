@@ -94,7 +94,8 @@ This is not required on Linux.
 
 ## Release Notes
 
-- 0.19.5: fixed OMP_NUM_THREADS issue by using threadpoolctl package
+- 0.19.5: fixed OMP_NUM_THREADS issue by using threadpoolctl package; dropped python 2 support (threadpoolctl is not 
+available for python 2)
 - 0.19:
    - There is now a complete example for BraTS2017/8 available for both 2D and 3D. Use this if you would like to get 
    some insights on how I (Fabian) do my experiments
