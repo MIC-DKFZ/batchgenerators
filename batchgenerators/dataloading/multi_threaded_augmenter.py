@@ -33,7 +33,7 @@ from threadpoolctl import threadpool_limits
 
 def producer(queue, data_loader, transform, thread_id, seed, abort_event):
     try:
-        with threadpool_limits(limits=1):
+        with threadpool_limits(limits=1, user_api="blas"):
             np.random.seed(seed)
             data_loader.set_thread_id(thread_id)
             item = None
