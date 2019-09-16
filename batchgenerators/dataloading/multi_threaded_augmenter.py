@@ -28,37 +28,35 @@ from multiprocessing import Event
 from queue import Empty, Full
 import traceback
 from time import sleep, time
-from threadpoolctl import threadpool_limits
 
 
 def producer(queue, data_loader, transform, thread_id, seed, abort_event):
     try:
-        with threadpool_limits(limits=1, user_api="blas"):
-            np.random.seed(seed)
-            data_loader.set_thread_id(thread_id)
-            item = None
+        np.random.seed(seed)
+        data_loader.set_thread_id(thread_id)
+        item = None
 
-            while True:
-                # check if abort event was set
-                if not abort_event.is_set():
+        while True:
+            # check if abort event was set
+            if not abort_event.is_set():
 
-                    if item is None:
-
-                        try:
-                            item = next(data_loader)
-                            if transform is not None:
-                                item = transform(**item)
-                        except StopIteration:
-                            item = "end"
+                if item is None:
 
                     try:
-                        queue.put(item, timeout=2)
-                        item = None
-                    except Full:
-                        # queue was full because items in it were not consumed. Try again.
-                        pass
-                else:
-                    break
+                        item = next(data_loader)
+                        if transform is not None:
+                            item = transform(**item)
+                    except StopIteration:
+                        item = "end"
+
+                try:
+                    queue.put(item, timeout=2)
+                    item = None
+                except Full:
+                    # queue was full because items in it were not consumed. Try again.
+                    pass
+            else:
+                break
 
     except KeyboardInterrupt:
         # drain queue, then give 'end', set abort flag and reraise KeyboardInterrupt
