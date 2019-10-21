@@ -122,7 +122,13 @@ def rotate_coords_2d(coords, angle):
 
 
 def scale_coords(coords, scale):
-    return coords * scale
+    if isinstance(scale, (tuple, list, np.ndarray)):
+        assert len(scale) == len(coords)
+        for i in range(len(scale)):
+            coords[i] *= scale[i]
+    else:
+        coords *= scale
+    return coords
 
 
 def uncenter_coords(coords):
