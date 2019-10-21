@@ -353,7 +353,6 @@ class SpatialTransform(AbstractTransform):
                                   p_el_per_sample=self.p_el_per_sample, p_scale_per_sample=self.p_scale_per_sample,
                                   p_rot_per_sample=self.p_rot_per_sample,
                                   independent_scale_for_each_axis=self.independent_scale_for_each_axis)
-
         data_dict[self.data_key] = ret_val[0]
         if seg is not None:
             data_dict[self.label_key] = ret_val[1]

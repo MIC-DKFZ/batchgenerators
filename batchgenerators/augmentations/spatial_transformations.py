@@ -215,13 +215,13 @@ def augment_spatial(data, seg, patch_size, patch_center_dist_from_border=30,
         coords = create_zero_centered_coordinate_mesh(patch_size)
         modified_coords = False
 
-        if np.random.uniform() < p_el_per_sample and do_elastic_deform:
+        if do_elastic_deform and np.random.uniform() < p_el_per_sample:
             a = np.random.uniform(alpha[0], alpha[1])
             s = np.random.uniform(sigma[0], sigma[1])
             coords = elastic_deform_coordinates(coords, a, s)
             modified_coords = True
 
-        if np.random.uniform() < p_rot_per_sample and do_rotation:
+        if do_rotation and np.random.uniform() < p_rot_per_sample:
             if angle_x[0] == angle_x[1]:
                 a_x = angle_x[0]
             else:
@@ -240,8 +240,8 @@ def augment_spatial(data, seg, patch_size, patch_center_dist_from_border=30,
                 coords = rotate_coords_2d(coords, a_x)
             modified_coords = True
 
-        if np.random.uniform() < p_scale_per_sample and do_scale:
-            if independent_scale_for_each_axis:
+        if do_scale and np.random.uniform() < p_scale_per_sample:
+            if not independent_scale_for_each_axis:
                 if np.random.random() < 0.5 and scale[0] < 1:
                     sc = np.random.uniform(scale[0], 1)
                 else:
