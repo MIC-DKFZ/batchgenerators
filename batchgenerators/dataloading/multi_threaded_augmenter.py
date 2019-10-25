@@ -29,8 +29,6 @@ from queue import Empty, Full
 import traceback
 from time import sleep, time
 from threadpoolctl import threadpool_limits
-from pprint import pprint
-from threadpoolctl import threadpool_info
 
 
 def producer(queue, data_loader, transform, thread_id, seed, abort_event):
@@ -235,7 +233,6 @@ class MultiThreadedAugmenter(object):
                 self.generator.was_initialized = False
 
             with threadpool_limits(limits=1, user_api="blas"):
-                pprint(threadpool_info())
                 for i in range(self.num_processes):
                     self._queues.append(Queue(self.num_cached_per_queue))
                     self._processes.append(Process(target=producer, args=(self._queues[i], self.generator, self.transform, i, self.seeds[i], self.abort_event)))
