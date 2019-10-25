@@ -130,8 +130,13 @@ class MultiThreadedAugmenter(object):
         seeds (list of int): one seed for each worker. Must have len(num_processes).
         If None then seeds = range(num_processes)
         pin_memory (bool): set to True if all torch tensors in data_dict are to be pinned. Pytorch only.
+        timeout (int): How long do we wait for the background workers to do stuff? If timeout seconds have passed and
+        self.__get_next_item still has not gotten an item from the workers we will perform a check whether all
+        background workers are still alive. If all are alive we wait, if not we set the abort flag.
     """
-    def __init__(self, data_loader, transform, num_processes, num_cached_per_queue=2, seeds=None, pin_memory=False):
+    def __init__(self, data_loader, transform, num_processes, num_cached_per_queue=2, seeds=None, pin_memory=False,
+                 timeout=300):
+        self.timeout = timeout
         self.pin_memory = pin_memory
         self.transform = transform
         if seeds is not None:
@@ -168,7 +173,6 @@ class MultiThreadedAugmenter(object):
         item = None
 
         tmp = time()
-        TIMEOUT = 60
 
         use_this_queue = self._next_queue()
 
@@ -188,7 +192,7 @@ class MultiThreadedAugmenter(object):
 
                 tmp = time()
             except Empty:
-                if time() - tmp > TIMEOUT:
+                if time() - tmp > self.timeout:
                     # check if all workers are still alive
                     all_alive = all([i.is_alive() for i in self._processes])
                     if not all_alive:
