@@ -29,11 +29,14 @@ from queue import Empty, Full
 import traceback
 from time import sleep, time
 from threadpoolctl import threadpool_limits
+from pprint import pprint
+from threadpoolctl import threadpool_info
 
 
 def producer(queue, data_loader, transform, thread_id, seed, abort_event):
     try:
         with threadpool_limits(limits=1, user_api="blas"):
+            pprint(threadpool_info())
             np.random.seed(seed)
             data_loader.set_thread_id(thread_id)
             item = None
