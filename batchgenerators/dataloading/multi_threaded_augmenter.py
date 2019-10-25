@@ -35,33 +35,31 @@ from threadpoolctl import threadpool_info
 
 def producer(queue, data_loader, transform, thread_id, seed, abort_event):
     try:
-        with threadpool_limits(limits=1, user_api="blas"):
-            pprint(threadpool_info())
-            np.random.seed(seed)
-            data_loader.set_thread_id(thread_id)
-            item = None
+        np.random.seed(seed)
+        data_loader.set_thread_id(thread_id)
+        item = None
 
-            while True:
-                # check if abort event was set
-                if not abort_event.is_set():
+        while True:
+            # check if abort event was set
+            if not abort_event.is_set():
 
-                    if item is None:
-
-                        try:
-                            item = next(data_loader)
-                            if transform is not None:
-                                item = transform(**item)
-                        except StopIteration:
-                            item = "end"
+                if item is None:
 
                     try:
-                        queue.put(item, timeout=2)
-                        item = None
-                    except Full:
-                        # queue was full because items in it were not consumed. Try again.
-                        pass
-                else:
-                    break
+                        item = next(data_loader)
+                        if transform is not None:
+                            item = transform(**item)
+                    except StopIteration:
+                        item = "end"
+
+                try:
+                    queue.put(item, timeout=2)
+                    item = None
+                except Full:
+                    # queue was full because items in it were not consumed. Try again.
+                    pass
+            else:
+                break
 
     except KeyboardInterrupt:
         # drain queue, then give 'end', set abort flag and reraise KeyboardInterrupt
@@ -236,11 +234,13 @@ class MultiThreadedAugmenter(object):
             if hasattr(self.generator, 'was_initialized'):
                 self.generator.was_initialized = False
 
-            for i in range(self.num_processes):
-                self._queues.append(Queue(self.num_cached_per_queue))
-                self._processes.append(Process(target=producer, args=(self._queues[i], self.generator, self.transform, i, self.seeds[i], self.abort_event)))
-                self._processes[-1].daemon = True
-                self._processes[-1].start()
+            with threadpool_limits(limits=1, user_api="blas"):
+                pprint(threadpool_info())
+                for i in range(self.num_processes):
+                    self._queues.append(Queue(self.num_cached_per_queue))
+                    self._processes.append(Process(target=producer, args=(self._queues[i], self.generator, self.transform, i, self.seeds[i], self.abort_event)))
+                    self._processes[-1].daemon = True
+                    self._processes[-1].start()
 
             if self.pin_memory:
                 import torch
