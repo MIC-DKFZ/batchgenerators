@@ -32,51 +32,37 @@ from threadpoolctl import threadpool_limits
 
 
 def producer(queue, data_loader, transform, thread_id, seed, abort_event):
-    try:
-        np.random.seed(seed)
-        data_loader.set_thread_id(thread_id)
-        item = None
+    np.random.seed(seed)
+    data_loader.set_thread_id(thread_id)
+    item = None
 
-        while True:
-            # check if abort event was set
-            if not abort_event.is_set():
-
-                if item is None:
-
-                    try:
-                        item = next(data_loader)
-                        if transform is not None:
-                            item = transform(**item)
-                    except StopIteration:
-                        item = "end"
+    while True:
+        # check if abort event was set
+        if not abort_event.is_set():
+            #print("worder %d event not set" % thread_id)
+            if item is None:
 
                 try:
-                    queue.put(item, timeout=2)
-                    item = None
-                except Full:
-                    # queue was full because items in it were not consumed. Try again.
-                    pass
-            else:
-                break
+                    item = next(data_loader)
+                    if transform is not None:
+                        item = transform(**item)
+                except StopIteration:
+                    item = "end"
 
-    except KeyboardInterrupt:
-        # drain queue, then give 'end', set abort flag and reraise KeyboardInterrupt
-        abort_event.set()
-
-        raise KeyboardInterrupt
-
-    except Exception:
-        print("Exception in worker", thread_id)
-        traceback.print_exc()
-        # drain queue, give 'end', send abort_event so that other workers know to exit
-
-        abort_event.set()
-
+            try:
+                queue.put(item, timeout=2)
+                item = None
+            except Full:
+                # queue was full because items in it were not consumed. Try again.
+                pass
+        else:
+            #print("worder %d event is now set, exiting" % thread_id)
+            break
 
 def pin_memory_loop(in_queues, out_queue, abort_event, gpu):
     import torch
     torch.cuda.set_device(gpu)
-    print("gpu", torch.cuda.current_device())
+    # print("gpu", torch.cuda.current_device())
     queue_ctr = 0
     item = None
     while True:
@@ -92,7 +78,7 @@ def pin_memory_loop(in_queues, out_queue, abort_event, gpu):
                 out_queue.put(item, timeout=2)
                 item = None
             else:
-                print('pin_memory_loop exiting...')
+                # print('pin_memory_loop exiting...')
                 return
         except Empty:
             pass
@@ -154,6 +140,7 @@ class MultiThreadedAugmenter(object):
         self.pin_memory_thread = None
         self.pin_memory_queue = None
         self.abort_event = Event()
+        self.pin_memory_abort_event = Event()
 
     def __iter__(self):
         return self
@@ -198,6 +185,7 @@ class MultiThreadedAugmenter(object):
                     if not all_alive:
                         print("###########################################\nsome background workers are missing!\n####################################")
                         self.abort_event.set()
+                        self.pin_memory_abort_event.set()
                 pass
 
         return item
@@ -228,6 +216,7 @@ class MultiThreadedAugmenter(object):
     def _start(self):
         if len(self._processes) == 0:
             self.abort_event.clear()
+            self.pin_memory_abort_event.clear()
 
             logging.debug("starting workers")
             self._queue_loop = 0
@@ -246,26 +235,26 @@ class MultiThreadedAugmenter(object):
             if self.pin_memory:
                 import torch
                 self.pin_memory_queue = thrQueue(2)
-                self.pin_memory_thread = threading.Thread(target=pin_memory_loop, args=(self._queues, self.pin_memory_queue, self.abort_event, torch.cuda.current_device()))
+                self.pin_memory_thread = threading.Thread(target=pin_memory_loop, args=(self._queues, self.pin_memory_queue, self.pin_memory_abort_event, torch.cuda.current_device()))
                 self.pin_memory_thread.daemon = True
                 self.pin_memory_thread.start()
         else:
             logging.debug("MultiThreadedGenerator Warning: start() has been called but workers are already running")
 
-    def _finish(self):
+    def _finish(self, timeout=60):
+        self.pin_memory_abort_event.set()
+
+        if self.pin_memory_thread is not None:
+            while(self.pin_memory_thread.is_alive()):
+                sleep(0.2)
+
         self.abort_event.set()
 
         if len(self._processes) != 0:
-            timeout = 60  # one minute for all workers to stop
-            start = time()
             logging.debug("MultiThreadedGenerator: shutting down workers...")
-            while any([i.is_alive() for i in self._processes]) and time() - start < timeout:
-                sleep(0.5)
+            [i.terminate() for i in self._processes]
 
             for i, p in enumerate(self._processes):
-                if p.is_alive():
-                    p.terminate()
-
                 self._queues[i].close()
                 self._queues[i].join_thread()
 

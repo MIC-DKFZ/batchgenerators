@@ -63,7 +63,7 @@ class NormalizeTransform(AbstractTransform):
 
 
 class BrightnessTransform(AbstractTransform):
-    def __init__(self, mu, sigma, per_channel=True, data_key="data", p_per_sample=1):
+    def __init__(self, mu, sigma, per_channel=True, data_key="data", p_per_sample=1, p_per_channel=1):
         """
         Augments the brightness of data. Additive brightness is sampled from Gaussian distribution with mu and sigma
         :param mu: mean of the Gaussian distribution to sample the added brightness from
@@ -78,13 +78,15 @@ class BrightnessTransform(AbstractTransform):
         self.mu = mu
         self.sigma = sigma
         self.per_channel = per_channel
+        self.p_per_channel = p_per_channel
 
     def __call__(self, **data_dict):
         data = data_dict[self.data_key]
 
         for b in range(data.shape[0]):
             if np.random.uniform() < self.p_per_sample:
-                data[b] = augment_brightness_additive(data[b], self.mu, self.sigma, self.per_channel)
+                data[b] = augment_brightness_additive(data[b], self.mu, self.sigma, self.per_channel, 
+                                                      p_per_channel=self.p_per_channel)
 
         data_dict[self.data_key] = data
         return data_dict
