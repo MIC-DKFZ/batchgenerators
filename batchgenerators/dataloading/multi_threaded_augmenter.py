@@ -59,6 +59,7 @@ def producer(queue, data_loader, transform, thread_id, seed, abort_event):
             #print("worder %d event is now set, exiting" % thread_id)
             break
 
+
 def pin_memory_loop(in_queues, out_queue, abort_event, gpu):
     import torch
     torch.cuda.set_device(gpu)
@@ -210,6 +211,8 @@ class MultiThreadedAugmenter(object):
 
         except KeyboardInterrupt:
             logging.error("MultiThreadedGenerator: caught exception: {}".format(sys.exc_info()))
+            self.abort_event.set()
+            self.pin_memory_abort_event.set()
             self._finish()
             raise KeyboardInterrupt
 
@@ -241,14 +244,14 @@ class MultiThreadedAugmenter(object):
         else:
             logging.debug("MultiThreadedGenerator Warning: start() has been called but workers are already running")
 
-    def _finish(self, timeout=60):
+    def _finish(self, timeout=10):
         self.pin_memory_abort_event.set()
-
-        if self.pin_memory_thread is not None:
-            while(self.pin_memory_thread.is_alive()):
-                sleep(0.2)
-
         self.abort_event.set()
+
+        start = time()
+        if self.pin_memory_thread is not None:
+            while self.pin_memory_thread.is_alive() and start + timeout > time():
+                sleep(0.2)
 
         if len(self._processes) != 0:
             logging.debug("MultiThreadedGenerator: shutting down workers...")
