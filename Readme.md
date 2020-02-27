@@ -4,6 +4,14 @@ Research Center (DKFZ) to suit all our deep learning data augmentation needs.
 It is not (yet) perfect, but we feel it is good enough to be shared with the community. If you encounter bug, feel free
 to contact us or open a github issue.
 
+If you use it please cite the following work:
+```
+Isensee Fabian, Jäger Paul, Wasserthal Jakob, Zimmerer David, Petersen Jens, Kohl Simon, 
+Schock Justus, Klein Andre, Roß Tobias, Wirkert Sebastian, Neher Peter, Dinkelacker Stefan, 
+Köhler Gregor, Maier-Hein Klaus (2020). batchgenerators - a python framework for data 
+augmentation. doi:10.5281/zenodo.3632567
+```
+
 [![Build Status](https://travis-ci.org/MIC-DKFZ/batchgenerators.svg?branch=master)](https://travis-ci.org/MIC-DKFZ/batchgenerators)
 
 ## Suported Augmentations
