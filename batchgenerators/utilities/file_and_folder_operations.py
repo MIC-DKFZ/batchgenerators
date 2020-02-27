@@ -33,6 +33,7 @@ subfolders = subdirs  # I am tired of confusing those
 
 
 def maybe_mkdir_p(directory):
+    directory = os.path.abspath(directory)
     splits = directory.split("/")[1:]
     for i in range(0, len(splits)):
         if not os.path.isdir(os.path.join("/", *splits[:i+1])):
