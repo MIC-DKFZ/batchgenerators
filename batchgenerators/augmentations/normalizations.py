@@ -16,7 +16,7 @@ import numpy as np
 
 
 def range_normalization(data, rnge=(0, 1), per_channel=True, eps=1e-8):
-    data_normalized = np.zeros(data.shape)
+    data_normalized = np.zeros(data.shape, dtype=data.dtype)
     for b in range(data.shape[0]):
         if per_channel:
             for c in range(data.shape[1]):
@@ -39,7 +39,7 @@ def min_max_normalization(data, eps):
     return data_normalized
 
 def zero_mean_unit_variance_normalization(data, per_channel=True, epsilon=1e-8):
-    data_normalized = np.zeros(data.shape)
+    data_normalized = np.zeros(data.shape, dtype=data.dtype)
     for b in range(data.shape[0]):
         if per_channel:
             for c in range(data.shape[1]):
@@ -54,7 +54,7 @@ def zero_mean_unit_variance_normalization(data, per_channel=True, epsilon=1e-8):
 
 
 def mean_std_normalization(data, mean, std, per_channel=True):
-    data_normalized = np.zeros(data.shape)
+    data_normalized = np.zeros(data.shape, dtype=data.dtype)
     if isinstance(data, np.ndarray):
         data_shape = tuple(list(data.shape))
     elif isinstance(data, (list, tuple)):
