@@ -141,10 +141,12 @@ class MultiThreadedAugmenter(object):
         timeout (int): How long do we wait for the background workers to do stuff? If timeout seconds have passed and
         self.__get_next_item still has not gotten an item from the workers we will perform a check whether all
         background workers are still alive. If all are alive we wait, if not we set the abort flag.
+        wait_time (float): set this to be lower than the time you need per iteration. Don't set this to 0,
+        that will come with a performance penalty. Default is 0.02 which will be fine for 50 iterations/s
     """
 
     def __init__(self, data_loader, transform, num_processes, num_cached_per_queue=2, seeds=None, pin_memory=False,
-                 timeout=10):
+                 timeout=10, wait_time=0.02):
         self.timeout = timeout
         self.pin_memory = pin_memory
         self.transform = transform
@@ -163,6 +165,7 @@ class MultiThreadedAugmenter(object):
         self.pin_memory_thread = None
         self.pin_memory_queue = None
         self.abort_event = Event()
+        self.wait_time = wait_time
 
     def __iter__(self):
         return self
@@ -170,7 +173,7 @@ class MultiThreadedAugmenter(object):
     def next(self):
         return self.__next__()
 
-    def __get_next_item(self, wait_time=0.05):
+    def __get_next_item(self):
         item = None
 
         while item is None:
@@ -182,7 +185,7 @@ class MultiThreadedAugmenter(object):
             if not self.pin_memory_queue.empty():
                 item = self.pin_memory_queue.get()
             else:
-                sleep(wait_time)
+                sleep(self.wait_time)
 
         return item
 
@@ -234,10 +237,11 @@ class MultiThreadedAugmenter(object):
             else:
                 gpu = None
 
-            self.pin_memory_queue = thrQueue(2)
+            # more caching = more performance. But don't cache too much or your RAM will hate you
+            self.pin_memory_queue = thrQueue(max(3, self.num_cached_per_queue * self.num_processes // 2))
 
             self.pin_memory_thread = threading.Thread(target=results_loop,  args=(
-                self._queues, self.pin_memory_queue, self.abort_event, self.pin_memory, gpu, 0.02))
+                self._queues, self.pin_memory_queue, self.abort_event, self.pin_memory, gpu, self.wait_time))
 
             self.pin_memory_thread.daemon = True
             self.pin_memory_thread.start()
