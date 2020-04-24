@@ -78,6 +78,7 @@ def results_loop(in_queues: List[Queue], out_queue: thrQueue, abort_event: Event
     do_pin_memory = torch is not None and pin_memory and gpu is not None and torch.cuda.is_available()
 
     if do_pin_memory:
+        print('using pin_memory on device', gpu)
         torch.cuda.set_device(gpu)
 
     queue_ctr = 0
@@ -89,7 +90,7 @@ def results_loop(in_queues: List[Queue], out_queue: thrQueue, abort_event: Event
         # the incoming queues and ignore all the errors occuring during this process.
         try:
             if abort_event.is_set():
-                print('abort event is set')
+                # print('abort event is set')
                 return
 
             # if we don't have an item we need to fetch it first. If the queue we want to get it from it empty, try
