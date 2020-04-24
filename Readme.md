@@ -99,7 +99,11 @@ This is not required on Linux.
 
 
 ## Release Notes
+(only highlights, not an exhaustive list)
 
+- 0.20.0: fixed an issue with MultiThreadedAugmenter not terminating properly after KeyboardInterrupt; Fixed an error 
+with the number and order of samples being returned when pin_memory=True; Improved performance by always hiding 
+process-process communication bottleneck through threading
 - 0.19.5: fixed OMP_NUM_THREADS issue by using threadpoolctl package; dropped python 2 support (threadpoolctl is not 
 available for python 2)
 - 0.19:
