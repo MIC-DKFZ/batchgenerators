@@ -43,8 +43,8 @@ class TestDataLoader(unittest.TestCase):
                 for i in dl:
                     idx += i
 
-                assert len(idx) == len(data)
-                assert all([i == j for i,j in zip(idx, data)])
+                self.assertTrue(len(idx) == len(data))
+                self.assertTrue(all([i == j for i,j in zip(idx, data)]))
 
     def test_return_all_indices_single_threaded_shuffle_True(self):
         data = list(range(123))
@@ -59,12 +59,12 @@ class TestDataLoader(unittest.TestCase):
                 for i in dl:
                     idx += i
 
-                assert len(idx) == len(data)
+                self.assertTrue(len(idx) == len(data))
 
-                assert not all([i == j for i, j in zip(idx, data)])
+                self.assertTrue(not all([i == j for i, j in zip(idx, data)]))
 
                 idx.sort()
-                assert all([i == j for i,j in zip(idx, data)])
+                self.assertTrue(all([i == j for i,j in zip(idx, data)]))
 
     def test_infinite_single_threaded(self):
         data = list(range(123))
@@ -93,8 +93,8 @@ class TestDataLoader(unittest.TestCase):
             assert len(i) == batch_size
             total += batch_size
 
-        assert total == 120
-        assert ctr == 10
+        self.assertTrue(total == 120)
+        self.assertTrue(ctr == 10)
 
         dl = DummyDataLoader(deepcopy(data), batch_size, 1, 1, return_incomplete=True, shuffle=False, infinite=False)
         # this should now not raise a StopIteration anymore
@@ -104,8 +104,8 @@ class TestDataLoader(unittest.TestCase):
             ctr += 1
             total += len(i)
 
-        assert total == 123
-        assert ctr == 11
+        self.assertTrue(total == 123)
+        self.assertTrue(ctr == 11)
 
     def test_return_all_indices_multi_threaded_shuffle_False(self):
         data = list(range(123))
@@ -121,8 +121,8 @@ class TestDataLoader(unittest.TestCase):
                 for i in mt:
                     idx += i
 
-                assert len(idx) == len(data)
-                assert all([i == j for i,j in zip(idx, data)])
+                self.assertTrue(len(idx) == len(data))
+                self.assertTrue(all([i == j for i,j in zip(idx, data)]))
 
     def test_return_all_indices_multi_threaded_shuffle_True(self):
         data = list(range(123))
@@ -138,12 +138,12 @@ class TestDataLoader(unittest.TestCase):
                 for i in mt:
                     idx += i
 
-                assert len(idx) == len(data)
+                self.assertTrue(len(idx) == len(data))
 
-                assert not all([i == j for i, j in zip(idx, data)])
+                self.assertTrue(not all([i == j for i, j in zip(idx, data)]))
 
                 idx.sort()
-                assert all([i == j for i,j in zip(idx, data)])
+                self.assertTrue(all([i == j for i,j in zip(idx, data)]))
 
     def test_infinite_multi_threaded(self):
         data = list(range(123))
@@ -178,8 +178,8 @@ class TestDataLoader(unittest.TestCase):
             assert len(i) == batch_size
             total += batch_size
 
-        assert total == 120
-        assert ctr == 10
+        self.assertTrue(total == 120)
+        self.assertTrue(ctr == 10)
 
         dl = DummyDataLoader(deepcopy(data), batch_size, num_workers, 1, return_incomplete=True, shuffle=False, infinite=False)
         mt = MultiThreadedAugmenter(dl, None, num_workers, 1, None, False)
@@ -190,8 +190,8 @@ class TestDataLoader(unittest.TestCase):
             ctr += 1
             total += len(i)
 
-        assert total == 123
-        assert ctr == 11
+        self.assertTrue(total == 123)
+        self.assertTrue(ctr == 11)
 
 
 if __name__ == "__main__":

@@ -45,7 +45,7 @@ def producer(queue, data_loader, transform, thread_id, seed, abort_event, wait_t
 
     try:
         while True:
-        # check if abort event was set
+            # check if abort event was set
             if not abort_event.is_set():
                 # print("worker %d event not set" % thread_id)
                 if item is None:
@@ -81,9 +81,9 @@ def results_loop(in_queues: List[Queue], out_queue: thrQueue, abort_event: Event
         print('using pin_memory on device', gpu)
         torch.cuda.set_device(gpu)
 
-    queue_ctr = 0
-
     item = None
+    queue_ctr = 0
+    end_ctr = 0
 
     while True:
         # if abort_event is set we need to clean up. This is where it hangs sometimes so it makes sense to drain all
@@ -107,6 +107,13 @@ def results_loop(in_queues: List[Queue], out_queue: thrQueue, abort_event: Event
                                 if isinstance(item[k], torch.Tensor):
                                     item[k] = item[k].pin_memory()
                     queue_ctr += 1
+
+                    if isinstance(item, str) and item == 'end':
+                        end_ctr += 1
+                    if end_ctr == len(in_queues):
+                        end_ctr = 0
+                        queue_ctr = 0
+
                 else:
                     sleep(wait_time)
                     continue
@@ -161,7 +168,7 @@ class MultiThreadedAugmenter(object):
         self._queues = []
         self._processes = []
         self._end_ctr = 0
-        self._queue_loop = 0
+        self._queue_ctr = 0
         self.pin_memory_thread = None
         self.pin_memory_queue = None
         self.abort_event = Event()
@@ -199,7 +206,7 @@ class MultiThreadedAugmenter(object):
                 self._end_ctr += 1
                 if self._end_ctr == self.num_processes:
                     self._end_ctr = 0
-                    self._queue_loop = 0
+                    self._queue_ctr = 0
                     logging.debug("MultiThreadedGenerator: finished data generation")
                     raise StopIteration
 
@@ -218,7 +225,7 @@ class MultiThreadedAugmenter(object):
             self.abort_event.clear()
 
             logging.debug("starting workers")
-            self._queue_loop = 0
+            self._queue_ctr = 0
             self._end_ctr = 0
 
             if hasattr(self.generator, 'was_initialized'):
@@ -228,7 +235,7 @@ class MultiThreadedAugmenter(object):
                 for i in range(self.num_processes):
                     self._queues.append(Queue(self.num_cached_per_queue))
                     self._processes.append(Process(target=producer, args=(
-                    self._queues[i], self.generator, self.transform, i, self.seeds[i], self.abort_event)))
+                        self._queues[i], self.generator, self.transform, i, self.seeds[i], self.abort_event)))
                     self._processes[-1].daemon = True
                     self._processes[-1].start()
 
@@ -240,7 +247,7 @@ class MultiThreadedAugmenter(object):
             # more caching = more performance. But don't cache too much or your RAM will hate you
             self.pin_memory_queue = thrQueue(max(3, self.num_cached_per_queue * self.num_processes // 2))
 
-            self.pin_memory_thread = threading.Thread(target=results_loop,  args=(
+            self.pin_memory_thread = threading.Thread(target=results_loop, args=(
                 self._queues, self.pin_memory_queue, self.abort_event, self.pin_memory, gpu, self.wait_time))
 
             self.pin_memory_thread.daemon = True
@@ -267,7 +274,7 @@ class MultiThreadedAugmenter(object):
             self._processes = []
             self._queue = None
             self._end_ctr = 0
-            self._queue_loop = 0
+            self._queue_ctr = 0
 
             del self.pin_memory_queue
 
