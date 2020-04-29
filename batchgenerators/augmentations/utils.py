@@ -563,7 +563,7 @@ def convert_seg_to_bounding_box_coordinates(data_dict, dim, get_rois_from_seg_fl
 
         data_dict['bb_target'] = np.array(bb_target)
         data_dict['roi_masks'] = np.array(roi_masks)
-        data_dict['roi_labels'] = np.array(roi_labels)
+        data_dict['class_target'] = np.array(roi_labels)
         data_dict['seg'] = out_seg
 
         return data_dict
