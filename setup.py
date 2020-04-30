@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(name='batchgenerators',
-      version='0.20.0',
+      version='0.20.1',
       description='Data augmentation toolkit',
       url='https://github.com/MIC-DKFZ/batchgenerators',
       author='Division of Medical Image Computing, German Cancer Research Center',
