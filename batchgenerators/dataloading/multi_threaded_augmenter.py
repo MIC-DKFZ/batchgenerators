@@ -259,7 +259,7 @@ class MultiThreadedAugmenter(object):
         self.abort_event.set()
 
         start = time()
-        while self.pin_memory_thread.is_alive() and start + timeout > time():
+        while self.pin_memory_thread is not None and self.pin_memory_thread.is_alive() and start + timeout > time():
             sleep(0.2)
 
         if len(self._processes) != 0:
