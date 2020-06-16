@@ -197,7 +197,8 @@ class MultiThreadedAugmenter(object):
         return item
 
     def __next__(self):
-        if len(self._queues) == 0:
+        if len(self._queues) == 0 or len(self._processes) != self.num_processes or not all([i.is_alive() for i
+                                                                                            in self._processes]):
             self._start()
         try:
             item = self.__get_next_item()
@@ -259,7 +260,7 @@ class MultiThreadedAugmenter(object):
         self.abort_event.set()
 
         start = time()
-        while self.pin_memory_thread.is_alive() and start + timeout > time():
+        while self.pin_memory_thread is not None and self.pin_memory_thread.is_alive() and start + timeout > time():
             sleep(0.2)
 
         if len(self._processes) != 0:
