@@ -301,7 +301,7 @@ class SpatialTransform(AbstractTransform):
                  do_scale=True, scale=(0.75, 1.25), border_mode_data='nearest', border_cval_data=0, order_data=3,
                  border_mode_seg='constant', border_cval_seg=0, order_seg=0, random_crop=True, data_key="data",
                  label_key="seg", p_el_per_sample=1, p_scale_per_sample=1, p_rot_per_sample=1,
-                 independent_scale_for_each_axis=False, p_rot_per_axis:float=1):
+                 independent_scale_for_each_axis=False, p_rot_per_axis:float=1, p_independent_scale_per_axis: int=1):
         self.independent_scale_for_each_axis = independent_scale_for_each_axis
         self.p_rot_per_sample = p_rot_per_sample
         self.p_scale_per_sample = p_scale_per_sample
@@ -327,6 +327,7 @@ class SpatialTransform(AbstractTransform):
         self.order_seg = order_seg
         self.random_crop = random_crop
         self.p_rot_per_axis = p_rot_per_axis
+        self.p_independent_scale_per_axis = p_independent_scale_per_axis
 
     def __call__(self, **data_dict):
         data = data_dict.get(self.data_key)
@@ -354,7 +355,8 @@ class SpatialTransform(AbstractTransform):
                                   p_el_per_sample=self.p_el_per_sample, p_scale_per_sample=self.p_scale_per_sample,
                                   p_rot_per_sample=self.p_rot_per_sample,
                                   independent_scale_for_each_axis=self.independent_scale_for_each_axis,
-                                  p_rot_per_axis=self.p_rot_per_axis)
+                                  p_rot_per_axis=self.p_rot_per_axis, 
+                                  p_independent_scale_per_axis=self.p_independent_scale_per_axis)
         data_dict[self.data_key] = ret_val[0]
         if seg is not None:
             data_dict[self.label_key] = ret_val[1]
