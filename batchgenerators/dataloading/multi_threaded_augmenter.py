@@ -184,10 +184,11 @@ class MultiThreadedAugmenter(object):
         item = None
 
         while item is None:
-            if self.abort_event.is_set():
+            if self.abort_event.is_set() or (not all([i.is_alive() for i in self._processes])):
                 self._finish()
                 raise RuntimeError("MultiThreadedAugmenter.abort_event was set, something went wrong. Maybe one of "
-                                   "your workers crashed")
+                                   "your workers crashed. This is not the actual error message! Look further up your "
+                                   "stdout to see what caused the error. Please also check whether your RAM was full")
 
             if not self.pin_memory_queue.empty():
                 item = self.pin_memory_queue.get()
@@ -222,7 +223,8 @@ class MultiThreadedAugmenter(object):
             raise KeyboardInterrupt
 
     def _start(self):
-        if len(self._processes) == 0:
+        if len(self._processes) != self.num_processes:
+            self._finish()
             self.abort_event.clear()
 
             logging.debug("starting workers")
