@@ -1,4 +1,5 @@
 import os
+import pathlib
 import pickle
 import json
 
@@ -33,16 +34,7 @@ subfolders = subdirs  # I am tired of confusing those
 
 
 def maybe_mkdir_p(directory):
-    directory = os.path.abspath(directory)
-    splits = directory.split("/")[1:]
-    for i in range(0, len(splits)):
-        if not os.path.isdir(os.path.join("/", *splits[:i+1])):
-            try:
-                os.mkdir(os.path.join("/", *splits[:i+1]))
-            except FileExistsError:
-                # this can sometimes happen when two jobs try to create the same directory at the same time,
-                # especially on network drives.
-                print("WARNING: Folder %s already existed and does not need to be created" % directory)
+    pathlib.Path(directory).mkdir(parents=True, exist_ok=True)
 
 
 def load_pickle(file, mode='rb'):
