@@ -191,7 +191,8 @@ class MirrorTransform(AbstractTransform):
 
     """
 
-    def __init__(self, axes=(0, 1, 2), data_key="data", label_key="seg"):
+    def __init__(self, axes=(0, 1, 2), data_key="data", label_key="seg", p_per_sample=1):
+        self.p_per_sample = p_per_sample
         self.data_key = data_key
         self.label_key = label_key
         self.axes = axes
@@ -205,13 +206,14 @@ class MirrorTransform(AbstractTransform):
         seg = data_dict.get(self.label_key)
 
         for b in range(len(data)):
-            sample_seg = None
-            if seg is not None:
-                sample_seg = seg[b]
-            ret_val = augment_mirroring(data[b], sample_seg, axes=self.axes)
-            data[b] = ret_val[0]
-            if seg is not None:
-                seg[b] = ret_val[1]
+            if np.random.uniform() < self.p_per_sample:
+                sample_seg = None
+                if seg is not None:
+                    sample_seg = seg[b]
+                ret_val = augment_mirroring(data[b], sample_seg, axes=self.axes)
+                data[b] = ret_val[0]
+                if seg is not None:
+                    seg[b] = ret_val[1]
 
         data_dict[self.data_key] = data
         if seg is not None:

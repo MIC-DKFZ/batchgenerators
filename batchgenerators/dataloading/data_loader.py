@@ -140,20 +140,23 @@ class DataLoader(SlimDataLoaderBase):
         self.infinite = infinite
         self.shuffle = shuffle
         self.return_incomplete = return_incomplete
-        self.rs = np.random.RandomState(seed_for_shuffle)
+        self.seed_for_shuffle = seed_for_shuffle
+        self.rs = np.random.RandomState(self.seed_for_shuffle)
         self.current_position = None
         self.was_initialized = False
         self.last_reached = False
+        self.num_resets = 0
 
         # when you derive, make sure to set this! We can't set it here because we don't know what data will be like
         self.indices = None
 
     def reset(self):
+        self.num_resets += 1
         assert self.indices is not None
         self.current_position = self.thread_id * self.batch_size
         self.was_initialized = True
-        self.rs.seed(self.rs.randint(0, 999999999))
         if self.shuffle:
+            self.rs.seed(self.seed_for_shuffle if self.seed_for_shuffle is None else self.seed_for_shuffle + self.num_resets)
             self.rs.shuffle(self.indices)
         self.last_reached = False
 
@@ -179,7 +182,7 @@ class DataLoader(SlimDataLoaderBase):
                 self.last_reached = True
                 break
 
-        if len(indices) > 0 and (not self.last_reached or self.return_incomplete):
+        if len(indices) > 0 and ((not self.last_reached) or self.return_incomplete):
             self.current_position += (self.number_of_threads_in_multithreaded - 1) * self.batch_size
             return indices
         else:

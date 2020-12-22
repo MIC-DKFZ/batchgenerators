@@ -262,7 +262,7 @@ def augment_spatial(data, seg, patch_size, patch_center_dist_from_border=30,
             coords = scale_coords(coords, sc)
             modified_coords = True
 
-        # now find a nice center location
+        # now find a nice center location 
         if modified_coords:
             for d in range(dim):
                 if random_crop:
