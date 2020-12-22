@@ -11,14 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
+from abc import ABCMeta, abstractmethod
 from builtins import object
 import warnings
 from collections import OrderedDict
 from warnings import warn
 import numpy as np
-from abc import ABCMeta, abstractmethod
 
 from batchgenerators.dataloading.dataset import Dataset
 
@@ -136,6 +134,21 @@ class SlimDataLoaderBase(object):
 class DataLoader(SlimDataLoaderBase):
     def __init__(self, data, batch_size, num_threads_in_multithreaded=1, seed_for_shuffle=None, return_incomplete=False,
                  shuffle=True, infinite=False):
+        """
+
+        :param data: will be stored in self._data for use in generate_train_batch
+        :param batch_size: will be used by get_indices to return the correct number of indices
+        :param num_threads_in_multithreaded: num_threads_in_multithreaded necessary for synchronization of dataloaders
+        when using multithreaded augmenter
+        :param seed_for_shuffle: for reproducibility
+        :param return_incomplete: whether or not to return batches that are incomplete. Only applies is infinite=False.
+        If your data has len of 34 and your batch size is 32 then there return_incomplete=False will make this loader
+        return only onebatch of shapre 32 (omitting 2 of your training examples). If return_incomplete=True a second
+        batch with batch size 2 will be returned.
+        :param shuffle: if True, the order of the indices will be shuffled between epochs. Only applies if infinite=False
+        :param infinite: if True, each batch contains randomly (uniformly) sampled indices. An unlimited number of
+        batches is returned. If False, DataLoader will iterate over the data only once
+        """
         super(DataLoader, self).__init__(data, batch_size, num_threads_in_multithreaded)
         self.infinite = infinite
         self.shuffle = shuffle
@@ -145,31 +158,34 @@ class DataLoader(SlimDataLoaderBase):
         self.current_position = None
         self.was_initialized = False
         self.last_reached = False
-        self.num_resets = 0
 
         # when you derive, make sure to set this! We can't set it here because we don't know what data will be like
         self.indices = None
 
     def reset(self):
-        self.num_resets += 1
         assert self.indices is not None
+
         self.current_position = self.thread_id * self.batch_size
+
         self.was_initialized = True
-        if self.shuffle:
-            self.rs.seed(self.seed_for_shuffle if self.seed_for_shuffle is None else self.seed_for_shuffle + self.num_resets)
+
+        # no need to shuffle if we are returning infinite random samples
+        if not self.infinite and self.shuffle:
             self.rs.shuffle(self.indices)
+
         self.last_reached = False
 
     def get_indices(self):
+        # if self.infinite, this is easy
+        if self.infinite:
+            return np.random.choice(self.indices, self.batch_size, replace=True, p=None)
+
         if self.last_reached:
             self.reset()
             raise StopIteration
 
         if not self.was_initialized:
             self.reset()
-
-        if self.infinite:
-            return np.random.choice(self.indices, self.batch_size, replace=True, p=None)
 
         indices = []
 
