@@ -200,7 +200,6 @@ class TestDataLoader(unittest.TestCase):
     def test_thoroughly(self):
         data_list = [list(range(123)),
             list(range(1243)),
-            list(range(22)),
             list(range(1)),
             list(range(7)),
                      ]
@@ -231,13 +230,16 @@ class TestDataLoader(unittest.TestCase):
 
                                 expected_num_items = len(data) if return_incomplete else expected_num_batches * batch_size
 
+                                print("init")
                                 dl = DummyDataLoader(deepcopy(data), batch_size, num_workers, seed_for_shuffle,
                                                      return_incomplete=return_incomplete, shuffle=shuffle,
                                                      infinite=False)
 
                                 mt = MultiThreadedAugmenter(dl, None, num_workers, 5, None, False, wait_time=0)
+                                mt._start()
 
                                 for epoch in range(epochs):
+                                    print("sampling")
                                     all_return = []
                                     total = 0
                                     ctr = 0
@@ -246,10 +248,10 @@ class TestDataLoader(unittest.TestCase):
                                         total += len(i)
                                         all_return += i
 
+                                    print('asserting')
                                     self.assertTrue(total == expected_num_items)
                                     self.assertTrue(ctr == expected_num_batches)
                                     self.assertTrue(len(np.unique(all_return)) == expected_num_items)
-
 
 
 if __name__ == "__main__":
