@@ -74,7 +74,7 @@ def producer(queue, data_loader, transform, thread_id, seed, abort_event, wait_t
 
 
 def results_loop(in_queues: List[Queue], out_queue: thrQueue, abort_event: Event, pin_memory: bool,
-                 gpu: Union[int, None] = None, wait_time: float = 0.02):
+                 gpu: Union[int, None], wait_time: float, worker_list: list):
     do_pin_memory = torch is not None and pin_memory and gpu is not None and torch.cuda.is_available()
 
     if do_pin_memory:
@@ -90,8 +90,15 @@ def results_loop(in_queues: List[Queue], out_queue: thrQueue, abort_event: Event
         # the incoming queues and ignore all the errors occuring during this process.
         try:
             if abort_event.is_set():
-                # print('abort event is set')
                 return
+
+            # check if all workers are still alive
+            if not all([i.is_alive() for i in worker_list]):
+                abort_event.set()
+                raise RuntimeError("Someone died. Better end this madness. This is not the actual error message! Look "
+                                   "further up your "
+                                   "stdout to see what caused the error. Please also check whether your RAM was full")
+
 
             # if we don't have an item we need to fetch it first. If the queue we want to get it from it empty, try
             # again later
@@ -173,6 +180,7 @@ class MultiThreadedAugmenter(object):
         self.pin_memory_queue = None
         self.abort_event = Event()
         self.wait_time = wait_time
+        self.was_initialized = False
 
     def __iter__(self):
         return self
@@ -184,7 +192,7 @@ class MultiThreadedAugmenter(object):
         item = None
 
         while item is None:
-            if self.abort_event.is_set() or (not all([i.is_alive() for i in self._processes])):
+            if self.abort_event.is_set():
                 self._finish()
                 raise RuntimeError("MultiThreadedAugmenter.abort_event was set, something went wrong. Maybe one of "
                                    "your workers crashed. This is not the actual error message! Look further up your "
@@ -198,9 +206,9 @@ class MultiThreadedAugmenter(object):
         return item
 
     def __next__(self):
-        if len(self._queues) == 0 or len(self._processes) != self.num_processes or not all([i.is_alive() for i
-                                                                                            in self._processes]):
+        if not self.was_initialized:
             self._start()
+
         try:
             item = self.__get_next_item()
 
@@ -223,7 +231,7 @@ class MultiThreadedAugmenter(object):
             raise KeyboardInterrupt
 
     def _start(self):
-        if len(self._processes) != self.num_processes:
+        if not self.was_initialized:
             self._finish()
             self.abort_event.clear()
 
@@ -251,12 +259,16 @@ class MultiThreadedAugmenter(object):
             self.pin_memory_queue = thrQueue(max(3, self.num_cached_per_queue * self.num_processes // 2))
 
             self.pin_memory_thread = threading.Thread(target=results_loop, args=(
-                self._queues, self.pin_memory_queue, self.abort_event, self.pin_memory, gpu, self.wait_time))
+                self._queues, self.pin_memory_queue, self.abort_event, self.pin_memory, gpu, self.wait_time,
+                self._processes))
 
             self.pin_memory_thread.daemon = True
             self.pin_memory_thread.start()
+
+            self.was_initialized = True
         else:
-            logging.debug("MultiThreadedGenerator Warning: start() has been called but workers are already running")
+            logging.debug("MultiThreadedGenerator Warning: start() has been called but it has already been "
+                          "initialized previously")
 
     def _finish(self, timeout=10):
         self.abort_event.set()
@@ -280,6 +292,7 @@ class MultiThreadedAugmenter(object):
             self._queue_ctr = 0
 
             del self.pin_memory_queue
+        self.was_initialized = False
 
     def restart(self):
         self._finish()

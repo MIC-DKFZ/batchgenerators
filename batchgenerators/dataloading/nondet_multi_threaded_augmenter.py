@@ -21,7 +21,7 @@ from queue import Queue as thrQueue
 import numpy as np
 import logging
 from multiprocessing import Event
-from time import sleep
+from time import sleep, time
 
 from batchgenerators.dataloading import DataLoader
 from tests.test_DataLoader import DummyDataLoader
@@ -89,17 +89,19 @@ def results_loop(in_queue: Queue, out_queue: thrQueue, abort_event: Event,
             if abort_event.is_set():
                 return
 
+            # check if all workers are still alive
+            if not all([i.is_alive() for i in worker_list]):
+                abort_event.set()
+                raise RuntimeError("Someone died. Better end this madness. This is not the actual error message! Look "
+                                   "further up your "
+                                   "stdout to see what caused the error. Please also check whether your RAM was full")
+
             if item is None:
                 if not in_queue.empty():
                     item = in_queue.get()
                     if do_pin_memory:
                         item = pin_memory_of_all_eligible_items_in_dict(item)
                 else:
-                    # check if all workers are still alive
-                    if not all([i.is_alive() for i in worker_list]):
-                        abort_event.set()
-                        raise RuntimeError("Someone died. Better end this madness")
-
                     sleep(wait_time)
                     continue
 
@@ -116,9 +118,9 @@ def results_loop(in_queue: Queue, out_queue: thrQueue, abort_event: Event,
             raise e
 
 
-class FasterMultiThreadedAugmenter(object):
+class NonDetMultiThreadedAugmenter(object):
     """
-    Non-deterministic but potentially faster than MultiThreadedAugmenter and uses less RAM.
+    Non-deterministic but potentially faster than MultiThreadedAugmenter and uses less RAM. Also less complicated.
     This one only has one queue through which the communication with background workers happens, meaning that there
     can be a race condition to it (and thus a nondeterministic ordering of batches). The advantage of this approach is
     that we will never run into the issue where everything needs to wait for worker X to finish its work.
@@ -251,11 +253,14 @@ if __name__ == '__main__':
                          return_incomplete=False, shuffle=True,
                          infinite=True)
 
-    mt = FasterMultiThreadedAugmenter(dl, None, 3, 2, None, False, 10, 0.02)
+    mt = NonDetMultiThreadedAugmenter(dl, None, 3, 2, None, False, 0.02)
     mt._start()
 
+    st = time()
     for i in range(1000):
         print(i)
         b = next(mt)
+    end = time()
+    print(end - st)
 
     mt._finish()
