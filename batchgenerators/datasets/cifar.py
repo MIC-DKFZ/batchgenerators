@@ -100,9 +100,11 @@ class CifarDataset(Dataset):
 
 
 class HighPerformanceCIFARLoader(DataLoader):
-    def __init__(self, data, batch_size, num_threads_in_multithreaded, seed_for_shuffle=1, infinite=False):
+    def __init__(self, data, batch_size, num_threads_in_multithreaded, seed_for_shuffle=1, infinite=False,
+                 return_incomplete=False):
         super(HighPerformanceCIFARLoader, self).__init__(data, batch_size, num_threads_in_multithreaded,
-                                                         seed_for_shuffle, infinite=infinite)
+                                                         seed_for_shuffle, infinite=infinite,
+                                                         return_incomplete=return_incomplete)
         self.indices = np.arange(len(data[0]))
 
     def generate_train_batch(self):

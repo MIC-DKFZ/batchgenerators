@@ -68,6 +68,7 @@ def producer(queue, data_loader, transform, thread_id, seed, abort_event, wait_t
         abort_event.set()
         return
     except Exception as e:
+        print(sys.last_traceback())
         print("Exception in background worker %d:\n" % thread_id, e)
         abort_event.set()
         return

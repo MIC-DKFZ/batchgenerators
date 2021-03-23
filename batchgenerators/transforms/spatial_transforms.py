@@ -486,7 +486,9 @@ class TransposeAxesTransform(AbstractTransform):
     def __init__(self, transpose_any_of_these=(0, 1, 2), data_key="data", label_key="seg", p_per_sample=1):
         '''
         This transform will randomly shuffle the axes of transpose_any_of_these.
-        Requires your patch size to have the same dimension in all spatial axes (like 128x128x128, NOT 128x128x96)!
+        Requires your patch size to have the same dimension in all axes specified in transpose_any_of_these. So if
+        transpose_any_of_these=(0, 1, 2) the shape must be (128x128x128) and cannotbe, for example (128x128x96)
+        (transpose_any_of_these=(0, 1) would be the correct one here)!
         :param transpose_any_of_these: spatial dimensions to transpose, 0=x, 1=y, 2=z. Must be a tuple/list of len>=2
         :param data_key:
         :param label_key:
