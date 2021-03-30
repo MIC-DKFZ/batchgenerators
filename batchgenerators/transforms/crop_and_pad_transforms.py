@@ -141,3 +141,68 @@ class PadTransform(AbstractTransform):
 
         return data_dict
 
+
+class RandomShiftTransform(AbstractTransform):
+    def __init__(self, shift_mu, shift_sigma, p_per_sample=1, p_per_channel=0.5, border_value=0, apply_to_keys=('data',)):
+        """
+        randomly shifts the data by some amount. Equivalent to pad -> random crop but with (probably) less
+        computational requirements
+
+        shift_mu gives the mean value of the shift, 0 is recommended
+        shift_sigma gives the standard deviation of the shift
+
+        shift will ne drawn from a Gaussian distribution with mean shift_mu and variance shift_sigma
+
+        shift_mu and shift_sigma can either be float values OR tuples of float values. If they are tuples they will
+        be interpreted as separate mean and std for each dimension
+
+        TODO separate per channel or not?
+
+        :param shift_mu:
+        :param shift_sigma:
+        :param p_per_sample:
+        :param p_per_channel:
+        :param apply_to_keys:
+        """
+        self.apply_to_keys = apply_to_keys
+        self.p_per_channel = p_per_channel
+        self.p_per_sample = p_per_sample
+        self.shift_sigma = shift_sigma
+        self.shift_mu = shift_mu
+        self.border_value = border_value
+
+    def __call__(self, **data_dict):
+        for k in self.apply_to_keys:
+            workon = data_dict[k]
+            for b in range(workon.shape[0]):
+                if np.random.uniform(0, 1) < self.p_per_sample:
+                    for c in range(workon.shape[1]):
+                        if np.random.uniform(0, 1) < self.p_per_channel:
+                            shift_here = []
+                            for d in range(len(workon.shape) - 2):
+                                shift_here.append(int(np.round(np.random.normal(
+                                    self.shift_mu[d] if isinstance(self.shift_mu, (list, tuple)) else self.shift_mu,
+                                    self.shift_sigma[d] if isinstance(self.shift_sigma,
+                                                                      (list, tuple)) else self.shift_sigma,
+                                    size=1))))
+                            data_copy = np.ones_like(workon[b, c]) * self.border_value
+                            lb_x = max(shift_here[0], 0)
+                            ub_x = max(0, min(workon.shape[2], workon.shape[2] + shift_here[0]))
+                            lb_y = max(shift_here[1], 0)
+                            ub_y = max(0, min(workon.shape[3], workon.shape[3] + shift_here[1]))
+
+                            t_lb_x = max(-shift_here[0], 0)
+                            t_ub_x = max(0, min(workon.shape[2], workon.shape[2] - shift_here[0]))
+                            t_lb_y = max(-shift_here[1], 0)
+                            t_ub_y = max(0, min(workon.shape[3], workon.shape[3] - shift_here[1]))
+
+                            if len(shift_here) == 2:
+                                data_copy[t_lb_x:t_ub_x, t_lb_y:t_ub_y] = workon[b, c, lb_x:ub_x, lb_y:ub_y]
+                            elif len(shift_here) == 3:
+                                lb_z = max(shift_here[2], 0)
+                                ub_z = max(0, min(workon.shape[4], workon.shape[4] + shift_here[2]))
+                                t_lb_z = max(-shift_here[2], 0)
+                                t_ub_z = max(0, min(workon.shape[2], workon.shape[4] - shift_here[2]))
+                                data_copy[t_lb_x:t_ub_x, t_lb_y:t_ub_y, t_lb_z:t_ub_z] = workon[b, c, lb_x:ub_x, lb_y:ub_y, lb_z:ub_z]
+                            data_dict[k][b, c] = data_copy
+        return data_dict
