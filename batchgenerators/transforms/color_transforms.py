@@ -254,81 +254,67 @@ class BrightnessGradientAdditiveTransform(AbstractTransform):
         for bi in range(b):
             if np.random.uniform() < self.p_per_sample:
                 if self.same_for_all_channels:
-                    kernel = BrightnessGradientAdditiveTransform.generate_kernel(img_shape, self.scale, self.loc)
+                    kernel = self._generate_kernel(img_shape)
                     # first center the mean of the kernel
                     kernel -= kernel.mean()
                     mx = np.max(np.abs(kernel))
                     if not callable(self.max_strength):
-                        strength = BrightnessGradientAdditiveTransform._get_max_strength(self.max_strength,
-                                                                                         None,
-                                                                                         None)
+                        strength = self._get_max_strength(None, None)
                     for ci in range(c):
                         if np.random.uniform() < self.p_per_channel:
                             # now rescale so that the maximum value of the kernel is max_strength
-                            strength = BrightnessGradientAdditiveTransform._get_max_strength(self.max_strength,
-                                                                                             data[bi, ci],
-                                                                                             kernel) if callable(self.max_strength) else strength
+                            strength = self._get_max_strength(data[bi, ci], kernel) if callable(self.max_strength) else strength
                             kernel_scaled = np.copy(kernel) / mx * strength
                             data[bi, ci] += kernel_scaled
                 else:
                     for ci in range(c):
                         if np.random.uniform() < self.p_per_channel:
-                            kernel = BrightnessGradientAdditiveTransform.generate_kernel(img_shape, self.scale,
-                                                                                         self.loc)
+                            kernel = self._generate_kernel(img_shape)
                             kernel -= kernel.mean()
                             mx = np.max(np.abs(kernel))
-                            strength = BrightnessGradientAdditiveTransform._get_max_strength(self.max_strength,
-                                                                                             data[bi, ci], kernel)
+                            strength = self._get_max_strength(data[bi, ci], kernel)
                             kernel = kernel / mx * strength
                             data[bi, ci] += kernel
         return data_dict
 
-    @staticmethod
-    def _get_scale(scale, image_shape, dimension):
-        if isinstance(scale, float):
-            return scale
-        elif isinstance(scale, (list, tuple)):
-            assert len(scale) == 2
-            return np.random.uniform(*scale)
-        elif callable(scale):
-            return scale(image_shape, dimension)
+    def _get_scale(self, image_shape, dimension):
+        if isinstance(self.scale, float):
+            return self.scale
+        elif isinstance(self.scale, (list, tuple)):
+            assert len(self.scale) == 2
+            return np.random.uniform(*self.scale)
+        elif callable(self.scale):
+            return self.scale(image_shape, dimension)
 
-    @staticmethod
-    def _get_loc(loc, image_shape, dimension):
-        if isinstance(loc, float):
-            return loc
-        elif isinstance(loc, (list, tuple)):
-            assert len(loc) == 2
-            return np.random.uniform(*loc)
-        elif callable(loc):
-            return loc(image_shape, dimension)
+    def _get_loc(self, image_shape, dimension):
+        if isinstance(self.loc, float):
+            return self.loc
+        elif isinstance(self.loc, (list, tuple)):
+            assert len(self.loc) == 2
+            return np.random.uniform(*self.loc)
+        elif callable(self.loc):
+            return self.loc(image_shape, dimension)
         else:
             raise RuntimeError()
 
-    @staticmethod
-    def _get_max_strength(max_strength, image, add_gauss):
-        if isinstance(max_strength, float):
-            return max_strength
-        elif isinstance(max_strength, (list, tuple)):
-            assert len(max_strength) == 2
-            return np.random.uniform(*max_strength)
-        elif callable(max_strength):
-            return max_strength(image, add_gauss)
+    def _get_max_strength(self, image, add_gauss):
+        if isinstance(self.max_strength, float):
+            return self.max_strength
+        elif isinstance(self.max_strength, (list, tuple)):
+            assert len(self.max_strength) == 2
+            return np.random.uniform(*self.max_strength)
+        elif callable(self.max_strength):
+            return self.max_strength(image, add_gauss)
         else:
             raise RuntimeError()
 
-    @staticmethod
-    def generate_kernel(img_shp: Tuple[int, ...],
-                        scale: Union[
-                            Tuple[float, float], float, Callable[[Union[Tuple[int, ...], List[int]], int], float]],
-                        loc: Union[Tuple[float, float], Callable[[Union[Tuple[int, ...], List[int]], int], float]],
-                        ) -> np.ndarray:
+    def _generate_kernel(self, img_shp: Tuple[int, ...]) -> np.ndarray:
         assert len(img_shp) <= 3
         kernels = []
         for d in range(len(img_shp)):
             image_size_here = img_shp[d]
-            loc = BrightnessGradientAdditiveTransform._get_loc(loc, img_shp, d)
-            scale = BrightnessGradientAdditiveTransform._get_scale(scale, img_shp, d)
+            loc = self._get_loc(img_shp, d)
+            scale = self._get_scale(img_shp, d)
 
             loc_rescaled = loc * image_size_here
             x = np.arange(-0.5, image_size_here + 0.5)
@@ -344,14 +330,15 @@ class BrightnessGradientAdditiveTransform(AbstractTransform):
 
 
 if __name__ == '__main__':
+    from copy import deepcopy
     # just some playing around with BrightnessGradientAdditiveTransform
     data = {'data': np.random.random((1, 3, 64, 64, 64))}
     tr = BrightnessGradientAdditiveTransform(
         lambda x, y: np.random.uniform(x[y] // 2, x[y]),
         (-1, 2),
-        (0.5, 2),
+        (1, 3),
         same_for_all_channels=False
     )
-    transformed = tr(**data)['data']
+    transformed = tr(**deepcopy(data))['data']
     from batchviewer import view_batch
     view_batch(data['data'][0], transformed[0])
