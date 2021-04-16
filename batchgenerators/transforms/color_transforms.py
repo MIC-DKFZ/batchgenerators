@@ -330,7 +330,7 @@ class BrightnessGradientAdditiveTransform(AbstractTransform):
         return kernel
 
 
-class GammaGradientTransform(AbstractTransform):
+class LocalGammaTransform(AbstractTransform):
     def __init__(self,
                  scale: Union[Tuple[float, float], float, Callable[[Union[Tuple[int, ...], List[int]], int], float]],
                  loc: Union[Tuple[float, float], Callable[[Union[Tuple[int, ...], List[int]], int], float]] = (-1, 2),
@@ -343,13 +343,13 @@ class GammaGradientTransform(AbstractTransform):
         """
         This transform is weird and definitely experimental.
 
-        TODO docu
         Applies gamma correction to the image. The gamma value varies locally using a gaussian kernel
 
-        The gradient is implemented by placing a Gaussian distribution with sigma=scale somewhere in the image. The
-        location of the kernel is selected independently for each image dimension. The location is encoded in % of the
-        image size. The default value of (-1, 2) means that the location will be sampled uniformly from
-        (-image.shape[i], 2* image.shape[i]). It is important to allow the center of the kernel to be outside of the image.
+        The local gamma values are implemented by placing a Gaussian distribution with sigma=scale somewhere in
+        (or close to) the image. The location of the kernel is selected independently for each image dimension.
+        The location is encoded in % of the image size. The default value of (-1, 2) means that the location will be
+        sampled uniformly from (-image.shape[i], 2* image.shape[i]). It is important to allow the center of the kernel
+        to be outside of the image.
 
         IMPORTANT: Try this with different parametrizations and visualize the outcome to get a better feeling for how
         to use this!
@@ -365,8 +365,9 @@ class GammaGradientTransform(AbstractTransform):
             is the index in image.shape we are requesting the location for. Must return a scalar value denoting a relative
             position along axis dimension (0 for index 0, 1 for image.shape[dimension]. Values beyond 0 and 1 are
             possible and even recommended)
-        :param inside_gamma:
-        :param outside_gamma:
+        :param gamma: gamma value at the peak of the gaussian distribution.
+            Recommended: lambda: np.random.uniform(0.01, 1) if np.random.uniform() < 1 else np.random.uniform(1, 3)
+            No, this is not a joke. Deal with it.
         :param same_for_all_channels: If True, then the same gradient will be applied to all selected color
         channels of a sample (see p_per_channel). If False, each selected channel obtains its own random gradient.
         :param allow_kernel_inversion:
@@ -487,10 +488,10 @@ if __name__ == '__main__':
 
     # just some playing around with BrightnessGradientAdditiveTransform
     data = {'data': np.vstack((camera()[None], camera()[None], camera()[None]))[None]}
-    tr = GammaGradientTransform(
+    tr = LocalGammaTransform(
         lambda x, y: np.random.uniform(x[y] // 4, x[y]),
         lambda x, y: np.random.uniform(-1, 0) if np.random.uniform() < 0.5 else np.random.uniform(1, 2),
-        lambda: np.random.uniform(0.01, 1) if np.random.uniform() < 1 else np.random.uniform(1, 10),
+        lambda: np.random.uniform(0.01, 1) if np.random.uniform() < 1 else np.random.uniform(1, 3),
         same_for_all_channels=False
     )
     transformed = tr(**deepcopy(data))['data']
