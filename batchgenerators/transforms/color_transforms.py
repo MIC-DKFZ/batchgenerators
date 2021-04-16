@@ -336,7 +336,6 @@ class LocalGammaTransform(AbstractTransform):
                  loc: Union[Tuple[float, float], Callable[[Union[Tuple[int, ...], List[int]], int], float]] = (-1, 2),
                  gamma: Union[float, Tuple[float, float], Callable[[], Tuple[float, float]]] = (0.5, 1),
                  same_for_all_channels: bool = True,
-                 allow_kernel_inversion: bool = False,
                  p_per_sample: float = 1.,
                  p_per_channel: float = 1.,
                  data_key: str = "data"):
@@ -383,7 +382,6 @@ class LocalGammaTransform(AbstractTransform):
         self.p_per_channel = p_per_channel
         self.data_key = data_key
         self.same_for_all_channels = same_for_all_channels
-        self.allow_kernel_inversion = allow_kernel_inversion
 
     def __call__(self, **data_dict):
         data = data_dict.get(self.data_key)
