@@ -6,7 +6,7 @@ from .color_transforms import BrightnessMultiplicativeTransform, BrightnessTrans
     FancyColorTransform, GammaTransform, IlluminationTransform, NormalizeTransform, ClipValueRange, LocalGammaTransform, \
     BrightnessGradientAdditiveTransform
 from .crop_and_pad_transforms import CenterCropSegTransform, CenterCropTransform, PadTransform, RandomCropTransform
-from .noise_transforms import GaussianBlurTransform, GaussianNoiseTransform
+from .noise_transforms import GaussianBlurTransform, GaussianNoiseTransform, SharpeningTransform, MedianFilterTransform
 from .sample_normalization_transforms import CutOffOutliersTransform, RangeTransform, ZeroMeanUnitVarianceTransform
 
 from .utility_transforms import ConvertSegToOnehotTransform, ListToTensor, NumpyToTensor, RenameTransform, \
@@ -22,5 +22,6 @@ transform_list = [
     CenterCropSegTransform, CenterCropTransform, PadTransform, RandomCropTransform,
     GaussianNoiseTransform, GaussianBlurTransform, CutOffOutliersTransform, RangeTransform,
     ZeroMeanUnitVarianceTransform, ChannelTranslation, MirrorTransform, SpatialTransform, ZoomTransform,
-    ConvertSegToOnehotTransform, ListToTensor, NumpyToTensor, LocalGammaTransform, BrightnessGradientAdditiveTransform
+    ConvertSegToOnehotTransform, ListToTensor, NumpyToTensor, LocalGammaTransform, BrightnessGradientAdditiveTransform,
+    SharpeningTransform, MedianFilterTransform
 ]
