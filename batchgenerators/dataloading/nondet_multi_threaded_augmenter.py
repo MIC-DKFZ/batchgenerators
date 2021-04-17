@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import traceback
 from copy import deepcopy
 from typing import List, Union
 import threading
@@ -24,7 +25,6 @@ from multiprocessing import Event
 from time import sleep, time
 
 from batchgenerators.dataloading import DataLoader
-from tests.test_DataLoader import DummyDataLoader
 from threadpoolctl import threadpool_limits
 
 try:
@@ -62,6 +62,7 @@ def producer(queue: Queue, data_loader, transform, thread_id: int, seed,
 
     except Exception as e:
         print("Exception in background worker %d:\n" % thread_id, e)
+        traceback.print_exc()
         abort_event.set()
         return
 
@@ -249,6 +250,7 @@ class NonDetMultiThreadedAugmenter(object):
 
 
 if __name__ == '__main__':
+    from tests.test_DataLoader import DummyDataLoader
     dl = DummyDataLoader(deepcopy(list(range(1234))), 2, 3, None,
                          return_incomplete=False, shuffle=True,
                          infinite=True)
