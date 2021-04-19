@@ -257,7 +257,7 @@ class BrightnessGradientAdditiveTransform(AbstractTransform):
                     kernel = self._generate_kernel(img_shape)
                     # first center the mean of the kernel
                     kernel -= kernel.mean()
-                    mx = np.max(np.abs(kernel))
+                    mx = max(np.max(np.abs(kernel)), 1e-8)
                     if not callable(self.max_strength):
                         strength = self._get_max_strength(None, None)
                     for ci in range(c):
@@ -272,7 +272,7 @@ class BrightnessGradientAdditiveTransform(AbstractTransform):
                         if np.random.uniform() < self.p_per_channel:
                             kernel = self._generate_kernel(img_shape)
                             kernel -= kernel.mean()
-                            mx = np.max(np.abs(kernel))
+                            mx = max(np.max(np.abs(kernel)), 1e-8)
                             strength = self._get_max_strength(data[bi, ci], kernel)
                             kernel = kernel / mx * strength
                             data[bi, ci] += kernel
@@ -461,14 +461,14 @@ class LocalGammaTransform(AbstractTransform):
         mn, mx = img.min(), img.max()
 
         # rescale tp [0, 1]
-        img = (img - mn) / (mx - mn)
+        img = (img - mn) / (max(mx - mn, 1e-8))
 
         inside_gamma = self._get_gamma()
         outside_gamma = 1
 
         # prepare kernel by rescaling it to gamma_range
         k_min, k_max = kernel.min(), kernel.max()
-        kernel = (kernel - k_min) / (k_max - k_min)  # [0, 1]
+        kernel = (kernel - k_min) / (max(k_max - k_min, 1e-8))  # [0, 1]
         kernel *= (inside_gamma - outside_gamma)
         kernel += outside_gamma
 
