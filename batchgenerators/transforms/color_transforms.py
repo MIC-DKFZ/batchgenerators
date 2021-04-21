@@ -18,17 +18,23 @@ from batchgenerators.augmentations.color_augmentations import augment_contrast, 
 from batchgenerators.transforms.abstract_transforms import AbstractTransform
 from typing import Union, Tuple, Callable, List
 import scipy.stats as st
-from scipy.ndimage import gaussian_filter, median_filter
 
 
 class ContrastAugmentationTransform(AbstractTransform):
-    def __init__(self, contrast_range=(0.75, 1.25), preserve_range=True, per_channel=True, data_key="data",
-                 p_per_sample=1):
+    def __init__(self,
+                 contrast_range: Union[Tuple[float, float], Callable[[], float]] = (0.75, 1.25),
+                 preserve_range: bool = True,
+                 per_channel: bool = True,
+                 data_key: str = "data",
+                 p_per_sample: float = 1,
+                 p_per_channel: float = 1):
         """
         Augments the contrast of data
-        :param contrast_range: range from which to sample a random contrast that is applied to the data. If
-        one value is smaller and one is larger than 1, half of the contrast modifiers will be >1 and the other half <1
-        (in the inverval that was specified)
+        :param contrast_range:
+            (float, float): range from which to sample a random contrast that is applied to the data. If
+                            one value is smaller and one is larger than 1, half of the contrast modifiers will be >1
+                            and the other half <1 (in the inverval that was specified)
+            callable      : must be contrast_range() -> float
         :param preserve_range: if True then the intensity values after contrast augmentation will be cropped to min and
         max values of the data before augmentation.
         :param per_channel: whether to use the same contrast modifier for all color channels or a separate one for each
@@ -41,6 +47,7 @@ class ContrastAugmentationTransform(AbstractTransform):
         self.contrast_range = contrast_range
         self.preserve_range = preserve_range
         self.per_channel = per_channel
+        self.p_per_channel = p_per_channel
 
     def __call__(self, **data_dict):
         for b in range(len(data_dict[self.data_key])):
@@ -48,7 +55,8 @@ class ContrastAugmentationTransform(AbstractTransform):
                 data_dict[self.data_key][b] = augment_contrast(data_dict[self.data_key][b],
                                                                contrast_range=self.contrast_range,
                                                                preserve_range=self.preserve_range,
-                                                               per_channel=self.per_channel)
+                                                               per_channel=self.per_channel,
+                                                               p_per_channel=self.p_per_channel)
         return data_dict
 
 
