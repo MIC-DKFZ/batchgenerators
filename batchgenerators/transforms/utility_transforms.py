@@ -13,6 +13,8 @@
 # limitations under the License.
 
 import copy
+from typing import List, Type
+
 import numpy as np
 
 from batchgenerators.augmentations.utils import convert_seg_image_to_one_hot_encoding, \
@@ -440,3 +442,17 @@ class ConvertToChannelLastTransform(AbstractTransform):
                 data = data.transpose(new_ordering)
                 data_dict[k] = data
         return data_dict
+
+
+class OneOfTransform(AbstractTransform):
+    def __init__(self, list_of_transforms: List[Type[AbstractTransform]]):
+        """
+        Randomly selects one of the transforms given in list_of_transforms and applies it with each call. Remember that
+        probabilities of the individual transforms for being applied still exist and apply!
+        :param list_of_transforms:
+        """
+        self.list_of_transforms = list_of_transforms
+
+    def __call__(self, **data_dict):
+        i = np.random.choice(len(self.list_of_transforms))
+        return self.list_of_transforms[i](data_dict)
