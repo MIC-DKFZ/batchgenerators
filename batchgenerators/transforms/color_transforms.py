@@ -18,6 +18,7 @@ from batchgenerators.augmentations.color_augmentations import augment_contrast, 
 from batchgenerators.transforms.abstract_transforms import AbstractTransform
 from typing import Union, Tuple, Callable, List
 import scipy.stats as st
+from scipy.ndimage import gaussian_filter, median_filter
 
 
 class ContrastAugmentationTransform(AbstractTransform):
@@ -201,6 +202,7 @@ class BrightnessGradientAdditiveTransform(AbstractTransform):
                  loc: Union[Tuple[float, float], Callable[[Union[Tuple[int, ...], List[int]], int], float]] = (-1, 2),
                  max_strength: Union[float, Tuple[float, float], Callable[[np.ndarray, np.ndarray], float]] = 1.,
                  same_for_all_channels: bool = True,
+                 mean_centered: bool = True,
                  p_per_sample: float = 1.,
                  p_per_channel: float = 1.,
                  data_key: str = "data"):
@@ -234,6 +236,9 @@ class BrightnessGradientAdditiveTransform(AbstractTransform):
             Must return a scalar.
         :param same_for_all_channels: If True, then the same gradient will be applied to all selected color
         channels of a sample (see p_per_channel). If False, each selected channel obtains its own random gradient.
+        :param mean_centered: if True, the brightness addition will be done such that the mean intensity of the image
+        does not change. So if a bright spot is added, other parts of the image will have something subtracted to keep
+        the mean intensity the same as it was before
         :param p_per_sample:
         :param p_per_channel:
         :param data_key:
@@ -246,6 +251,7 @@ class BrightnessGradientAdditiveTransform(AbstractTransform):
         self.p_per_channel = p_per_channel
         self.data_key = data_key
         self.same_for_all_channels = same_for_all_channels
+        self.mean_centered = mean_centered
 
     def __call__(self, **data_dict):
         data = data_dict.get(self.data_key)
@@ -255,8 +261,9 @@ class BrightnessGradientAdditiveTransform(AbstractTransform):
             if np.random.uniform() < self.p_per_sample:
                 if self.same_for_all_channels:
                     kernel = self._generate_kernel(img_shape)
-                    # first center the mean of the kernel
-                    kernel -= kernel.mean()
+                    if self.mean_centered:
+                        # first center the mean of the kernel
+                        kernel -= kernel.mean()
                     mx = max(np.max(np.abs(kernel)), 1e-8)
                     if not callable(self.max_strength):
                         strength = self._get_max_strength(None, None)
@@ -271,7 +278,8 @@ class BrightnessGradientAdditiveTransform(AbstractTransform):
                     for ci in range(c):
                         if np.random.uniform() < self.p_per_channel:
                             kernel = self._generate_kernel(img_shape)
-                            kernel -= kernel.mean()
+                            if self.mean_centered:
+                                kernel -= kernel.mean()
                             mx = max(np.max(np.abs(kernel)), 1e-8)
                             strength = self._get_max_strength(data[bi, ci], kernel)
                             kernel = kernel / mx * strength
@@ -480,19 +488,40 @@ class LocalGammaTransform(AbstractTransform):
         return img
 
 
+"""class LocalContastTransform(LocalGammaTransform):
+    def __call__(self, **data_dict):
+        data = data_dict.get(self.data_key)
+        ret = super().__call__(**{'data': np.copy(data)})['data']
+        filter_orig = np.zeros_like(data)
+        filter_aug = np.zeros_like(data)
+        for b in range(data.shape[0]):
+            for c in range(data.shape[1]):
+                filter_orig[b, c] = gaussian_filter(np.copy(data[b, c]), sigma=5)
+                filter_aug[b, c] = gaussian_filter(np.copy(ret[b, c]), sigma=5)
+        intens_corrected = np.clip(ret * (filter_orig / filter_aug), data.min(), data.max())
+        #import IPython;IPython.embed()
+        data_dict['data'] = intens_corrected
+        return data_dict"""
+
+
 if __name__ == '__main__':
     from copy import deepcopy
     from skimage.data import camera
 
     # just some playing around with BrightnessGradientAdditiveTransform
-    data = {'data': np.vstack((camera()[None], camera()[None], camera()[None]))[None]}
-    tr = LocalGammaTransform(
-        lambda x, y: np.random.uniform(x[y] // 4, x[y]),
-        lambda x, y: np.random.uniform(-1, 0) if np.random.uniform() < 0.5 else np.random.uniform(1, 2),
-        lambda: np.random.uniform(0.01, 1) if np.random.uniform() < 1 else np.random.uniform(1, 3),
+    data = {'data': np.vstack((camera()[None], camera()[None], camera()[None]))[None].astype(np.float32)}
+    tr = LocalContastTransform(
+        lambda x, y: np.random.uniform(x[y] // 10, x[y] // 4),
+        #lambda x, y: np.random.uniform(-1, 0) if np.random.uniform() < 0.5 else np.random.uniform(1, 2),
+        (0, 1),
+        #lambda: np.random.uniform(0.0001, 0.01) if np.random.uniform() < 0.5 else np.random.uniform(1, 10),
+        1e-90,
         same_for_all_channels=False
     )
     transformed = tr(**deepcopy(data))['data']
     from batchviewer import view_batch
-
-    view_batch(*data['data'][0], *transformed[0])
+    data['data'][0][:, 0:2, 0] = np.array((0, 255))
+    transformed[0][:, 0:2, 0] = np.array((0, 255))
+    diff = [i - j for i, j in zip(data['data'][0], transformed[0])]
+    [print(i[10,10]) for i in diff]
+    view_batch(*data['data'][0], *transformed[0], *[i - j for i, j in zip(data['data'][0], transformed[0])])
