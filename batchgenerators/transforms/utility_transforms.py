@@ -455,4 +455,4 @@ class OneOfTransform(AbstractTransform):
 
     def __call__(self, **data_dict):
         i = np.random.choice(len(self.list_of_transforms))
-        return self.list_of_transforms[i](data_dict)
+        return self.list_of_transforms[i](**data_dict)

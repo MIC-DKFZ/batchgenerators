@@ -40,9 +40,11 @@ class SingleThreadedAugmenter(object):
     def __iter__(self):
         return self
 
-
     def __next__(self):
         item = next(self.data_loader)
         if self.transform is not None:
             item = self.transform(**item)
         return item
+
+    def next(self):
+        return self.__next__()
