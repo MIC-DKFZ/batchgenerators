@@ -11,8 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from abc import ABC
 
 import numpy as np
+from scipy.ndimage import gaussian_filter
+
 from batchgenerators.augmentations.color_augmentations import augment_contrast, augment_brightness_additive, \
     augment_brightness_multiplicative, augment_gamma, augment_illumination, augment_PCA_shift
 from batchgenerators.transforms.abstract_transforms import AbstractTransform
@@ -204,7 +207,56 @@ class ClipValueRange(AbstractTransform):
         return data_dict
 
 
-class BrightnessGradientAdditiveTransform(AbstractTransform):
+class LocalGaussianSomethingTransform(ABC):
+    def __init__(self,
+                 scale: Union[Tuple[float, float], float, Callable[[Union[Tuple[int, ...], List[int]], int], float]],
+                 loc: Union[Tuple[float, float], Callable[[Union[Tuple[int, ...], List[int]], int], float]] = (-1, 2),
+                 ):
+        self.loc = loc
+        self.scale = scale
+
+    def _get_scale(self, image_shape, dimension):
+        if isinstance(self.scale, float):
+            return self.scale
+        elif isinstance(self.scale, (list, tuple)):
+            assert len(self.scale) == 2
+            return np.random.uniform(*self.scale)
+        elif callable(self.scale):
+            return self.scale(image_shape, dimension)
+
+    def _get_loc(self, image_shape, dimension):
+        if isinstance(self.loc, float):
+            return self.loc
+        elif isinstance(self.loc, (list, tuple)):
+            assert len(self.loc) == 2
+            return np.random.uniform(*self.loc)
+        elif callable(self.loc):
+            return self.loc(image_shape, dimension)
+        else:
+            raise RuntimeError()
+
+    def _generate_kernel(self, img_shp: Tuple[int, ...]) -> np.ndarray:
+        assert len(img_shp) <= 3
+        kernels = []
+        for d in range(len(img_shp)):
+            image_size_here = img_shp[d]
+            loc = self._get_loc(img_shp, d)
+            scale = self._get_scale(img_shp, d)
+
+            loc_rescaled = loc * image_size_here
+            x = np.arange(-0.5, image_size_here + 0.5)
+            kernels.append(np.diff(st.norm.cdf(x, loc=loc_rescaled, scale=scale)))
+
+        kernel_2d = kernels[0][:, None].dot(kernels[1][None])
+        if len(kernels) > 2:
+            # trial and error got me here lol
+            kernel = kernel_2d[:, :, None].dot(kernels[2][None])
+        else:
+            kernel = kernel_2d
+        return kernel
+
+
+class BrightnessGradientAdditiveTransform(LocalGaussianSomethingTransform):
     def __init__(self,
                  scale: Union[Tuple[float, float], float, Callable[[Union[Tuple[int, ...], List[int]], int], float]],
                  loc: Union[Tuple[float, float], Callable[[Union[Tuple[int, ...], List[int]], int], float]] = (-1, 2),
@@ -213,6 +265,7 @@ class BrightnessGradientAdditiveTransform(AbstractTransform):
                  mean_centered: bool = True,
                  p_per_sample: float = 1.,
                  p_per_channel: float = 1.,
+                 clip_intensities: bool = False,
                  data_key: str = "data"):
         """
         Applies an additive intensity gradient to the image. The intensity gradient is zero-centered (sum(add) = 0;
@@ -249,17 +302,17 @@ class BrightnessGradientAdditiveTransform(AbstractTransform):
         the mean intensity the same as it was before
         :param p_per_sample:
         :param p_per_channel:
+        :param clip_intensities:
         :param data_key:
         """
-        super().__init__()
-        self.scale = scale
-        self.loc = loc
+        super().__init__(scale, loc)
         self.max_strength = max_strength
         self.p_per_sample = p_per_sample
         self.p_per_channel = p_per_channel
         self.data_key = data_key
         self.same_for_all_channels = same_for_all_channels
         self.mean_centered = mean_centered
+        self.clip_intensities = clip_intensities
 
     def __call__(self, **data_dict):
         data = data_dict.get(self.data_key)
@@ -294,28 +347,8 @@ class BrightnessGradientAdditiveTransform(AbstractTransform):
                             data[bi, ci] += kernel
         return data_dict
 
-    def _get_scale(self, image_shape, dimension):
-        if isinstance(self.scale, float):
-            return self.scale
-        elif isinstance(self.scale, (list, tuple)):
-            assert len(self.scale) == 2
-            return np.random.uniform(*self.scale)
-        elif callable(self.scale):
-            return self.scale(image_shape, dimension)
-
-    def _get_loc(self, image_shape, dimension):
-        if isinstance(self.loc, float):
-            return self.loc
-        elif isinstance(self.loc, (list, tuple)):
-            assert len(self.loc) == 2
-            return np.random.uniform(*self.loc)
-        elif callable(self.loc):
-            return self.loc(image_shape, dimension)
-        else:
-            raise RuntimeError()
-
     def _get_max_strength(self, image, add_gauss):
-        if isinstance(self.max_strength, float):
+        if isinstance(self.max_strength, (int, float)):
             return self.max_strength
         elif isinstance(self.max_strength, (list, tuple)):
             assert len(self.max_strength) == 2
@@ -325,32 +358,12 @@ class BrightnessGradientAdditiveTransform(AbstractTransform):
         else:
             raise RuntimeError()
 
-    def _generate_kernel(self, img_shp: Tuple[int, ...]) -> np.ndarray:
-        assert len(img_shp) <= 3
-        kernels = []
-        for d in range(len(img_shp)):
-            image_size_here = img_shp[d]
-            loc = self._get_loc(img_shp, d)
-            scale = self._get_scale(img_shp, d)
 
-            loc_rescaled = loc * image_size_here
-            x = np.arange(-0.5, image_size_here + 0.5)
-            kernels.append(np.diff(st.norm.cdf(x, loc=loc_rescaled, scale=scale)))
-
-        kernel_2d = kernels[0][:, None].dot(kernels[1][None])
-        if len(kernels) > 2:
-            # trial and error got me here lol
-            kernel = kernel_2d[:, :, None].dot(kernels[2][None])
-        else:
-            kernel = kernel_2d
-        return kernel
-
-
-class LocalGammaTransform(AbstractTransform):
+class LocalGammaTransform(LocalGaussianSomethingTransform):
     def __init__(self,
                  scale: Union[Tuple[float, float], float, Callable[[Union[Tuple[int, ...], List[int]], int], float]],
                  loc: Union[Tuple[float, float], Callable[[Union[Tuple[int, ...], List[int]], int], float]] = (-1, 2),
-                 gamma: Union[float, Tuple[float, float], Callable[[], Tuple[float, float]]] = (0.5, 1),
+                 gamma: Union[float, Tuple[float, float], Callable[[], float]] = (0.5, 1),
                  same_for_all_channels: bool = True,
                  p_per_sample: float = 1.,
                  p_per_channel: float = 1.,
@@ -390,9 +403,7 @@ class LocalGammaTransform(AbstractTransform):
         :param p_per_channel:
         :param data_key:
         """
-        super().__init__()
-        self.scale = scale
-        self.loc = loc
+        super().__init__(scale, loc)
         self.gamma = gamma
         self.p_per_sample = p_per_sample
         self.p_per_channel = p_per_channel
@@ -418,56 +429,16 @@ class LocalGammaTransform(AbstractTransform):
                             data[bi, ci] = self._apply_gamma_gradient(data[bi, ci], kernel)
         return data_dict
 
-    def _get_scale(self, image_shape, dimension):
-        if isinstance(self.scale, float):
-            return self.scale
-        elif isinstance(self.scale, (list, tuple)):
-            assert len(self.scale) == 2
-            return np.random.uniform(*self.scale)
-        elif callable(self.scale):
-            return self.scale(image_shape, dimension)
-
-    def _get_loc(self, image_shape, dimension):
-        if isinstance(self.loc, float):
-            return self.loc
-        elif isinstance(self.loc, (list, tuple)):
-            assert len(self.loc) == 2
-            return np.random.uniform(*self.loc)
-        elif callable(self.loc):
-            return self.loc(image_shape, dimension)
-        else:
-            raise RuntimeError()
-
     def _get_gamma(self):
-        if isinstance(self.gamma, float):
+        if isinstance(self.gamma, (int, float)):
             return self.gamma
         elif isinstance(self.gamma, (list, tuple)):
             assert len(self.gamma) == 2
-            return np.random.uniform(self.gamma)
+            return np.random.uniform(*self.gamma)
         elif callable(self.gamma):
             return self.gamma()
         else:
             raise RuntimeError()
-
-    def _generate_kernel(self, img_shp: Tuple[int, ...]) -> np.ndarray:
-        assert len(img_shp) <= 3
-        kernels = []
-        for d in range(len(img_shp)):
-            image_size_here = img_shp[d]
-            loc = self._get_loc(img_shp, d)
-            scale = self._get_scale(img_shp, d)
-
-            loc_rescaled = loc * image_size_here
-            x = np.arange(-0.5, image_size_here + 0.5)
-            kernels.append(np.diff(st.norm.cdf(x, loc=loc_rescaled, scale=scale)))
-
-        kernel_2d = kernels[0][:, None].dot(kernels[1][None])
-        if len(kernels) > 2:
-            # trial and error got me here lol
-            kernel = kernel_2d[:, :, None].dot(kernels[2][None])
-        else:
-            kernel = kernel_2d
-        return kernel
 
     def _apply_gamma_gradient(self, img: np.ndarray, kernel: np.ndarray) -> np.ndarray:
         # copy kernel so that we don't modify it out of scope
@@ -496,6 +467,98 @@ class LocalGammaTransform(AbstractTransform):
         return img
 
 
+class LocalSmoothingTransform(LocalGaussianSomethingTransform):
+    def __init__(self,
+                 scale: Union[Tuple[float, float], float, Callable[[Union[Tuple[int, ...], List[int]], int], float]],
+                 loc: Union[Tuple[float, float], Callable[[Union[Tuple[int, ...], List[int]], int], float]] = (-1, 2),
+                 smoothing_strength: Union[float, Tuple[float, float], Callable[[], float]] = (0.5, 1),
+                 kernel_size: Union[float, Tuple[float, float], Callable[[], float]] = (0.5, 1),
+                 same_for_all_channels: bool = True,
+                 p_per_sample: float = 1.,
+                 p_per_channel: float = 1.,
+                 data_key: str = "data"):
+        """
+        Creates a local blurring of the image. This is achieved by creating ablussed copy of the image and then
+        linearly interpolating between the original and smoothed images:
+            result = image_orig * (1 - smoothing_strength) + smoothed_image * smoothing_strength
+        The interpolation only happens where the local gaussian is placed (defined by scale and loc)
+        strength of smoothing is determined by kernel_size in combination with smoothing_strength. You can set
+        smoothing_strength=1 for simplicity
+        :param scale:
+        :param loc:
+        :param smoothing_strength:
+        :param kernel_size:
+        :param same_for_all_channels:
+        :param p_per_sample:
+        :param p_per_channel:
+        :param data_key:
+        """
+        super().__init__(scale, loc)
+        self.smoothing_strength = smoothing_strength
+        self.same_for_all_channels = same_for_all_channels
+        self.p_per_sample = p_per_sample
+        self.p_per_channel = p_per_channel
+        self.data_key = data_key
+        self.kernel_size = kernel_size
+
+    def __call__(self, **data_dict):
+        data = data_dict.get(self.data_key)
+        assert data is not None, "Could not find data key '%s'" % self.data_key
+        b, c, *img_shape = data.shape
+        for bi in range(b):
+            if np.random.uniform() < self.p_per_sample:
+                if self.same_for_all_channels:
+                    kernel = self._generate_kernel(img_shape)
+
+                    for ci in range(c):
+                        if np.random.uniform() < self.p_per_channel:
+                            data[bi, ci] = self._apply_local_smoothing(data[bi, ci], kernel)
+                else:
+                    for ci in range(c):
+                        if np.random.uniform() < self.p_per_channel:
+                            kernel = self._generate_kernel(img_shape)
+                            data[bi, ci] = self._apply_local_smoothing(data[bi, ci], kernel)
+        return data_dict
+
+    def _get_smoothing(self):
+        if isinstance(self.smoothing_strength, (int, float)):
+            return self.smoothing_strength
+        elif isinstance(self.smoothing_strength, (list, tuple)):
+            assert len(self.smoothing_strength) == 2
+            return np.random.uniform(*self.smoothing_strength)
+        elif callable(self.smoothing_strength):
+            return self.smoothing_strength()
+        else:
+            raise RuntimeError()
+
+    def _get_kernel_size(self):
+        if isinstance(self.kernel_size, (int, float)):
+            return self.kernel_size
+        elif isinstance(self.kernel_size, (list, tuple)):
+            assert len(self.kernel_size) == 2
+            return np.random.uniform(*self.kernel_size)
+        elif callable(self.kernel_size):
+            return self.kernel_size()
+        else:
+            raise RuntimeError()
+
+    def _apply_local_smoothing(self, img: np.ndarray, kernel: np.ndarray) -> np.ndarray:
+        # copy kernel so that we don't modify it out of scope
+        import IPython;IPython.embed()
+        kernel = np.copy(kernel)
+
+        smoothing = self._get_smoothing()
+
+        # prepare kernel by rescaling it to gamma_range
+        k_min, k_max = kernel.min(), kernel.max()
+        kernel = (kernel - k_min) / (max(k_max - k_min, 1e-8))  # [0, 1]
+        kernel *= smoothing
+
+        kernel_size = self._get_kernel_size()
+        img_smoothed = gaussian_filter(img, kernel_size)
+
+        return img * (1 - kernel) + img_smoothed * kernel
+
 """class LocalContastTransform(LocalGammaTransform):
     def __call__(self, **data_dict):
         data = data_dict.get(self.data_key)
@@ -518,13 +581,12 @@ if __name__ == '__main__':
 
     # just some playing around with BrightnessGradientAdditiveTransform
     data = {'data': np.vstack((camera()[None], camera()[None], camera()[None]))[None].astype(np.float32)}
-    tr = LocalContastTransform(
-        lambda x, y: np.random.uniform(x[y] // 10, x[y] // 4),
-        #lambda x, y: np.random.uniform(-1, 0) if np.random.uniform() < 0.5 else np.random.uniform(1, 2),
+    tr = LocalSmoothingTransform(
+        lambda x, y: np.random.uniform(x[y] // 4, x[y] // 2),
+        (0.5, 0.51),
         (0, 1),
-        #lambda: np.random.uniform(0.0001, 0.01) if np.random.uniform() < 0.5 else np.random.uniform(1, 10),
-        1e-90,
-        same_for_all_channels=False
+        5,
+        same_for_all_channels=True
     )
     transformed = tr(**deepcopy(data))['data']
     from batchviewer import view_batch
