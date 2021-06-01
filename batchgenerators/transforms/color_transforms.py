@@ -544,7 +544,6 @@ class LocalSmoothingTransform(LocalGaussianSomethingTransform):
 
     def _apply_local_smoothing(self, img: np.ndarray, kernel: np.ndarray) -> np.ndarray:
         # copy kernel so that we don't modify it out of scope
-        import IPython;IPython.embed()
         kernel = np.copy(kernel)
 
         smoothing = self._get_smoothing()
@@ -582,11 +581,11 @@ if __name__ == '__main__':
     # just some playing around with BrightnessGradientAdditiveTransform
     data = {'data': np.vstack((camera()[None], camera()[None], camera()[None]))[None].astype(np.float32)}
     tr = LocalSmoothingTransform(
-        lambda x, y: np.random.uniform(x[y] // 4, x[y] // 2),
-        (0.5, 0.51),
+        lambda x, y: np.random.uniform(x[y] // 6, x[y] // 2),
         (0, 1),
-        5,
-        same_for_all_channels=True
+        1,
+        13,
+        same_for_all_channels=False
     )
     transformed = tr(**deepcopy(data))['data']
     from batchviewer import view_batch
