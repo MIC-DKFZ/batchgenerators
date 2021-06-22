@@ -12,7 +12,7 @@ Köhler Gregor, Maier-Hein Klaus (2020). batchgenerators - a python framework fo
 augmentation. doi:10.5281/zenodo.3632567
 ```
 
-[![Build Status](https://travis-ci.org/MIC-DKFZ/batchgenerators.svg?branch=master)](https://travis-ci.org/MIC-DKFZ/batchgenerators)
+[![Build Status](https://travis-ci.com/MIC-DKFZ/batchgenerators.svg?branch=master)](https://travis-ci.com/github/MIC-DKFZ/batchgenerators)
 
 ## Supported Augmentations
 We supports a variety of augmentations, all of which are compatible with **2D and 3D input data**! (This is something
