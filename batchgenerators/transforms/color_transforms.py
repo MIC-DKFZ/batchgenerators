@@ -579,7 +579,7 @@ if __name__ == '__main__':
     from skimage.data import camera
 
     # just some playing around with BrightnessGradientAdditiveTransform
-    data = {'data': np.vstack((camera()[None], camera()[None], camera()[None], camera()[None]))[None].astype(np.float32)}
+    data = {'data': np.vstack((camera()[None], camera()[None], camera()[None]))[None].astype(np.float32)}
     tr = LocalSmoothingTransform(
         lambda x, y: np.random.uniform(x[y] // 6, x[y] // 2),
         (0, 1),
