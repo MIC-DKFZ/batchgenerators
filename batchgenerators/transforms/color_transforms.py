@@ -369,7 +369,7 @@ class LocalGammaTransform(LocalGaussianSomethingTransform):
                  p_per_channel: float = 1.,
                  data_key: str = "data"):
         """
-        This transform is weird and definitely experimental.
+        This transform is weird and definitely experimental. Use at your own risk
 
         Applies gamma correction to the image. The gamma value varies locally using a gaussian kernel
 
