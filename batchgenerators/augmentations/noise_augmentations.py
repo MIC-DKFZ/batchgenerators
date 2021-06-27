@@ -23,7 +23,7 @@ def augment_rician_noise(data_sample, noise_variance=(0, 0.1)):
     variance = random.uniform(noise_variance[0], noise_variance[1])
     data_sample = np.sqrt(
         (data_sample + np.random.normal(0.0, variance, size=data_sample.shape)) ** 2 +
-        np.random.normal(0.0, variance, size=data_sample.shape) ** 2)
+        np.random.normal(0.0, variance, size=data_sample.shape) ** 2) * np.sign(data_sample)
     return data_sample
 
 
