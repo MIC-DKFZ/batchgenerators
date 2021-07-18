@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import unittest
-
-import unittest2
 import numpy as np
 from skimage import data
 
@@ -22,7 +20,7 @@ from tests.DataGenerators import BasicDataLoader
 from batchgenerators.transforms.spatial_transforms import MirrorTransform
 
 
-class TestMirrorAxis(unittest2.TestCase):
+class TestMirrorAxis(unittest.TestCase):
     def setUp(self):
         self.seed = 1234
 
