@@ -1,15 +1,14 @@
 init:
-	pip install numpy ; \
-  pip install -r requirements.txt
+	poetry install
 
 test:
-	python -m unittest discover
+	poetry run pytest
 
 install_develop:
-	python setup.py develop
+	poetry install
 
 install:
-	python setup.py install
+	poetry install --no-dev
 
 documentation:
-	sphinx-apidoc -e -f DeepLearningBatchGeneratorUtils -o doc/
+	poetry run sphinx-apidoc -e -f DeepLearningBatchGeneratorUtils -o doc/
