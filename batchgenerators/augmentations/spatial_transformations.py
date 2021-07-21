@@ -269,7 +269,7 @@ def augment_spatial(data, seg, patch_size, patch_center_dist_from_border=30,
                     ctr = np.random.uniform(patch_center_dist_from_border[d],
                                             data.shape[d + 2] - patch_center_dist_from_border[d])
                 else:
-                    ctr = int(np.round(data.shape[d + 2] / 2.))
+                    ctr = data.shape[d + 2] / 2. - 0.5
                 coords[d] += ctr
             for channel_id in range(data.shape[1]):
                 data_result[sample_id, channel_id] = interpolate_img(data[sample_id, channel_id], coords, order_data,
@@ -436,7 +436,7 @@ def augment_spatial_2(data, seg, patch_size, patch_center_dist_from_border=30,
                     ctr = np.random.uniform(patch_center_dist_from_border[d],
                                             data.shape[d + 2] - patch_center_dist_from_border[d])
                 else:
-                    ctr = int(np.round(data.shape[d + 2] / 2.))
+                    ctr = data.shape[d + 2] / 2. - 0.5
                 coords[d] += ctr
             for channel_id in range(data.shape[1]):
                 data_result[sample_id, channel_id] = interpolate_img(data[sample_id, channel_id], coords, order_data,
