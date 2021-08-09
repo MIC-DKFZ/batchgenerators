@@ -48,6 +48,12 @@ The working principle is simple: Derive from DataLoaderBase class, reimplement g
 use it to stack your augmentations!
 For simple example see `batchgenerators/examples/example_ipynb.ipynb`
 
+A heavily commented example for using SlimDataLoaderBase and MultithreadedAugmentor is available at:
+`batchgenerators/examples/multithreaded_with_batches.ipynb`. 
+It gives an idea of the interplay between the SlimDataLoaderBase and the MultiThreadedAugmentor.
+The example uses the MultiThreadedAugmentor for loading and augmentation on mutiple processes, while 
+covering the entire dataset only once per epoch (basically sampling without replacement).
+
 We also now have an extensive example for BraTS2017/2018 with both 2D and 3D DataLoader and augmentations: 
 `batchgenerators/examples/brats2017/`
 
