@@ -461,6 +461,7 @@ class LocalContrastTransform(LocalTransform):
 if __name__ == '__main__':
     from copy import deepcopy
     from skimage.data import camera
+    from batchviewer import view_batch  # https://github.com/FabianIsensee/BatchViewer
 
     """
     data = {'data': np.vstack((camera()[None], camera()[None], camera()[None], camera()[None]))[None].astype(np.float32)}
@@ -473,7 +474,6 @@ if __name__ == '__main__':
         same_for_all_channels=False
     )
     transformed = tr(**deepcopy(data))['data']
-    from batchviewer import view_batch
     data['data'][0][:, 0:2, 0] = np.array((0, 255))
     transformed[0][:, 0:2, 0] = np.array((0, 255))
     diff = [i - j for i, j in zip(data['data'][0], transformed[0])]
@@ -487,13 +487,12 @@ if __name__ == '__main__':
     tr = LocalGammaTransform(
         lambda x, y: np.random.uniform(x[y] // 6, x[y] // 2),
         (0, 1),
-        (0.1, 3),
+        (0, 3),
         False,
         1,
         1
     )
     transformed = tr(**deepcopy(data))['data']
-    from batchviewer import view_batch
     data['data'][0][:, 0:2, 0] = np.array((0, 255))
     transformed[0][:, 0:2, 0] = np.array((0, 255))
     diff = [i - j for i, j in zip(data['data'][0], transformed[0])]
@@ -512,9 +511,28 @@ if __name__ == '__main__':
         1
     )
     transformed = tr(**deepcopy(data))['data']
-    from batchviewer import view_batch
     data['data'][0][:, 0:2, 0] = np.array((0, 255))
     transformed[0][:, 0:2, 0] = np.array((0, 255))
     diff = [i - j for i, j in zip(data['data'][0], transformed[0])]
     [print(i[10,10]) for i in diff]
     view_batch(*data['data'][0], *transformed[0], *[i - j for i, j in zip(data['data'][0], transformed[0])])
+
+
+    data = {'data': np.vstack((camera()[None], camera()[None], camera()[None], camera()[None]))[None].astype(np.float32)}
+
+    tr = BrightnessGradientAdditiveTransform(
+        lambda x, y: np.random.uniform(x[y] // 6, x[y] // 2),
+        (0, 1),
+        (-128, 128),
+        False,
+        1,
+        1
+    )
+    transformed = tr(**deepcopy(data))['data']
+    data['data'][0][:, 0:2, 0] = np.array((0, 255))
+    transformed[0][:, 0:2, 0] = np.array((0, 255))
+    diff = [i - j for i, j in zip(data['data'][0], transformed[0])]
+    [print(i[10,10]) for i in diff]
+    view_batch(*data['data'][0], *transformed[0], *[i - j for i, j in zip(data['data'][0], transformed[0])])
+
+
