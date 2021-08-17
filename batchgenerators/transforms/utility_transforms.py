@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import copy
-from typing import List, Type
+from typing import List, Type, Union, Tuple
 
 import numpy as np
 
@@ -456,3 +456,26 @@ class OneOfTransform(AbstractTransform):
     def __call__(self, **data_dict):
         i = np.random.choice(len(self.list_of_transforms))
         return self.list_of_transforms[i](**data_dict)
+
+
+class OneOfTransform_perSample(AbstractTransform):
+    def __init__(self, list_of_transforms: List, relevant_keys: Union[Tuple[str, ...], List[str]]):
+        """
+        For each sample in a batch, randomly select one of the transforms. Difference to OneOfTransform is that
+        OneOfTransform selects a random transform for each batch, so all samples in a batch share that transform
+        :param list_of_transforms:
+        """
+        self.list_of_transforms = list_of_transforms
+        self.relevant_keys = relevant_keys
+
+    def __call__(self, **data_dict):
+        # for each sample in the batch, construct a new dict using the relevant keys. All entries of relevent_keys are
+        # expected to have the same length
+        some_value = data_dict.get(self.relevant_keys[0])
+        for b in range(len(some_value)):
+            new_dict = {i: data_dict[i][b:b+1] for i in self.relevant_keys}
+            random_transform = np.random.choice(len(self.list_of_transforms))
+            ret = self.list_of_transforms[random_transform](**new_dict)
+            for i in self.relevant_keys:
+                data_dict[i][b] = ret[i]
+        return data_dict
