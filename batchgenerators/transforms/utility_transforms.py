@@ -447,7 +447,7 @@ class ConvertToChannelLastTransform(AbstractTransform):
 class OneOfTransform(AbstractTransform):
     def __init__(self, list_of_transforms: List):
         """
-        Randomly selects one of the transforms given in list_of_transforms and applies it with each call. Remember that
+        Randomly selects one of the transforms given in list_of_transforms and applies it. Remember that
         probabilities of the individual transforms for being applied still exist and apply!
         :param list_of_transforms:
         """
