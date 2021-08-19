@@ -459,7 +459,8 @@ class OneOfTransform(AbstractTransform):
 
 
 class OneOfTransform_perSample(AbstractTransform):
-    def __init__(self, list_of_transforms: List, relevant_keys: Union[Tuple[str, ...], List[str]]):
+    def __init__(self, list_of_transforms: List, relevant_keys: Union[Tuple[str, ...], List[str]],
+                 p: Tuple[float, ...] = None):
         """
         For each sample in a batch, randomly select one of the transforms. Difference to OneOfTransform is that
         OneOfTransform selects a random transform for each batch, so all samples in a batch share that transform
@@ -467,6 +468,11 @@ class OneOfTransform_perSample(AbstractTransform):
         """
         self.list_of_transforms = list_of_transforms
         self.relevant_keys = relevant_keys
+        self.p = p
+        if p is not None:
+            assert len(p) == len(list_of_transforms), 'if sampling probabilities are provided there must be one ' \
+                                                      'probability per transform (length of tuples/lists must match)'
+            assert sum(p) == 1, 'probabilities must sum to 1'
 
     def __call__(self, **data_dict):
         # for each sample in the batch, construct a new dict using the relevant keys. All entries of relevent_keys are
@@ -474,7 +480,7 @@ class OneOfTransform_perSample(AbstractTransform):
         some_value = data_dict.get(self.relevant_keys[0])
         for b in range(len(some_value)):
             new_dict = {i: data_dict[i][b:b+1] for i in self.relevant_keys}
-            random_transform = np.random.choice(len(self.list_of_transforms))
+            random_transform = np.random.choice(len(self.list_of_transforms), p=self.p)
             ret = self.list_of_transforms[random_transform](**new_dict)
             for i in self.relevant_keys:
                 data_dict[i][b] = ret[i]

@@ -60,6 +60,10 @@ def producer(queue: Queue, data_loader, transform, thread_id: int, seed,
                 else:
                     sleep(wait_time)
 
+    except KeyboardInterrupt:
+        abort_event.set()
+        return
+
     except Exception as e:
         print("Exception in background worker %d:\n" % thread_id, e)
         traceback.print_exc()
@@ -93,9 +97,9 @@ def results_loop(in_queue: Queue, out_queue: thrQueue, abort_event: Event,
             # check if all workers are still alive
             if not all([i.is_alive() for i in worker_list]):
                 abort_event.set()
-                raise RuntimeError("Someone died. Better end this madness. This is not the actual error message! Look "
-                                   "further up your "
-                                   "stdout to see what caused the error. Please also check whether your RAM was full")
+                raise RuntimeError("Abort event was set. So someone died and we should end this madness. \nIMPORTANT: "
+                                   "This is not the actual error message! Look further up to see what caused the "
+                                   "error. Please also check whether your RAM was full")
 
             if item is None:
                 if not in_queue.empty():

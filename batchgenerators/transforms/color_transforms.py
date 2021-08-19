@@ -129,8 +129,8 @@ class BrightnessMultiplicativeTransform(AbstractTransform):
 
 
 class GammaTransform(AbstractTransform):
-    def __init__(self, gamma_range=(0.5, 2), invert_image=False, per_channel=False, data_key="data", retain_stats=False,
-                 p_per_sample=1):
+    def __init__(self, gamma_range=(0.5, 2), invert_image=False, per_channel=False, data_key="data",
+                 retain_stats: Union[bool, Callable[[], bool]] = False, p_per_sample=1):
         """
         Augments by changing 'gamma' of the image (same as gamma correction in photos or computer monitors
 
@@ -142,7 +142,8 @@ class GammaTransform(AbstractTransform):
         :param per_channel:
         :param data_key:
         :param retain_stats: Gamma transformation will alter the mean and std of the data in the patch. If retain_stats=True,
-        the data will be transformed to match the mean and standard deviation before gamma augmentation
+        the data will be transformed to match the mean and standard deviation before gamma augmentation. retain_stats
+        can also be callable (signature retain_stats() -> bool)
         :param p_per_sample:
         """
         self.p_per_sample = p_per_sample
@@ -203,4 +204,3 @@ class ClipValueRange(AbstractTransform):
     def __call__(self, **data_dict):
         data_dict[self.data_key] = np.clip(data_dict[self.data_key], self.min, self.max)
         return data_dict
-

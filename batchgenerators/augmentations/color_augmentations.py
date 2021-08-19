@@ -104,11 +104,13 @@ def augment_brightness_multiplicative(data_sample, multiplier_range=(0.5, 2), pe
 
 
 def augment_gamma(data_sample, gamma_range=(0.5, 2), invert_image=False, epsilon=1e-7, per_channel=False,
-                  retain_stats=False):
+                  retain_stats: Union[bool, Callable[[], bool]] = False):
     if invert_image:
         data_sample = - data_sample
+
     if not per_channel:
-        if retain_stats:
+        retain_stats_here = retain_stats() if callable(retain_stats) else retain_stats
+        if retain_stats_here:
             mn = data_sample.mean()
             sd = data_sample.std()
         if np.random.random() < 0.5 and gamma_range[0] < 1:
@@ -118,13 +120,14 @@ def augment_gamma(data_sample, gamma_range=(0.5, 2), invert_image=False, epsilon
         minm = data_sample.min()
         rnge = data_sample.max() - minm
         data_sample = np.power(((data_sample - minm) / float(rnge + epsilon)), gamma) * rnge + minm
-        if retain_stats:
+        if retain_stats_here:
             data_sample = data_sample - data_sample.mean()
             data_sample = data_sample / (data_sample.std() + 1e-8) * sd
             data_sample = data_sample + mn
     else:
         for c in range(data_sample.shape[0]):
-            if retain_stats:
+            retain_stats_here = retain_stats() if callable(retain_stats) else retain_stats
+            if retain_stats_here:
                 mn = data_sample[c].mean()
                 sd = data_sample[c].std()
             if np.random.random() < 0.5 and gamma_range[0] < 1:
@@ -134,7 +137,7 @@ def augment_gamma(data_sample, gamma_range=(0.5, 2), invert_image=False, epsilon
             minm = data_sample[c].min()
             rnge = data_sample[c].max() - minm
             data_sample[c] = np.power(((data_sample[c] - minm) / float(rnge + epsilon)), gamma) * float(rnge + epsilon) + minm
-            if retain_stats:
+            if retain_stats_here:
                 data_sample[c] = data_sample[c] - data_sample[c].mean()
                 data_sample[c] = data_sample[c] / (data_sample[c].std() + 1e-8) * sd
                 data_sample[c] = data_sample[c] + mn

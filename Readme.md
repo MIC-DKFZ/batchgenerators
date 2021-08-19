@@ -135,3 +135,15 @@ available for python 2)
     (pin_memory=True). This will happen in a background thread (inspired by pytorch DataLoader). pinned memory can be 
     copied to the GPU much faster. My (Fabian) classification experiment with Resnet50 got a speed boost of 12% from just 
     that.
+
+
+-------------------------
+
+<img src="DKFZ_Logo.png" width="512px" />
+
+<img src="HIP_Logo.png" width="512px" />
+
+batchgenerators is developed by the Applied Computer Vision Lab (ACVL) of the 
+[Helmholtz Imaging Platform](https://helmholtz-imaging.de) and the 
+[Division of Medical Image Computing](https://www.dkfz.de/en/mic/index.php) at the German Cancer 
+Research Center (DKFZ).
