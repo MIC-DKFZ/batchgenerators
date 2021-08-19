@@ -1,4 +1,5 @@
-# Copyright 2017 Division of Medical Image Computing, German Cancer Research Center (DKFZ)
+# Copyright 2021 Division of Medical Image Computing, German Cancer Research Center (DKFZ)
+# and Applied Computer Vision Lab, Helmholtz Imaging Platform
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import traceback
 from copy import deepcopy
 from typing import List, Union
@@ -24,7 +26,7 @@ import logging
 from multiprocessing import Event
 from time import sleep, time
 
-from batchgenerators.dataloading import DataLoader
+from batchgenerators.dataloading.data_loader import DataLoader
 from threadpoolctl import threadpool_limits
 
 try:

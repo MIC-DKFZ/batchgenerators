@@ -1,8 +1,8 @@
 from time import time
 from batchgenerators.augmentations.crop_and_pad_augmentations import crop
-from batchgenerators.dataloading import MultiThreadedAugmenter
+from batchgenerators.dataloading.multi_threaded_augmenter import MultiThreadedAugmenter
 from batchgenerators.examples.brats2017.config import brats_preprocessed_folder, num_threads_for_brats_example
-from batchgenerators.transforms import Compose
+from batchgenerators.transforms.abstract_transforms import Compose
 from batchgenerators.utilities.data_splitting import get_split_deterministic
 from batchgenerators.utilities.file_and_folder_operations import *
 import numpy as np

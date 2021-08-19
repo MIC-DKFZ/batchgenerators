@@ -1,4 +1,5 @@
-# Copyright 2017 Division of Medical Image Computing, German Cancer Research Center (DKFZ)
+# Copyright 2021 Division of Medical Image Computing, German Cancer Research Center (DKFZ)
+# and Applied Computer Vision Lab, Helmholtz Imaging Platform
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,19 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-from __future__ import print_function
-
 import traceback
 from typing import List, Union
-
-from future import standard_library
 import threading
-
-standard_library.install_aliases()
-from builtins import range
-from multiprocessing import Process
-from multiprocessing import Queue
+from multiprocessing import Process, Queue
 from queue import Queue as thrQueue
 import numpy as np
 import sys

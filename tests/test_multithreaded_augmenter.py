@@ -1,4 +1,4 @@
-# Copyright 2017 Division of Medical Image Computing, German Cancer Research Center (DKFZ)
+# Copyright 2021 Division of Medical Image Computing, German Cancer Research Center (DKFZ)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,13 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import unittest
 from time import sleep
 
 import numpy as np
-from batchgenerators.dataloading import SlimDataLoaderBase, MultiThreadedAugmenter
+from batchgenerators.dataloading.data_loader import SlimDataLoaderBase
+from batchgenerators.dataloading.multi_threaded_augmenter import MultiThreadedAugmenter
 from batchgenerators.examples.multithreaded_dataloading import DummyDL, DummyDLWithShuffle
+from batchgenerators.transforms.abstract_transforms import Compose
+from batchgenerators.transforms.spatial_transforms import MirrorTransform, TransposeAxesTransform
+from batchgenerators.transforms.utility_transforms import NumpyToTensor
 from skimage.data import camera, checkerboard, astronaut, binary_blobs, coins
 from skimage.transform import resize
 from copy import deepcopy
@@ -169,7 +172,6 @@ class TestMultiThreadedAugmenter(unittest.TestCase):
             '''dont test if torch is not installed'''
             return
 
-        from batchgenerators.transforms import MirrorTransform, NumpyToTensor, TransposeAxesTransform, Compose
 
         tr_transforms = []
         tr_transforms.append(MirrorTransform())
@@ -196,7 +198,6 @@ class TestMultiThreadedAugmenter(unittest.TestCase):
         This just should not crash
         :return:
         '''
-        from batchgenerators.transforms import MirrorTransform, TransposeAxesTransform, Compose
 
         tr_transforms = []
         tr_transforms.append(MirrorTransform())

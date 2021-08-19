@@ -1,12 +1,13 @@
 import re
 import torch
-from batchgenerators.dataloading import MultiThreadedAugmenter
 import numpy as np
 import os
 from batchgenerators.dataloading.data_loader import DataLoaderFromDataset
+from batchgenerators.dataloading.multi_threaded_augmenter import MultiThreadedAugmenter
 from batchgenerators.datasets.cifar import HighPerformanceCIFARLoader, CifarDataset
+from batchgenerators.transforms.abstract_transforms import Compose
 from batchgenerators.transforms.spatial_transforms import SpatialTransform
-from batchgenerators.transforms import NumpyToTensor, Compose
+from batchgenerators.transforms.utility_transforms import NumpyToTensor
 from torch._six import int_classes, string_classes, container_abcs
 from torch.utils.data.dataloader import numpy_type_map
 

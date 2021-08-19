@@ -1,6 +1,8 @@
 # batchgenerators by MIC@DKFZ
-batchgenerators is a python package that we developed at the Division of Medical Image Computing at the German Cancer
-Research Center (DKFZ) to suit all our deep learning data augmentation needs.
+batchgenerators is a python package for data augmentation. It is developed jointly between the Division of
+Medical Image Computing at the German Cancer Research Center (DKFZ) and the Applied Computer 
+Vision Lab of the Helmholtz Imaging Platform.
+
 It is not (yet) perfect, but we feel it is good enough to be shared with the community. If you encounter bug, feel free
 to contact us or open a github issue.
 

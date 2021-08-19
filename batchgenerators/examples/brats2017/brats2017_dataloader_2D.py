@@ -3,8 +3,8 @@ from time import time
 import numpy as np
 from batchgenerators.augmentations.crop_and_pad_augmentations import crop
 from batchgenerators.augmentations.utils import pad_nd_image
-from batchgenerators.dataloading import MultiThreadedAugmenter
 from batchgenerators.dataloading.data_loader import DataLoader
+from batchgenerators.dataloading.multi_threaded_augmenter import MultiThreadedAugmenter
 from batchgenerators.examples.brats2017.brats2017_dataloader_3D import get_list_of_patients, BraTS2017DataLoader3D, \
     get_train_transform
 from batchgenerators.examples.brats2017.config import brats_preprocessed_folder, num_threads_for_brats_example

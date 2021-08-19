@@ -1,4 +1,5 @@
-# Copyright 2017 Division of Medical Image Computing, German Cancer Research Center (DKFZ)
+# Copyright 2021 Division of Medical Image Computing, German Cancer Research Center (DKFZ)
+# and Applied Computer Vision Lab, Helmholtz Imaging Platform
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,9 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import numpy as np
-from batchgenerators.dataloading import SlimDataLoaderBase
+from batchgenerators.dataloading.data_loader import SlimDataLoaderBase
 
 
 class BasicDataLoader(SlimDataLoaderBase):

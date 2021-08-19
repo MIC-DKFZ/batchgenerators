@@ -1,4 +1,5 @@
-# Copyright 2017 Division of Medical Image Computing, German Cancer Research Center (DKFZ)
+# Copyright 2021 Division of Medical Image Computing, German Cancer Research Center (DKFZ)
+# and Applied Computer Vision Lab, Helmholtz Imaging Platform
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,18 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 from abc import ABC
-import scipy.stats as st
+from typing import Tuple
+
 import numpy as np
-from typing import Union, Tuple, List, Callable
+import scipy.stats as st
+from batchgenerators.utilities.custom_types import ScalarType, sample_scalar
 from scipy.ndimage import gaussian_filter
 
 
 class LocalTransform(ABC):
     def __init__(self,
-                 scale: Union[Tuple[float, float], float, Callable[[Union[Tuple[int, ...], List[int]], int], float]],
-                 loc: Union[Tuple[float, float], Callable[[Union[Tuple[int, ...], List[int]], int], float]] = (-1, 2),
+                 scale: ScalarType,
+                 loc: ScalarType = (-1, 2),
                  ):
         """
         Places a Gaussian in the image. This can be used to apply a variety of effects through creating a modified
@@ -32,28 +34,6 @@ class LocalTransform(ABC):
         """
         self.loc = loc
         self.scale = scale
-
-    def _get_scale(self, image_shape, dimension):
-        if isinstance(self.scale, float):
-            return self.scale
-        elif isinstance(self.scale, (list, tuple)):
-            assert len(self.scale) == 2
-            return np.random.uniform(*self.scale)
-        elif callable(self.scale):
-            return self.scale(image_shape, dimension)
-        else:
-            raise RuntimeError()
-
-    def _get_loc(self, image_shape, dimension):
-        if isinstance(self.loc, float):
-            return self.loc
-        elif isinstance(self.loc, (list, tuple)):
-            assert len(self.loc) == 2
-            return np.random.uniform(*self.loc)
-        elif callable(self.loc):
-            return self.loc(image_shape, dimension)
-        else:
-            raise RuntimeError()
 
     def _generate_kernel(self, img_shp: Tuple[int, ...]) -> np.ndarray:
         """
@@ -66,8 +46,8 @@ class LocalTransform(ABC):
         kernels = []
         for d in range(len(img_shp)):
             image_size_here = img_shp[d]
-            loc = self._get_loc(img_shp, d)
-            scale = self._get_scale(img_shp, d)
+            loc = sample_scalar(self.loc, img_shp, d)
+            scale = sample_scalar(self.scale, img_shp, d)
 
             loc_rescaled = loc * image_size_here
             x = np.arange(-0.5, image_size_here + 0.5)
@@ -112,9 +92,9 @@ class LocalTransform(ABC):
 
 class BrightnessGradientAdditiveTransform(LocalTransform):
     def __init__(self,
-                 scale: Union[Tuple[float, float], float, Callable[[Union[Tuple[int, ...], List[int]], int], float]],
-                 loc: Union[Tuple[float, float], Callable[[Union[Tuple[int, ...], List[int]], int], float]] = (-1, 2),
-                 max_strength: Union[float, Tuple[float, float], Callable[[np.ndarray, np.ndarray], float]] = 1.,
+                 scale: ScalarType,
+                 loc: ScalarType = (-1, 2),
+                 max_strength: ScalarType = 1.,
                  same_for_all_channels: bool = True,
                  mean_centered: bool = True,
                  p_per_sample: float = 1.,
@@ -181,11 +161,11 @@ class BrightnessGradientAdditiveTransform(LocalTransform):
                         kernel -= kernel.mean()
                     mx = max(np.max(np.abs(kernel)), 1e-8)
                     if not callable(self.max_strength):
-                        strength = self._get_max_strength(None, None)
+                        strength = sample_scalar(self.max_strength, None, None)
                     for ci in range(c):
                         if np.random.uniform() < self.p_per_channel:
                             # now rescale so that the maximum value of the kernel is max_strength
-                            strength = self._get_max_strength(data[bi, ci], kernel) if callable(
+                            strength = sample_scalar(self.max_strength, data[bi, ci], kernel) if callable(
                                 self.max_strength) else strength
                             kernel_scaled = np.copy(kernel) / mx * strength
                             data[bi, ci] += kernel_scaled
@@ -196,28 +176,17 @@ class BrightnessGradientAdditiveTransform(LocalTransform):
                             if self.mean_centered:
                                 kernel -= kernel.mean()
                             mx = max(np.max(np.abs(kernel)), 1e-8)
-                            strength = self._get_max_strength(data[bi, ci], kernel)
+                            strength = sample_scalar(self.max_strength, data[bi, ci], kernel)
                             kernel = kernel / mx * strength
                             data[bi, ci] += kernel
         return data_dict
 
-    def _get_max_strength(self, image, add_gauss):
-        if isinstance(self.max_strength, (int, float)):
-            return self.max_strength
-        elif isinstance(self.max_strength, (list, tuple)):
-            assert len(self.max_strength) == 2
-            return np.random.uniform(*self.max_strength)
-        elif callable(self.max_strength):
-            return self.max_strength(image, add_gauss)
-        else:
-            raise RuntimeError()
-
 
 class LocalGammaTransform(LocalTransform):
     def __init__(self,
-                 scale: Union[Tuple[float, float], float, Callable[[Union[Tuple[int, ...], List[int]], int], float]],
-                 loc: Union[Tuple[float, float], Callable[[Union[Tuple[int, ...], List[int]], int], float]] = (-1, 2),
-                 gamma: Union[float, Tuple[float, float], Callable[[], float]] = (0.5, 1),
+                 scale: ScalarType,
+                 loc: ScalarType = (-1, 2),
+                 gamma: ScalarType = (0.5, 1),
                  same_for_all_channels: bool = True,
                  p_per_sample: float = 1.,
                  p_per_channel: float = 1.,
@@ -283,17 +252,6 @@ class LocalGammaTransform(LocalTransform):
                             data[bi, ci] = self._apply_gamma_gradient(data[bi, ci], kernel)
         return data_dict
 
-    def _get_gamma(self):
-        if isinstance(self.gamma, (int, float)):
-            return self.gamma
-        elif isinstance(self.gamma, (list, tuple)):
-            assert len(self.gamma) == 2
-            return np.random.uniform(*self.gamma)
-        elif callable(self.gamma):
-            return self.gamma()
-        else:
-            raise RuntimeError()
-
     def _apply_gamma_gradient(self, img: np.ndarray, kernel: np.ndarray) -> np.ndarray:
         # store keep original image range
         mn, mx = img.min(), img.max()
@@ -301,7 +259,7 @@ class LocalGammaTransform(LocalTransform):
         # rescale tp [0, 1]
         img = (img - mn) / (max(mx - mn, 1e-8))
 
-        gamma = self._get_gamma()
+        gamma = sample_scalar(self.gamma)
         img_modified = np.power(img, gamma)
 
         return self.run_interpolation(img, img_modified, kernel) * (mx - mn) + mn
@@ -309,10 +267,10 @@ class LocalGammaTransform(LocalTransform):
 
 class LocalSmoothingTransform(LocalTransform):
     def __init__(self,
-                 scale: Union[Tuple[float, float], float, Callable[[Union[Tuple[int, ...], List[int]], int], float]],
-                 loc: Union[Tuple[float, float], Callable[[Union[Tuple[int, ...], List[int]], int], float]] = (-1, 2),
-                 smoothing_strength: Union[float, Tuple[float, float], Callable[[], float]] = (0.5, 1),
-                 kernel_size: Union[float, Tuple[float, float], Callable[[], float]] = (0.5, 1),
+                 scale: ScalarType,
+                 loc: ScalarType = (-1, 2),
+                 smoothing_strength: ScalarType = (0.5, 1),
+                 kernel_size: ScalarType = (0.5, 1),
                  same_for_all_channels: bool = True,
                  p_per_sample: float = 1.,
                  p_per_channel: float = 1.,
@@ -360,40 +318,18 @@ class LocalSmoothingTransform(LocalTransform):
                             data[bi, ci] = self._apply_local_smoothing(data[bi, ci], kernel)
         return data_dict
 
-    def _get_smoothing(self):
-        if isinstance(self.smoothing_strength, (int, float)):
-            return self.smoothing_strength
-        elif isinstance(self.smoothing_strength, (list, tuple)):
-            assert len(self.smoothing_strength) == 2
-            return np.random.uniform(*self.smoothing_strength)
-        elif callable(self.smoothing_strength):
-            return self.smoothing_strength()
-        else:
-            raise RuntimeError()
-
-    def _get_kernel_size(self):
-        if isinstance(self.kernel_size, (int, float)):
-            return self.kernel_size
-        elif isinstance(self.kernel_size, (list, tuple)):
-            assert len(self.kernel_size) == 2
-            return np.random.uniform(*self.kernel_size)
-        elif callable(self.kernel_size):
-            return self.kernel_size()
-        else:
-            raise RuntimeError()
-
     def _apply_local_smoothing(self, img: np.ndarray, kernel: np.ndarray) -> np.ndarray:
         # copy kernel so that we don't modify it out of scope
         kernel = np.copy(kernel)
 
-        smoothing = self._get_smoothing()
+        smoothing = sample_scalar(self.smoothing_strength)
         assert 0 <= smoothing <= 1, 'smoothing_strength must be between 0 and 1, is %f' % smoothing
 
         # prepare kernel by rescaling it to gamma_range
         # kernel is already [0, 1]
         kernel *= smoothing
 
-        smoothing_kernel_size = self._get_kernel_size()
+        smoothing_kernel_size = sample_scalar(self.kernel_size)
         img_smoothed = gaussian_filter(img, smoothing_kernel_size)
 
         return self.run_interpolation(img, img_smoothed, kernel)
@@ -401,9 +337,9 @@ class LocalSmoothingTransform(LocalTransform):
 
 class LocalContrastTransform(LocalTransform):
     def __init__(self,
-                 scale: Union[Tuple[float, float], float, Callable[[Union[Tuple[int, ...], List[int]], int], float]],
-                 loc: Union[Tuple[float, float], Callable[[Union[Tuple[int, ...], List[int]], int], float]] = (-1, 2),
-                 new_contrast: Union[float, Tuple[float, float], Callable[[], float]] = (0.5, 1),
+                 scale: ScalarType,
+                 loc: ScalarType = (-1, 2),
+                 new_contrast: ScalarType = (0.5, 1),
                  same_for_all_channels: bool = True,
                  p_per_sample: float = 1.,
                  p_per_channel: float = 1.,
@@ -434,22 +370,11 @@ class LocalContrastTransform(LocalTransform):
                             data[bi, ci] = self._apply_local_smoothing(data[bi, ci], kernel)
         return data_dict
 
-    def _get_contrast(self):
-        if isinstance(self.new_contrast, (int, float)):
-            return self.new_contrast
-        elif isinstance(self.new_contrast, (list, tuple)):
-            assert len(self.new_contrast) == 2
-            return np.random.uniform(*self.new_contrast)
-        elif callable(self.new_contrast):
-            return self.new_contrast()
-        else:
-            raise RuntimeError()
-
     def _apply_local_smoothing(self, img: np.ndarray, kernel: np.ndarray) -> np.ndarray:
         # copy kernel so that we don't modify it out of scope
         kernel = np.copy(kernel)
 
-        new_contrast = self._get_contrast()
+        new_contrast = sample_scalar(self.new_contrast)
 
         # we compute the mean within the kernel
         mean = (img * kernel).sum() / kernel.sum()

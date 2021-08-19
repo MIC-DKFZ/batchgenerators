@@ -1,4 +1,5 @@
-# Copyright 2017 Division of Medical Image Computing, German Cancer Research Center (DKFZ)
+# Copyright 2021 Division of Medical Image Computing, German Cancer Research Center (DKFZ)
+# and Applied Computer Vision Lab, Helmholtz Imaging Platform
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,11 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import print_function
-from builtins import range, zip
 import random
-
-import numpy
 import numpy as np
 from copy import deepcopy
 from scipy.ndimage import map_coordinates, fourier_gaussian
@@ -100,9 +97,9 @@ def elastic_deform_coordinates_2(coordinates, sigmas, magnitudes):
     offsets = []
     for d in range(n_dim):
         random_values = np.random.random(coordinates.shape[1:]) * 2 - 1
-        random_values_ = numpy.fft.fftn(random_values)
+        random_values_ = np.fft.fftn(random_values)
         deformation_field = fourier_gaussian(random_values_, sigmas)
-        deformation_field = numpy.fft.ifftn(deformation_field).real
+        deformation_field = np.fft.ifftn(deformation_field).real
         offsets.append(deformation_field)
         mx = np.max(np.abs(offsets[-1]))
         offsets[-1] = offsets[-1] / (mx / (magnitudes[d] + 1e-8))

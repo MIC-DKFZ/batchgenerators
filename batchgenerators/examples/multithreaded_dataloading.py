@@ -1,4 +1,5 @@
-from batchgenerators.dataloading import MultiThreadedAugmenter, SlimDataLoaderBase
+from batchgenerators.dataloading.data_loader import SlimDataLoaderBase
+from batchgenerators.dataloading.multi_threaded_augmenter import MultiThreadedAugmenter
 import numpy as np
 
 

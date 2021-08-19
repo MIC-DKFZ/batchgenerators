@@ -1,4 +1,5 @@
-# Copyright 2017 Division of Medical Image Computing, German Cancer Research Center (DKFZ)
+# Copyright 2021 Division of Medical Image Computing, German Cancer Research Center (DKFZ)
+# and Applied Computer Vision Lab, Helmholtz Imaging Platform
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,11 +12,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import unittest
 from copy import deepcopy
 import numpy as np
-from batchgenerators.dataloading import DataLoader
-from batchgenerators.dataloading import MultiThreadedAugmenter
+from batchgenerators.dataloading.data_loader import DataLoader
+from batchgenerators.dataloading.multi_threaded_augmenter import MultiThreadedAugmenter
 
 
 class DummyDataLoader(DataLoader):
