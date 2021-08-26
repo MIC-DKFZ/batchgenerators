@@ -43,7 +43,7 @@ def augment_rot90(sample_data, sample_seg, num_rot=(1, 2, 3), axes=(0, 1, 2)):
     return sample_data, sample_seg
 
 
-def augment_resize(sample_data, sample_seg, target_size, order=3, order_seg=1, cval_seg=0):
+def augment_resize(sample_data, sample_seg, target_size, order=3, order_seg=1):
     """
     Reshapes data (and seg) to target_size
     :param sample_data: np.ndarray or list/tuple of np.ndarrays, must be (c, x, y(, z))) (if list/tuple then each entry
@@ -69,14 +69,14 @@ def augment_resize(sample_data, sample_seg, target_size, order=3, order_seg=1, c
     if sample_seg is not None:
         target_seg = np.ones([sample_seg.shape[0]] + target_size_here)
         for c in range(sample_seg.shape[0]):
-            target_seg[c] = resize_segmentation(sample_seg[c], target_size_here, order_seg, cval_seg)
+            target_seg[c] = resize_segmentation(sample_seg[c], target_size_here, order_seg)
     else:
         target_seg = None
 
     return sample_data, target_seg
 
 
-def augment_zoom(sample_data, sample_seg, zoom_factors, order=3, order_seg=1, cval_seg=0):
+def augment_zoom(sample_data, sample_seg, zoom_factors, order=3, order_seg=1):
     """
     zooms data (and seg) by factor zoom_factors
     :param sample_data: np.ndarray or list/tuple of np.ndarrays, must be (c, x, y(, z))) (if list/tuple then each entry
@@ -105,7 +105,7 @@ def augment_zoom(sample_data, sample_seg, zoom_factors, order=3, order_seg=1, cv
     if sample_seg is not None:
         target_seg = np.ones([sample_seg.shape[0]] + target_shape_here)
         for c in range(sample_seg.shape[0]):
-            target_seg[c] = resize_segmentation(sample_seg[c], target_shape_here, order_seg, cval_seg)
+            target_seg[c] = resize_segmentation(sample_seg[c], target_shape_here, order_seg)
     else:
         target_seg = None
 

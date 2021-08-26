@@ -58,7 +58,7 @@ class Rot90Transform(AbstractTransform):
 
 
 class ZoomTransform(AbstractTransform):
-    def __init__(self, zoom_factors=1, order=3, order_seg=1, cval_seg=0, concatenate_list=False, data_key="data",
+    def __init__(self, zoom_factors=1, order=3, order_seg=1, concatenate_list=False, data_key="data",
                  label_key="seg"):
         """
         Zooms 'data' (and 'seg') by zoom_factors
@@ -75,7 +75,6 @@ class ZoomTransform(AbstractTransform):
 
         """
         self.concatenate_list = concatenate_list
-        self.cval_seg = cval_seg
         self.order_seg = order_seg
         self.data_key = data_key
         self.label_key = label_key
@@ -104,8 +103,7 @@ class ZoomTransform(AbstractTransform):
             sample_seg = None
             if seg is not None:
                 sample_seg = seg[b]
-            res_data, res_seg = augment_zoom(data[b], sample_seg, self.zoom_factors, self.order, self.order_seg,
-                                             self.cval_seg)
+            res_data, res_seg = augment_zoom(data[b], sample_seg, self.zoom_factors, self.order, self.order_seg)
             results.append((res_data, res_seg))
 
         if concatenate:
@@ -122,7 +120,7 @@ class ZoomTransform(AbstractTransform):
 
 class ResizeTransform(AbstractTransform):
 
-    def __init__(self, target_size, order=3, order_seg=1, cval_seg=0, concatenate_list=False, data_key="data",
+    def __init__(self, target_size, order=3, order_seg=1, concatenate_list=False, data_key="data",
                  label_key="seg"):
         """
         Reshapes 'data' (and 'seg') to target_size
@@ -139,7 +137,6 @@ class ResizeTransform(AbstractTransform):
 
         """
         self.concatenate_list = concatenate_list
-        self.cval_seg = cval_seg
         self.order_seg = order_seg
         self.data_key = data_key
         self.label_key = label_key
@@ -168,8 +165,7 @@ class ResizeTransform(AbstractTransform):
             sample_seg = None
             if seg is not None:
                 sample_seg = seg[b]
-            res_data, res_seg = augment_resize(data[b], sample_seg, self.target_size, self.order, self.order_seg,
-                                               self.cval_seg)
+            res_data, res_seg = augment_resize(data[b], sample_seg, self.target_size, self.order, self.order_seg)
             results.append((res_data, res_seg))
 
         if concatenate:

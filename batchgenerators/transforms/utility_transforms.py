@@ -459,7 +459,7 @@ class OneOfTransform(AbstractTransform):
         return self.list_of_transforms[i](**data_dict)
 
 
-class OneOfTransform_perSample(AbstractTransform):
+class OneOfTransformPerSample(AbstractTransform):
     def __init__(self, list_of_transforms: List, relevant_keys: Union[Tuple[str, ...], List[str]],
                  p: Tuple[float, ...] = None):
         """
