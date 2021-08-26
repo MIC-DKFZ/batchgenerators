@@ -41,19 +41,30 @@ class AugmentResize(unittest.TestCase):
 
     def setUp(self):
         np.random.seed(123)
-        self.data_3D = np.random.random((2, 4, 5, 6))
+        self.data_3D = np.random.random((2, 12, 14, 31))
         self.seg_3D = np.random.random(self.data_3D.shape)
 
     def test_resize(self):
-        data_resized, seg_resized = augment_resize(self.data_3D, self.seg_3D, target_size=2)
+        data_resized, seg_resized = augment_resize(self.data_3D, self.seg_3D, target_size=15)
 
         mean_resized = float(np.mean(data_resized))
         mean_original = float(np.mean(self.data_3D))
 
         self.assertAlmostEqual(mean_original, mean_resized, places=2)
 
-        self.assertTrue(all((data_resized.shape[i] == 2 and seg_resized.shape[i] == 2) for i in
-                            range(len(data_resized.shape))))
+        self.assertTrue(all((data_resized.shape[i] == 15 and seg_resized.shape[i] == 15) for i in
+                            range(1, len(data_resized.shape))))
+
+    def test_resize2(self):
+        data_resized, seg_resized = augment_resize(self.data_3D, self.seg_3D, target_size=(7, 5, 6))
+
+        mean_resized = float(np.mean(data_resized))
+        mean_original = float(np.mean(self.data_3D))
+
+        self.assertAlmostEqual(mean_original, mean_resized, places=2)
+
+        self.assertTrue(all([i == j for i, j in zip(data_resized.shape[1:], (7, 5, 6))]))
+        self.assertTrue(all([i == j for i, j in zip(seg_resized.shape[1:], (7, 5, 6))]))
 
 
 class AugmentRot90(unittest.TestCase):
