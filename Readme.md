@@ -153,7 +153,6 @@ This is not required on Linux.
 
 <img src="HIP_Logo.png" width="512px" />
 
-batchgenerators is developed by the Applied Computer Vision Lab (ACVL) of the 
-[Helmholtz Imaging Platform](https://helmholtz-imaging.de) and the 
-[Division of Medical Image Computing](https://www.dkfz.de/en/mic/index.php) at the German Cancer 
-Research Center (DKFZ).
+batchgenerators is developed by the [Division of Medical Image Computing](https://www.dkfz.de/en/mic/index.php) of the 
+German Cancer Research Center (DKFZ) and the Applied Computer Vision Lab (ACVL) of the
+[Helmholtz Imaging Platform](https://helmholtz-imaging.de).
