@@ -618,7 +618,7 @@ def resize_multichannel_image(multichannel_image, new_shape, order=3):
     new_shp = [multichannel_image.shape[0]] + list(new_shape)
     result = np.zeros(new_shp, dtype=multichannel_image.dtype)
     for i in range(multichannel_image.shape[0]):
-        result[i] = resize(multichannel_image[i].astype(float), new_shape, order, "constant", 0, True, anti_aliasing=False)
+        result[i] = resize(multichannel_image[i].astype(float), new_shape, order, "edge", clip=True, anti_aliasing=False)
     return result.astype(tpe)
 
 
