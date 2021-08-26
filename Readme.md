@@ -109,11 +109,19 @@ This is not required on Linux.
 ## Release Notes
 (only highlights, not an exhaustive list)
 
-- 0.20.0: fixed an issue with MultiThreadedAugmenter not terminating properly after KeyboardInterrupt; Fixed an error 
-with the number and order of samples being returned when pin_memory=True; Improved performance by always hiding 
-process-process communication bottleneck through threading
-- 0.19.5: fixed OMP_NUM_THREADS issue by using threadpoolctl package; dropped python 2 support (threadpoolctl is not 
-available for python 2)
+- 0.23: 
+  - fixed the import mess. `__init__.py` files are now empty. This is a breaking change for some users! 
+  Please adapt your imports :-)
+  - local_transforms are now a thing, check them out!
+  - resize_segmentation now uses 'edge' mode and no longer takes a cval argument. Resizing segmentations with constant
+  border values (previous default) can cause problems and should not be done.
+- 0.20.0: 
+  - fixed an issue with MultiThreadedAugmenter not terminating properly after KeyboardInterrupt; Fixed an error 
+  with the number and order of samples being returned when pin_memory=True; Improved performance by always hiding 
+  process-process communication bottleneck through threading
+- 0.19.5: 
+  - fixed OMP_NUM_THREADS issue by using threadpoolctl package; dropped python 2 support (threadpoolctl is not 
+  available for python 2)
 - 0.19:
    - There is now a complete example for BraTS2017/8 available for both 2D and 3D. Use this if you would like to get 
    some insights on how I (Fabian) do my experiments
