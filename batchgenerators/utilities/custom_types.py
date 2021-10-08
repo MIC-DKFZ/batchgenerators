@@ -13,10 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Union, Tuple, Callable, Any
+from typing import Union, Tuple, Any, Protocol
 import numpy as np
 
-ScalarType = Union[Union[int, float], Tuple[float, float], Callable[..., Union[float, int]]]
+class SomeCallable(Protocol):
+    def __call__(self, a: Any, *args, **kwargs) -> Union[float, int]: ...
+
+ScalarType = Union[Union[int, float], Tuple[float, float], SomeCallable]
 
 
 def sample_scalar(scalar_type: ScalarType, *args):
