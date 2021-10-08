@@ -13,7 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Union, Tuple, Any, Protocol
+from typing import Union, Tuple, Any
+from typing_extensions import Protocol
 import numpy as np
 
 class SomeCallable(Protocol):
