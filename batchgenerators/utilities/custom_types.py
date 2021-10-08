@@ -16,7 +16,7 @@
 from typing import Union, Tuple, Callable, Any
 import numpy as np
 
-ScalarType = Union[Union[int, float], Tuple[float, float], Callable[[Any, ...], Union[float, int]]]
+ScalarType = Union[Union[int, float], Tuple[float, float], Callable[..., Union[float, int]]]
 
 
 def sample_scalar(scalar_type: ScalarType, *args):
