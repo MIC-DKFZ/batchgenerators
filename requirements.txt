@@ -6,4 +6,3 @@ scipy
 scikit-image
 scikit-learn
 unittest2
-mypy
