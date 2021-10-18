@@ -135,7 +135,7 @@ class SlimDataLoaderBase(object):
 
 class DataLoader(SlimDataLoaderBase):
     def __init__(self, data, batch_size, num_threads_in_multithreaded=1, seed_for_shuffle=None, return_incomplete=False,
-                 shuffle=True, infinite=False):
+                 shuffle=True, infinite=False, sampling_probabilities=None):
         """
 
         :param data: will be stored in self._data for use in generate_train_batch
@@ -150,6 +150,10 @@ class DataLoader(SlimDataLoaderBase):
         :param shuffle: if True, the order of the indices will be shuffled between epochs. Only applies if infinite=False
         :param infinite: if True, each batch contains randomly (uniformly) sampled indices. An unlimited number of
         batches is returned. If False, DataLoader will iterate over the data only once
+        :param sampling_probabilities: only applies if infinite=True. If sampling_probabilities is not None, the
+        probabilities will be used by np.random.choice to sample the indexes for each batch. Important:
+        sampling_probabilities must have as many entries as there are samples in your dataset AND
+        sampling_probabilitiesneeds to sum to 1
         """
         super(DataLoader, self).__init__(data, batch_size, num_threads_in_multithreaded)
         self.infinite = infinite
@@ -163,6 +167,7 @@ class DataLoader(SlimDataLoaderBase):
 
         # when you derive, make sure to set this! We can't set it here because we don't know what data will be like
         self.indices = None
+        self.sampling_probabilities = sampling_probabilities
 
     def reset(self):
         assert self.indices is not None
@@ -180,7 +185,7 @@ class DataLoader(SlimDataLoaderBase):
     def get_indices(self):
         # if self.infinite, this is easy
         if self.infinite:
-            return np.random.choice(self.indices, self.batch_size, replace=True, p=None)
+            return np.random.choice(self.indices, self.batch_size, replace=True, p=self.sampling_probabilities)
 
         if self.last_reached:
             self.reset()
