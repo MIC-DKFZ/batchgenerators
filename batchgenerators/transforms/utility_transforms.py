@@ -17,7 +17,6 @@ import copy
 from typing import List, Type, Union, Tuple
 
 import numpy as np
-import torch
 
 from batchgenerators.augmentations.utils import convert_seg_image_to_one_hot_encoding, \
     convert_seg_to_bounding_box_coordinates, transpose_channels
@@ -37,7 +36,7 @@ class NumpyToTensor(AbstractTransform):
         self.keys = keys
         self.cast_to = cast_to
 
-    def cast(self, tensor: torch.Tensor):
+    def cast(self, tensor):
         if self.cast_to is not None:
             if self.cast_to == 'half':
                 tensor = tensor.half()
