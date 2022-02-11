@@ -311,7 +311,7 @@ class SharpeningTransform(AbstractTransform):
         for b in range(data.shape[0]):
             if np.random.uniform() < self.p_per_sample:
                 if self.same_for_each_channel:
-                    mn, mx = data[b, c].min(), data[b, c].max()
+                    mn, mx = data[b].min(), data[b].max()
                     strength_here = self.strength if isinstance(self.strength, float) else np.random.uniform(
                         *self.strength)
                     if len(data.shape) == 4:
