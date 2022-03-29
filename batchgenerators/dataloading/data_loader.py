@@ -145,7 +145,7 @@ class DataLoader(SlimDataLoaderBase):
         :param seed_for_shuffle: for reproducibility
         :param return_incomplete: whether or not to return batches that are incomplete. Only applies is infinite=False.
         If your data has len of 34 and your batch size is 32 then there return_incomplete=False will make this loader
-        return only onebatch of shapre 32 (omitting 2 of your training examples). If return_incomplete=True a second
+        return only one batch of shape 32 (omitting 2 of your training examples). If return_incomplete=True a second
         batch with batch size 2 will be returned.
         :param shuffle: if True, the order of the indices will be shuffled between epochs. Only applies if infinite=False
         :param infinite: if True, each batch contains randomly (uniformly) sampled indices. An unlimited number of
@@ -164,10 +164,10 @@ class DataLoader(SlimDataLoaderBase):
         self.current_position = None
         self.was_initialized = False
         self.last_reached = False
+        self.sampling_probabilities = sampling_probabilities
 
         # when you derive, make sure to set this! We can't set it here because we don't know what data will be like
         self.indices = None
-        self.sampling_probabilities = sampling_probabilities
 
     def reset(self):
         assert self.indices is not None
