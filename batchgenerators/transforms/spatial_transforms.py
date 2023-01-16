@@ -230,18 +230,21 @@ class ChannelTranslation(AbstractTransform):
 
     """
 
-    def __init__(self, const_channel=0, max_shifts=None, data_key="data", label_key="seg"):
+    def __init__(self, const_channel=0, max_shifts=None, data_key="data", label_key="seg", p_per_sample=0.3):
         self.data_key = data_key
         self.label_key = label_key
         self.max_shift = max_shifts
         self.const_channel = const_channel
+        self.p_per_sample = p_per_sample
+
 
     def __call__(self, **data_dict):
         data = data_dict.get(self.data_key)
+        for b in range(len(data)):
+            if np.random.uniform() < self.p_per_sample:
+                ret_val = augment_channel_translation(data=data, const_channel=self.const_channel, max_shifts=self.max_shift)
 
-        ret_val = augment_channel_translation(data=data, const_channel=self.const_channel, max_shifts=self.max_shift)
-
-        data_dict[self.data_key] = ret_val[0]
+                data_dict[self.data_key] = ret_val[0]
 
         return data_dict
 
