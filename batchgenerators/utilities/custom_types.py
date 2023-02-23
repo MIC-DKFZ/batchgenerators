@@ -25,8 +25,10 @@ def sample_scalar(scalar_type: ScalarType, *args):
         return scalar_type
     elif isinstance(scalar_type, (list, tuple)):
         assert len(scalar_type) == 2, 'if list is provided, its length must be 2'
-        assert scalar_type[0] < scalar_type[1], 'if list is provided, first entry must be smaller than second entry, ' \
+        assert scalar_type[0] <= scalar_type[1], 'if list is provided, first entry must be smaller or equal than second entry, ' \
                                                 'otherwise we cannot sample using np.random.uniform'
+        if scalar_type[0] == scalar_type[1]:
+            return scalar_type[0]
         return np.random.uniform(*scalar_type)
     elif callable(scalar_type):
         return scalar_type(*args)
