@@ -38,39 +38,40 @@ except ImportError:
 def producer(queue: Queue, data_loader, transform, thread_id: int, seed,
              abort_event: Event, wait_time: float = 0.02):
     # the producer will set the abort event if something happens
-    np.random.seed(seed)
-    data_loader.set_thread_id(thread_id)
-    item = None
+    with threadpool_limits(1, None):
+        np.random.seed(seed)
+        data_loader.set_thread_id(thread_id)
+        item = None
 
-    try:
-        while True:
-
-            if abort_event.is_set():
-                return
-            else:
-                if item is None:
-                    item = next(data_loader)
-                    if transform is not None:
-                        item = transform(**item)
+        try:
+            while True:
 
                 if abort_event.is_set():
                     return
-
-                if not queue.full():
-                    queue.put(item)
-                    item = None
                 else:
-                    sleep(wait_time)
+                    if item is None:
+                        item = next(data_loader)
+                        if transform is not None:
+                            item = transform(**item)
 
-    except KeyboardInterrupt:
-        abort_event.set()
-        return
+                    if abort_event.is_set():
+                        return
 
-    except Exception as e:
-        print("Exception in background worker %d:\n" % thread_id, e)
-        traceback.print_exc()
-        abort_event.set()
-        return
+                    if not queue.full():
+                        queue.put(item)
+                        item = None
+                    else:
+                        sleep(wait_time)
+
+        except KeyboardInterrupt:
+            abort_event.set()
+            return
+
+        except Exception as e:
+            print("Exception in background worker %d:\n" % thread_id, e)
+            traceback.print_exc()
+            abort_event.set()
+            return
 
 
 def pin_memory_of_all_eligible_items_in_dict(result_dict):
@@ -207,12 +208,11 @@ class NonDetMultiThreadedAugmenter(object):
             if isinstance(self.generator, DataLoader):
                 self.generator.was_initialized = False
 
-            with threadpool_limits(limits=1, user_api=None):
-                for i in range(self.num_processes):
-                    self._processes.append(Process(target=producer, args=(
-                        self._queue, self.generator, self.transform, i, self.seeds[i], self.abort_event, self.wait_time
-                    )))
-                    self._processes[-1].daemon = True
+            for i in range(self.num_processes):
+                self._processes.append(Process(target=producer, args=(
+                    self._queue, self.generator, self.transform, i, self.seeds[i], self.abort_event, self.wait_time
+                )))
+                self._processes[-1].daemon = True
             _ = [i.start() for i in self._processes]
 
             if torch is not None and torch.cuda.is_available():
