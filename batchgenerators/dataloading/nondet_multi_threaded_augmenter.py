@@ -99,9 +99,8 @@ def results_loop(in_queue: Queue, out_queue: thrQueue, abort_event: Event,
             # check if all workers are still alive
             if not all([i.is_alive() for i in worker_list]):
                 abort_event.set()
-                raise RuntimeError("Abort event was set. So someone died and we should end this madness. \nIMPORTANT: "
-                                   "This is not the actual error message! Look further up to see what caused the "
-                                   "error. Please also check whether your RAM was full")
+                raise RuntimeError("One or more background workers are no longer alive. Exiting. Please check the "
+                                   "print statements above for the actual error message")
 
             if item is None:
                 if not in_queue.empty():
@@ -178,9 +177,8 @@ class NonDetMultiThreadedAugmenter(object):
             if self.abort_event.is_set():
                 # self.communication_thread handles checking for dead workers and will set the abort event if necessary
                 self._finish()
-                raise RuntimeError("MultiThreadedAugmenter.abort_event was set, something went wrong. Maybe one of "
-                                   "your workers crashed. This is not the actual error message! Look further up your "
-                                   "stdout to see what caused the error. Please also check whether your RAM was full")
+                raise RuntimeError("One or more background workers are no longer alive. Exiting. Please check the "
+                                   "print statements above for the actual error message")
 
             if not self.results_loop_queue.empty():
                 item = self.results_loop_queue.get()
