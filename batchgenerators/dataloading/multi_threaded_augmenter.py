@@ -80,7 +80,7 @@ def results_loop(in_queues: List[Queue], out_queue: thrQueue, abort_event: Event
     end_ctr = 0
 
     while True:
-        # if abort_event is set we need to clean up. This is where it hangs sometimes so it makes sense to drain all
+        # if abort_event is set we need to clean up. This is where it hangs sometimes, so it makes sense to drain all
         # the incoming queues and ignore all the errors occuring during this process.
         try:
             if abort_event.is_set():
