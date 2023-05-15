@@ -84,14 +84,10 @@ def mean_std_normalization(data, mean, std, per_channel=True):
 def cut_off_outliers(data, percentile_lower=0.2, percentile_upper=99.8, per_channel=False):
     for b in range(len(data)):
         if not per_channel:
-            cut_off_lower = np.percentile(data[b], percentile_lower)
-            cut_off_upper = np.percentile(data[b], percentile_upper)
-            data[b][data[b] < cut_off_lower] = cut_off_lower
-            data[b][data[b] > cut_off_upper] = cut_off_upper
+            cut_off_lower, cut_off_upper = np.percentile(data[b], (percentile_lower, percentile_upper))
+            np.clip(data[b], cut_off_lower, cut_off_upper, out=data[b])
         else:
             for c in range(data.shape[1]):
-                cut_off_lower = np.percentile(data[b, c], percentile_lower)
-                cut_off_upper = np.percentile(data[b, c], percentile_upper)
-                data[b, c][data[b, c] < cut_off_lower] = cut_off_lower
-                data[b, c][data[b, c] > cut_off_upper] = cut_off_upper
+                cut_off_lower, cut_off_upper = np.percentile(data[b, c], (percentile_lower, percentile_upper))
+                np.clip(data[b, c], cut_off_lower, cut_off_upper, out=data[b, c])
     return data

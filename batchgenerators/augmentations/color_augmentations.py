@@ -41,11 +41,10 @@ def augment_contrast(data_sample: np.ndarray,
                     minm = data_sample[c].min()
                     maxm = data_sample[c].max()
 
-                data_sample[c] = (data_sample[c] - mn) * factor + mn
+                data_sample[c] = data_sample[c] * factor + mn * (1 - factor)
 
                 if preserve_range:
-                    data_sample[c][data_sample[c] < minm] = minm
-                    data_sample[c][data_sample[c] > maxm] = maxm
+                    np.clip(data_sample[c], minm, maxm, out=data_sample[c])
     else:
         for c in range(data_sample.shape[0]):
             if np.random.uniform() < p_per_channel:
@@ -62,11 +61,11 @@ def augment_contrast(data_sample: np.ndarray,
                     minm = data_sample[c].min()
                     maxm = data_sample[c].max()
 
-                data_sample[c] = (data_sample[c] - mn) * factor + mn
+                data_sample[c] = data_sample[c] * factor + mn * (1 - factor)
 
                 if preserve_range:
-                    data_sample[c][data_sample[c] < minm] = minm
-                    data_sample[c][data_sample[c] > maxm] = maxm
+                    np.clip(data_sample[c], minm, maxm, out=data_sample[c])
+
     return data_sample
 
 
