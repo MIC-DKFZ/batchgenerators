@@ -44,7 +44,7 @@ def augment_gaussian_noise(data_sample: np.ndarray, noise_variance: Tuple[float,
                 noise_variance[0] if noise_variance[0] == noise_variance[1] else \
                     random.uniform(noise_variance[0], noise_variance[1])
             # bug fixed: https://github.com/MIC-DKFZ/batchgenerators/issues/86
-            data_sample[c] = data_sample[c] + np.random.normal(0.0, variance_here, size=data_sample[c].shape)
+            data_sample[c] += np.random.normal(0.0, variance_here, size=data_sample[c].shape)
     return data_sample
 
 

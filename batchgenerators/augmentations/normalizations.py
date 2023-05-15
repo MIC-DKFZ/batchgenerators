@@ -74,7 +74,7 @@ def mean_std_normalization(data, mean, std, per_channel=True):
 
     for b in range(data_shape[0]):
         if per_channel:
-            for c in range(data_shape[1]):
+            for c in range(data_shape[1]):  # TODO: do one loop
                 data_normalized[b][c] = (data[b][c] - mean[c]) / std[c]
         else:
             data_normalized[b] = (data[b] - mean) / std
