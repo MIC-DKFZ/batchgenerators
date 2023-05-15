@@ -93,8 +93,8 @@ def augment_brightness_additive(data_sample, mu:float, sigma:float , per_channel
 
 
 def augment_brightness_multiplicative(data_sample, multiplier_range=(0.5, 2), per_channel=True):
-    multiplier = np.random.uniform(multiplier_range[0], multiplier_range[1])
     if not per_channel:
+        multiplier = np.random.uniform(multiplier_range[0], multiplier_range[1])
         data_sample *= multiplier
     else:
         for c in range(data_sample.shape[0]):

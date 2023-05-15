@@ -32,10 +32,12 @@ def get_lbs_for_random_crop(crop_size, data_shape, margins):
     """
     lbs = []
     for i in range(len(data_shape) - 2):
-        if data_shape[i+2] - crop_size[i] - margins[i] > margins[i]:
-            lbs.append(np.random.randint(margins[i], data_shape[i+2] - crop_size[i] - margins[i]))
+        new_shape = data_shape[i+2] - crop_size[i]
+        margin = margins[i]
+        if new_shape > 2 * margin:
+            lbs.append(np.random.randint(margin, new_shape - margin))
         else:
-            lbs.append((data_shape[i+2] - crop_size[i]) // 2)
+            lbs.append(new_shape // 2)
     return lbs
 
 
@@ -88,7 +90,7 @@ def crop(data, seg=None, crop_size=128, margins=(0, 0, 0), crop_type="center",
                                                                              (str(data_shape), str(seg_shape))
 
     if type(crop_size) not in (tuple, list, np.ndarray):
-        crop_size = [crop_size] * dim
+        crop_size = (crop_size, ) * dim
     else:
         assert len(crop_size) == len(
             data_shape) - 2, "If you provide a list/tuple as center crop make sure it has the same dimension as your " \
@@ -97,9 +99,9 @@ def crop(data, seg=None, crop_size=128, margins=(0, 0, 0), crop_type="center",
     if not isinstance(margins, (np.ndarray, tuple, list)):
         margins = [margins] * dim
 
-    data_return = np.zeros([data_shape[0], data_shape[1]] + list(crop_size), dtype=data_dtype)
+    data_return = np.zeros((data_shape[0], data_shape[1]) + tuple(crop_size), dtype=data_dtype)
     if seg is not None:
-        seg_return = np.zeros([seg_shape[0], seg_shape[1]] + list(crop_size), dtype=seg_dtype)
+        seg_return = np.zeros((seg_shape[0], seg_shape[1]) + tuple(crop_size), dtype=seg_dtype)
     else:
         seg_return = None
 

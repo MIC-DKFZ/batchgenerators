@@ -57,10 +57,10 @@ def zero_mean_unit_variance_normalization(data, per_channel=True, epsilon=1e-8):
 def mean_std_normalization(data, mean, std, per_channel=True):
     data_normalized = np.zeros(data.shape, dtype=data.dtype)
     if isinstance(data, np.ndarray):
-        data_shape = tuple(list(data.shape))
+        data_shape = data.shape
     elif isinstance(data, (list, tuple)):
         assert len(data) > 0 and isinstance(data[0], np.ndarray)
-        data_shape = [len(data)] +  list(data[0].shape)
+        data_shape = (len(data),) + data[0].shape
     else:
         raise TypeError("Data has to be either a numpy array or a list")
 
