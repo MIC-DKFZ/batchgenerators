@@ -187,7 +187,8 @@ class TestMultiThreadedAugmenter(unittest.TestCase):
             res = mt.next()
 
         assert isinstance(res['data'], torch.Tensor)
-        assert res['data'].is_pinned()
+        if torch.cuda.is_available():
+            assert res['data'].is_pinned()
 
         # let mt finish caching, otherwise it's going to print an error (which is not a problem and will not prevent
         # the success of the test but it does not look pretty)

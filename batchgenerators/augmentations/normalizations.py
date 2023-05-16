@@ -55,7 +55,6 @@ def zero_mean_unit_variance_normalization(data, per_channel=True, epsilon=1e-8):
 
 
 def mean_std_normalization(data, mean, std, per_channel=True):
-    data_normalized = np.zeros(data.shape, dtype=data.dtype)
     if isinstance(data, np.ndarray):
         data_shape = data.shape
     elif isinstance(data, (list, tuple)):
@@ -72,12 +71,14 @@ def mean_std_normalization(data, mean, std, per_channel=True):
     elif per_channel and isinstance(std, (tuple, list, np.ndarray)):
         assert len(std) == data_shape[1]
 
-    for b in range(data_shape[0]):
-        if per_channel:
-            for c in range(data_shape[1]):  # TODO: do one loop
-                data_normalized[b][c] = (data[b][c] - mean[c]) / std[c]
-        else:
-            data_normalized[b] = (data[b] - mean) / std
+    if per_channel:
+        mean = np.array(mean)
+        std = np.array(std)
+        data_normalized = np.zeros(data.shape, dtype=data.dtype)
+        for b in range(data_shape[0]):
+            data_normalized[b] = ((data[b].T - mean) / std).T
+    else:
+        data_normalized = (data - mean) / std
     return data_normalized
 
 
