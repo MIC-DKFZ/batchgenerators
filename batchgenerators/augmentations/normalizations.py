@@ -17,40 +17,42 @@ import numpy as np
 
 
 def range_normalization(data, rnge=(0, 1), per_channel=True, eps=1e-8):
-    data_normalized = np.zeros(data.shape, dtype=data.dtype)
-    for b in range(data.shape[0]):
-        if per_channel:
-            for c in range(data.shape[1]):
-                data_normalized[b, c] = min_max_normalization(data[b, c], eps)
-        else:
-            data_normalized[b] = min_max_normalization(data[b], eps)
+    if per_channel:
+        axes = tuple(range(2, len(data.shape)))
+    else:
+        axes = tuple(range(1, len(data.shape)))
 
+    data_normalized = min_max_normalization_batched(data, eps, axes)
     data_normalized *= (rnge[1] - rnge[0])
     data_normalized += rnge[0]
+    return data_normalized
+
+
+def min_max_normalization_batched(data, eps, axes):
+    mn = data.min(axis=axes)
+    mx = data.max(axis=axes)
+    old_range = mx - mn + eps
+    data_normalized = ((data.T - mn.T) / old_range.T).T
     return data_normalized
 
 
 def min_max_normalization(data, eps):
     mn = data.min()
     mx = data.max()
-    data_normalized = data - mn
     old_range = mx - mn + eps
-    data_normalized /= old_range
-
+    data_normalized = (data - mn) / old_range
     return data_normalized
 
+
 def zero_mean_unit_variance_normalization(data, per_channel=True, epsilon=1e-8):
-    data_normalized = np.zeros(data.shape, dtype=data.dtype)
-    for b in range(data.shape[0]):
-        if per_channel:
-            for c in range(data.shape[1]):
-                mean = data[b, c].mean()
-                std = data[b, c].std() + epsilon
-                data_normalized[b, c] = (data[b, c] - mean) / std
-        else:
-            mean = data[b].mean()
-            std = data[b].std() + epsilon
-            data_normalized[b] = (data[b] - mean) / std
+    if per_channel:
+        axes = tuple(range(2, len(data.shape)))
+    else:
+        axes = tuple(range(1, len(data.shape)))
+
+    mean = np.mean(data, axis=axes)
+    std = np.std(data, axis=axes) + epsilon
+    data_normalized = ((data.T - mean.T) / std.T).T
     return data_normalized
 
 
@@ -72,23 +74,20 @@ def mean_std_normalization(data, mean, std, per_channel=True):
         assert len(std) == data_shape[1]
 
     if per_channel:
-        mean = np.array(mean)
-        std = np.array(std)
-        data_normalized = np.zeros(data.shape, dtype=data.dtype)
-        for b in range(data_shape[0]):
-            data_normalized[b] = ((data[b].T - mean) / std).T
+        mean = np.broadcast_to(mean, (len(data), len(mean)))
+        std = np.broadcast_to(std, (len(data), len(std)))
+        data_normalized = ((data.T - mean.T) / std.T).T
     else:
         data_normalized = (data - mean) / std
     return data_normalized
 
 
 def cut_off_outliers(data, percentile_lower=0.2, percentile_upper=99.8, per_channel=False):
-    for b in range(len(data)):
-        if not per_channel:
-            cut_off_lower, cut_off_upper = np.percentile(data[b], (percentile_lower, percentile_upper))
-            np.clip(data[b], cut_off_lower, cut_off_upper, out=data[b])
-        else:
-            for c in range(data.shape[1]):
-                cut_off_lower, cut_off_upper = np.percentile(data[b, c], (percentile_lower, percentile_upper))
-                np.clip(data[b, c], cut_off_lower, cut_off_upper, out=data[b, c])
+    if per_channel:
+        axes = tuple(range(2, len(data.shape)))
+    else:
+        axes = tuple(range(1, len(data.shape)))
+
+    cut_off_lower, cut_off_upper = np.percentile(data, (percentile_lower, percentile_upper), axis=axes)
+    np.clip(data.T, cut_off_lower.T, cut_off_upper.T, out=data.T)
     return data
