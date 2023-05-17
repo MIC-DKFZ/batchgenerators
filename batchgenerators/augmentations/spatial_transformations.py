@@ -36,7 +36,7 @@ def augment_rot90(sample_data, sample_seg, num_rot=(1, 2, 3), axes=(0, 1, 2)):
     num_rot = np.random.choice(num_rot)
     axes = np.random.choice(axes, size=2, replace=False)
     axes.sort()
-    axes = [i + 1 for i in axes]
+    axes += 1
     sample_data = np.rot90(sample_data, num_rot, axes)
     if sample_seg is not None:
         sample_seg = np.rot90(sample_seg, num_rot, axes)

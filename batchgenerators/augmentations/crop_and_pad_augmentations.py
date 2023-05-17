@@ -95,13 +95,14 @@ def crop(data, seg=None, crop_size=128, margins=(0, 0, 0), crop_type="center",
         assert len(crop_size) == len(
             data_shape) - 2, "If you provide a list/tuple as center crop make sure it has the same dimension as your " \
                              "data (2d/3d)"
+    crop_size = tuple(crop_size)
 
     if not isinstance(margins, (np.ndarray, tuple, list)):
         margins = [margins] * dim
 
-    data_return = np.zeros((data_shape[0], data_shape[1]) + tuple(crop_size), dtype=data_dtype)
+    data_return = np.zeros((data_shape[0], data_shape[1]) + crop_size, dtype=data_dtype)
     if seg is not None:
-        seg_return = np.zeros((seg_shape[0], seg_shape[1]) + tuple(crop_size), dtype=seg_dtype)
+        seg_return = np.zeros((seg_shape[0], seg_shape[1]) + crop_size, dtype=seg_dtype)
     else:
         seg_return = None
 

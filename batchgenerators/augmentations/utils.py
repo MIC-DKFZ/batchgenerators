@@ -37,8 +37,9 @@ def generate_elastic_transform_coordinates(shape, alpha, sigma):
 def create_zero_centered_coordinate_mesh(shape):
     tmp = tuple([np.arange(i) for i in shape])
     coords = np.array(np.meshgrid(*tmp, indexing='ij')).astype(float)
+    to_add = ((np.array(shape).astype(float) - 1) / 2.)
     for d in range(len(shape)):
-        coords[d] -= ((np.array(shape).astype(float) - 1) / 2.)[d]
+        coords[d] -= to_add[d]
     return coords
 
 
@@ -100,9 +101,10 @@ def elastic_deform_coordinates_2(coordinates, sigmas, magnitudes):
         random_values_ = np.fft.fftn(random_values)
         deformation_field = fourier_gaussian(random_values_, sigmas)
         deformation_field = np.fft.ifftn(deformation_field).real
+        mx = np.max(np.abs(deformation_field))
+        deformation_field *= (magnitudes[d] + 1e-8) / mx
         offsets.append(deformation_field)
-        mx = np.max(np.abs(offsets[-1]))
-        offsets[-1] = offsets[-1] / (mx / (magnitudes[d] + 1e-8))
+
     offsets = np.array(offsets)
     indices = offsets + coordinates
     return indices
@@ -134,10 +136,10 @@ def scale_coords(coords, scale):
 
 
 def uncenter_coords(coords):
-    shp = coords.shape[1:]
+    shp = (coords.shape[1:] - 1) / 2.
     coords = deepcopy(coords)
     for d in range(coords.shape[0]):
-        coords[d] += (shp[d] - 1) / 2.
+        coords[d] += shp[d]
     return coords
 
 
@@ -145,7 +147,7 @@ def interpolate_img(img, coords, order=3, mode='nearest', cval=0.0, is_seg=False
     if is_seg and order != 0:
         unique_labels = np.unique(img)
         result = np.zeros(coords.shape[1:], img.dtype)
-        for i, c in enumerate(unique_labels):
+        for c in unique_labels:
             res_new = map_coordinates((img == c).astype(float), coords, order=order, mode=mode, cval=cval)
             result[res_new >= 0.5] = c
         return result
@@ -160,10 +162,9 @@ def generate_noise(shape, alpha, sigma):
 
 
 def find_entries_in_array(entries, myarray):
-    entries = np.array(entries)
-    values = np.arange(np.max(myarray) + 1)
-    lut = np.zeros(len(values), 'bool')
-    lut[entries.astype("int")] = True
+    entries = np.array(entries, dtype=int)
+    lut = np.zeros(np.max(myarray) + 1, 'bool')
+    lut[entries] = True
     return np.take(lut, myarray.astype(int))
 
 
@@ -330,8 +331,8 @@ def random_crop_2D_image_batched(img, crop_size):
 
 
 def resize_image_by_padding(image, new_shape, pad_value=None):
-    shape = tuple(list(image.shape))
-    new_shape = tuple(np.max(np.concatenate((shape, new_shape)).reshape((2, len(shape))), axis=0))
+    shape = image.shape
+    new_shape = np.max(np.concatenate((shape, new_shape)).reshape((2, len(shape))), axis=0)
     if pad_value is None:
         if len(shape) == 2:
             pad_value = image[0, 0]
@@ -339,8 +340,8 @@ def resize_image_by_padding(image, new_shape, pad_value=None):
             pad_value = image[0, 0, 0]
         else:
             raise ValueError("Image must be either 2 or 3 dimensional")
-    res = np.ones(list(new_shape), dtype=image.dtype) * pad_value
-    start = np.array(new_shape) / 2. - np.array(shape) / 2.
+    res = np.ones(new_shape, dtype=image.dtype) * pad_value
+    start = new_shape / 2. - np.array(shape) / 2.
     if len(shape) == 2:
         res[int(start[0]):int(start[0]) + int(shape[0]), int(start[1]):int(start[1]) + int(shape[1])] = image
     elif len(shape) == 3:
@@ -350,8 +351,8 @@ def resize_image_by_padding(image, new_shape, pad_value=None):
 
 
 def resize_image_by_padding_batched(image, new_shape, pad_value=None):
-    shape = tuple(list(image.shape[2:]))
-    new_shape = tuple(np.max(np.concatenate((shape, new_shape)).reshape((2, len(shape))), axis=0))
+    shape = image.shape[2:]
+    new_shape = np.max(np.concatenate((shape, new_shape)).reshape((2, len(shape))), axis=0)
     if pad_value is None:
         if len(shape) == 2:
             pad_value = image[0, 0]
@@ -359,7 +360,7 @@ def resize_image_by_padding_batched(image, new_shape, pad_value=None):
             pad_value = image[0, 0, 0]
         else:
             raise ValueError("Image must be either 2 or 3 dimensional")
-    start = np.array(new_shape) / 2. - np.array(shape) / 2.
+    start = new_shape / 2. - np.array(shape) / 2.
     if len(shape) == 2:
         res = np.ones((image.shape[0], image.shape[1], new_shape[0], new_shape[1]), dtype=image.dtype) * pad_value
         res[:, :, int(start[0]):int(start[0]) + int(shape[0]), int(start[1]):int(start[1]) + int(shape[1])] = image[:,
@@ -476,16 +477,18 @@ def general_cc_var_num_channels(img, diff_order=0, mink_norm=1, sigma=1, mask_im
         for c in range(img_internal.shape[0]):
             white_colors.append(np.max(img_internal[c][mask_im != 1]))
 
-    som = np.sqrt(np.sum([i ** 2 for i in white_colors]))
+    white_colors = np.array(white_colors)
+    som = np.sqrt(np.sum(np.power(white_colors, 2)))
 
-    white_colors = [i / som for i in white_colors]
+    white_colors /= som
+    white_colors *= np.sqrt(3.)
 
     for c in range(output_img.shape[0]):
-        output_img[c] /= (white_colors[c] * np.sqrt(3.))
+        output_img[c] /= white_colors[c]
 
     if clip_range:
-        output_img[output_img < minm] = minm
-        output_img[output_img > maxm] = maxm
+        np.clip(output_img, minm, maxm, out= output_img)
+
     return white_colors, output_img
 
 
@@ -598,7 +601,7 @@ def resize_segmentation(segmentation, new_shape, order=3):
     else:
         reshaped = np.zeros(new_shape, dtype=segmentation.dtype)
 
-        for i, c in enumerate(unique_labels):
+        for c in unique_labels:
             mask = segmentation == c
             reshaped_multihot = resize(mask.astype(float), new_shape, order, mode="edge", clip=True, anti_aliasing=False)
             reshaped[reshaped_multihot >= 0.5] = c
@@ -693,9 +696,7 @@ def pad_nd_image(image, new_shape=None, mode="constant", kwargs=None, return_sli
     num_axes_nopad = len(image.shape) - len(new_shape)
 
     new_shape = [max(new_shape[i], old_shape[i]) for i in range(len(new_shape))]
-
-    if not isinstance(new_shape, np.ndarray):
-        new_shape = np.array(new_shape)
+    new_shape = np.array(new_shape)
 
     if shape_must_be_divisible_by is not None:
         if not isinstance(shape_must_be_divisible_by, (list, tuple, np.ndarray)):
@@ -704,17 +705,16 @@ def pad_nd_image(image, new_shape=None, mode="constant", kwargs=None, return_sli
             assert len(shape_must_be_divisible_by) == len(new_shape)
 
         for i in range(len(new_shape)):
-            if new_shape[i] % shape_must_be_divisible_by[i] == 0:
-                new_shape[i] -= shape_must_be_divisible_by[i]
-
-        new_shape = np.array([new_shape[i] + shape_must_be_divisible_by[i] - new_shape[i] % shape_must_be_divisible_by[i] for i in range(len(new_shape))])
+            modulo = new_shape[i] % shape_must_be_divisible_by[i]
+            if modulo != 0:
+                new_shape[i] += shape_must_be_divisible_by[i] - modulo
 
     difference = new_shape - old_shape
     pad_below = difference // 2
-    pad_above = difference // 2 + difference % 2
+    pad_above = pad_below + difference % 2
     pad_list = [[0, 0]]*num_axes_nopad + list([list(i) for i in zip(pad_below, pad_above)])
 
-    if not ((all([i == 0 for i in pad_below])) and (all([i == 0 for i in pad_above]))):
+    if np.any(pad_below) or np.any(pad_above):
         res = np.pad(image, pad_list, mode, **kwargs)
     else:
         res = image
