@@ -118,7 +118,7 @@ class SegChannelRandomSwapTransform(AbstractTransform):
             random_number = np.random.rand()
             if random_number < self.swap_probability:
                 seg[:, [self.axis1, self.axis2]] = seg[:, [self.axis2, self.axis1]]
-            data_dict[self.label_key] = seg
+                data_dict[self.label_key] = seg
         return data_dict
 
 

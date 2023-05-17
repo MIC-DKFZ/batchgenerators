@@ -169,6 +169,10 @@ class DataLoader(SlimDataLoaderBase):
         # when you derive, make sure to set this! We can't set it here because we don't know what data will be like
         self.indices = None
 
+        if self.infinite:
+            # Use separate get indices method
+            self.get_indices = self.get_indices_infinite
+
     def reset(self):
         assert self.indices is not None
 
@@ -182,11 +186,10 @@ class DataLoader(SlimDataLoaderBase):
 
         self.last_reached = False
 
-    def get_indices(self):
-        # if self.infinite, this is easy
-        if self.infinite:
-            return np.random.choice(self.indices, self.batch_size, replace=True, p=self.sampling_probabilities)
+    def get_indices_infinite(self):
+        return np.random.choice(self.indices, self.batch_size, replace=True, p=self.sampling_probabilities)
 
+    def get_indices(self):
         if self.last_reached:
             self.reset()
             raise StopIteration
@@ -199,7 +202,6 @@ class DataLoader(SlimDataLoaderBase):
         for b in range(self.batch_size):
             if self.current_position < len(self.indices):
                 indices.append(self.indices[self.current_position])
-
                 self.current_position += 1
             else:
                 self.last_reached = True

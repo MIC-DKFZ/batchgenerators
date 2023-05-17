@@ -61,8 +61,8 @@ class LocalTransform(ABC):
             kernel_image = kernel_2d
 
         # normalize to [0, 1]
-        kernel_image = kernel_image - kernel_image.min()
-        kernel_image = kernel_image / max(1e-8, kernel_image.max())
+        kernel_image -= kernel_image.min()
+        kernel_image /= max(1e-8, kernel_image.max())
         return kernel_image
 
     def _generate_multiple_kernel_image(self, img_shp: Tuple[int, ...], num_kernels: int) -> np.ndarray:
@@ -167,7 +167,7 @@ class BrightnessGradientAdditiveTransform(LocalTransform):
                             # now rescale so that the maximum value of the kernel is max_strength
                             strength = sample_scalar(self.max_strength, data[bi, ci], kernel) if callable(
                                 self.max_strength) else strength
-                            kernel_scaled = np.copy(kernel) / mx * strength
+                            kernel_scaled = kernel / mx * strength
                             data[bi, ci] += kernel_scaled
                 else:
                     for ci in range(c):
@@ -177,7 +177,7 @@ class BrightnessGradientAdditiveTransform(LocalTransform):
                                 kernel -= kernel.mean()
                             mx = max(np.max(np.abs(kernel)), 1e-8)
                             strength = sample_scalar(self.max_strength, data[bi, ci], kernel)
-                            kernel = kernel / mx * strength
+                            kernel *= strength / mx
                             data[bi, ci] += kernel
         return data_dict
 

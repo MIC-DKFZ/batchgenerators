@@ -480,8 +480,7 @@ def general_cc_var_num_channels(img, diff_order=0, mink_norm=1, sigma=1, mask_im
     white_colors = np.array(white_colors)
     som = np.sqrt(np.sum(np.power(white_colors, 2)))
 
-    white_colors /= som
-    white_colors *= np.sqrt(3.)
+    white_colors *= np.sqrt(3.) / som
 
     for c in range(output_img.shape[0]):
         output_img[c] /= white_colors[c]
