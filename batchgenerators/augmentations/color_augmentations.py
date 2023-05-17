@@ -25,7 +25,19 @@ def augment_contrast(data_sample: np.ndarray,
                      preserve_range: bool = True,
                      per_channel: bool = True,
                      p_per_channel: float = 1) -> np.ndarray:
-    if not per_channel:
+    size = data_sample.shape[0]
+    if per_channel:
+        if callable(contrast_range):
+            factor = [contrast_range() for _ in range(size)]
+        else:
+            factor = []
+            for _ in range(size):
+                if np.random.random() < 0.5 and contrast_range[0] < 1:
+                    factor.append(np.random.uniform(contrast_range[0], 1))
+                else:
+                    factor.append(np.random.uniform(max(contrast_range[0], 1), contrast_range[1]))
+        factor = np.array(factor)
+    else:
         if callable(contrast_range):
             factor = contrast_range()
         else:
@@ -34,37 +46,19 @@ def augment_contrast(data_sample: np.ndarray,
             else:
                 factor = np.random.uniform(max(contrast_range[0], 1), contrast_range[1])
 
-        for c in range(data_sample.shape[0]):
-            if np.random.uniform() < p_per_channel:
-                mn = data_sample[c].mean()
-                if preserve_range:
-                    minm = data_sample[c].min()
-                    maxm = data_sample[c].max()
+    mask = np.random.uniform(size=size) < p_per_channel
+    workon = data_sample[mask]
+    if len(workon) > 0:
+        axes = tuple(range(1, len(data_sample.shape)))
+        mean = workon.mean(axis=axes)
+        if preserve_range:
+            minm = workon.min(axis=axes)
+            maxm = workon.max(axis=axes)
 
-                data_sample[c] = data_sample[c] * factor + mn * (1 - factor)
+        data_sample[mask] = (workon.T * factor + mean * (1 - factor)).T  # writing directly in data_sample
 
-                if preserve_range:
-                    np.clip(data_sample[c], minm, maxm, out=data_sample[c])
-    else:
-        for c in range(data_sample.shape[0]):
-            if np.random.uniform() < p_per_channel:
-                if callable(contrast_range):
-                    factor = contrast_range()
-                else:
-                    if np.random.random() < 0.5 and contrast_range[0] < 1:
-                        factor = np.random.uniform(contrast_range[0], 1)
-                    else:
-                        factor = np.random.uniform(max(contrast_range[0], 1), contrast_range[1])
-
-                mn = data_sample[c].mean()
-                if preserve_range:
-                    minm = data_sample[c].min()
-                    maxm = data_sample[c].max()
-
-                data_sample[c] = data_sample[c] * factor + mn * (1 - factor)
-
-                if preserve_range:
-                    np.clip(data_sample[c], minm, maxm, out=data_sample[c])
+        if preserve_range:
+            np.clip(data_sample[mask], minm, maxm, out=data_sample[mask])
 
     return data_sample
 
@@ -79,27 +73,26 @@ def augment_brightness_additive(data_sample, mu:float, sigma:float , per_channel
     :param p_per_channel: 
     :return: 
     """
-    if not per_channel:
-        rnd_nb = np.random.normal(mu, sigma)
-        for c in range(data_sample.shape[0]):
-            if np.random.uniform() <= p_per_channel:
-                data_sample[c] += rnd_nb
+    size = data_sample.shape[0]
+    if per_channel:
+        rnd_nb = np.random.normal(mu, sigma, size=size)
     else:
-        for c in range(data_sample.shape[0]):
-            if np.random.uniform() <= p_per_channel:
-                rnd_nb = np.random.normal(mu, sigma)
-                data_sample[c] += rnd_nb
+        rnd_nb = np.repeat(np.random.normal(mu, sigma), size)
+    rnd_nb[np.random.uniform(size=size) > p_per_channel] = 0.0
+    axes = tuple(range(len(data_sample.shape) - 1))
+    data_sample += np.expand_dims(rnd_nb, axis=axes).T  # Broadcasting rules require this
     return data_sample
 
 
 def augment_brightness_multiplicative(data_sample, multiplier_range=(0.5, 2), per_channel=True):
     if not per_channel:
         multiplier = np.random.uniform(multiplier_range[0], multiplier_range[1])
-        data_sample *= multiplier
     else:
-        for c in range(data_sample.shape[0]):
-            multiplier = np.random.uniform(multiplier_range[0], multiplier_range[1])
-            data_sample[c] *= multiplier
+        axes = [1 for _ in range(len(data_sample.shape))]
+        axes[0] = data_sample.shape[0]
+        multiplier = np.random.uniform(multiplier_range[0], multiplier_range[1], size=axes)
+
+    data_sample *= multiplier
     return data_sample
 
 

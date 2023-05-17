@@ -27,7 +27,9 @@ class TestAugmentContrast(unittest.TestCase):
         self.data_2D = np.random.random((2, 64, 56))
         self.factor = (0.75, 1.25)
 
+        self.d_3D = augment_contrast(self.data_3D, contrast_range=self.factor, preserve_range=False, per_channel=True)
         self.d_3D = augment_contrast(self.data_3D, contrast_range=self.factor, preserve_range=False, per_channel=False)
+        self.d_2D = augment_contrast(self.data_2D, contrast_range=self.factor, preserve_range=False, per_channel=True)
         self.d_2D = augment_contrast(self.data_2D, contrast_range=self.factor, preserve_range=False, per_channel=False)
 
     def test_augment_contrast_3D(self):
