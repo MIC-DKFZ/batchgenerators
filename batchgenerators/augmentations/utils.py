@@ -47,6 +47,7 @@ def convert_seg_image_to_one_hot_encoding(image, classes=None):
     image must be either (x, y, z) or (x, y)
     Takes as input an nd array of a label map (any dimension). Outputs a one hot encoding of the label map.
     Example (3D): if input is of shape (x, y, z), the output will ne of shape (n_classes, x, y, z)
+    Prefer convert_seg_image_to_one_hot_encoding_batched.
     '''
     if classes is None:
         classes = np.unique(image)
@@ -62,11 +63,10 @@ def convert_seg_image_to_one_hot_encoding_batched(image, classes=None):
     '''
     if classes is None:
         classes = np.unique(image)
-    output_shape = [image.shape[0]] + [len(classes)] + list(image.shape[1:])
+    output_shape = (image.shape[0], len(classes)) + image.shape[1:]
     out_image = np.zeros(output_shape, dtype=image.dtype)
-    for b in range(image.shape[0]):
-        for i, c in enumerate(classes):
-            out_image[b, i][image[b] == c] = 1
+    for i, c in enumerate(classes):
+        out_image[:, i][image == c] = 1
     return out_image
 
 

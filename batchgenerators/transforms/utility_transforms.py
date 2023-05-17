@@ -14,12 +14,12 @@
 # limitations under the License.
 
 import copy
-from typing import List, Type, Union, Tuple
+from typing import List, Union, Tuple
 
 import numpy as np
 
-from batchgenerators.augmentations.utils import convert_seg_image_to_one_hot_encoding, \
-    convert_seg_to_bounding_box_coordinates, transpose_channels
+from batchgenerators.augmentations.utils import convert_seg_to_bounding_box_coordinates, transpose_channels, \
+    convert_seg_image_to_one_hot_encoding_batched
 from batchgenerators.transforms.abstract_transforms import AbstractTransform
 
 
@@ -118,9 +118,7 @@ class ConvertSegToOnehotTransform(AbstractTransform):
     def __call__(self, **data_dict):
         seg = data_dict.get("seg")
         if seg is not None:
-            new_seg = np.zeros([seg.shape[0], len(self.classes)] + list(seg.shape[2:]), dtype=seg.dtype)
-            for b in range(seg.shape[0]):
-                new_seg[b] = convert_seg_image_to_one_hot_encoding(seg[b, self.seg_channel], self.classes)
+            new_seg = convert_seg_image_to_one_hot_encoding_batched(seg[:, self.seg_channel], self.classes)
             data_dict[self.output_key] = new_seg
         else:
             from warnings import warn
@@ -139,9 +137,9 @@ class ConvertMultiSegToOnehotTransform(AbstractTransform):
         seg = data_dict.get("seg")
         if seg is not None:
             new_seg = np.zeros([seg.shape[0], len(self.classes) * seg.shape[1]] + list(seg.shape[2:]), dtype=seg.dtype)
-            for b in range(seg.shape[0]):
-                for c in range(seg.shape[1]):
-                    new_seg[b, c*len(self.classes):(c+1)*len(self.classes)] = convert_seg_image_to_one_hot_encoding(seg[b, c], self.classes)
+            for c in range(seg.shape[1]):
+                new_seg[:, c * len(self.classes):(c + 1) * len(self.classes)] = \
+                    convert_seg_image_to_one_hot_encoding_batched(seg[:, c], self.classes)
             data_dict["seg"] = new_seg
         else:
             from warnings import warn
