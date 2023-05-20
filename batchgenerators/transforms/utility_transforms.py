@@ -46,6 +46,8 @@ class NumpyToTensor(AbstractTransform):
                 self.cast_to = torch.bool
             else:
                 raise ValueError(f'Unknown value for cast_to: {self.cast_to}')
+        else:
+            self.cast_to = None
 
     def cast(self, tensor):
         if self.cast_to is not None:
