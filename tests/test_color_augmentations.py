@@ -26,11 +26,35 @@ class TestAugmentContrast(unittest.TestCase):
         self.data_3D = np.random.random((2, 64, 56, 48))
         self.data_2D = np.random.random((2, 64, 56))
         self.factor = (0.75, 1.25)
+        self.data_4D = np.random.random((9, 2, 64, 56, 48))
 
-        self.d_3D = augment_contrast(self.data_3D, contrast_range=self.factor, preserve_range=False, per_channel=True)
+        self.d_4D = augment_contrast(self.data_4D, contrast_range=self.factor, preserve_range=True, per_channel=True, batched=True)
+        self.d_4D = augment_contrast(self.data_4D, contrast_range=self.factor, preserve_range=False, per_channel=False, batched=True)
+        self.d_3D = augment_contrast(self.data_3D, contrast_range=self.factor, preserve_range=True, per_channel=True)
         self.d_3D = augment_contrast(self.data_3D, contrast_range=self.factor, preserve_range=False, per_channel=False)
-        self.d_2D = augment_contrast(self.data_2D, contrast_range=self.factor, preserve_range=False, per_channel=True)
+        self.d_2D = augment_contrast(self.data_2D, contrast_range=self.factor, preserve_range=True, per_channel=True)
         self.d_2D = augment_contrast(self.data_2D, contrast_range=self.factor, preserve_range=False, per_channel=False)
+
+    def test_augment_contrast_4D(self):
+        data = self.data_4D[0]
+        mean = np.mean(data)
+
+        idx0 = np.where(data < mean)  # where the data is lower than mean value
+        idx1 = np.where(data > mean)  # where the data is greater than mean value
+
+        contrast_lower_limit_0 = self.factor[1] * (data[idx0] - mean) + mean
+        contrast_lower_limit_1 = self.factor[0] * (data[idx1] - mean) + mean
+        contrast_upper_limit_0 = self.factor[0] * (data[idx0] - mean) + mean
+        contrast_upper_limit_1 = self.factor[1] * (data[idx1] - mean) + mean
+
+        # augmented values lower than mean should be lower than lower limit and greater than upper limit
+        self.assertTrue(np.all(np.logical_and(self.d_4D[0][idx0] >= contrast_lower_limit_0,
+                                              self.d_4D[0][idx0] <= contrast_upper_limit_0)),
+                        "Augmented contrast below mean value not within range")
+        # augmented values greater than mean should be lower than upper limit and greater than lower limit
+        self.assertTrue(np.all(np.logical_and(self.d_4D[0][idx1] >= contrast_lower_limit_1,
+                                              self.d_4D[0][idx1] <= contrast_upper_limit_1)),
+                        "Augmented contrast above mean not within range")
 
     def test_augment_contrast_3D(self):
 

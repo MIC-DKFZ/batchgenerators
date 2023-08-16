@@ -24,32 +24,38 @@ def augment_contrast(data_sample: np.ndarray,
                      contrast_range: Union[Tuple[float, float], Callable[[], float]] = (0.75, 1.25),
                      preserve_range: bool = True,
                      per_channel: bool = True,
-                     p_per_channel: float = 1) -> np.ndarray:
-    size = data_sample.shape[0]
+                     p_per_channel: float = 1,
+                     batched=False) -> np.ndarray:
+    size = data_sample.shape[1 if batched else 0]
     if per_channel:
         if callable(contrast_range):
             factor = [contrast_range() for _ in range(size)]
         else:
             factor = []
             for _ in range(size):
-                if np.random.random() < 0.5 and contrast_range[0] < 1:
+                if contrast_range[0] < 1 and np.random.random() < 0.5:
                     factor.append(np.random.uniform(contrast_range[0], 1))
                 else:
                     factor.append(np.random.uniform(max(contrast_range[0], 1), contrast_range[1]))
+
         factor = np.array(factor)
+        if batched:
+            factor = factor.repeat(data_sample.shape[0])
     else:
         if callable(contrast_range):
             factor = contrast_range()
         else:
-            if np.random.random() < 0.5 and contrast_range[0] < 1:
+            if contrast_range[0] < 1 and np.random.random() < 0.5:
                 factor = np.random.uniform(contrast_range[0], 1)
             else:
                 factor = np.random.uniform(max(contrast_range[0], 1), contrast_range[1])
 
     mask = np.random.uniform(size=size) < p_per_channel
+    if batched:
+        mask = np.atleast_2d(mask).repeat(data_sample.shape[0], axis=0)
     workon = data_sample[mask]
     if len(workon) > 0:
-        axes = tuple(range(1, len(data_sample.shape)))
+        axes = tuple(range(1, len(workon.shape)))
         mean = workon.mean(axis=axes)
         if preserve_range:
             minm = workon.min(axis=axes)
@@ -58,7 +64,7 @@ def augment_contrast(data_sample: np.ndarray,
         data_sample[mask] = (workon.T * factor + mean * (1 - factor)).T  # writing directly in data_sample
 
         if preserve_range:
-            np.clip(data_sample[mask], minm, maxm, out=data_sample[mask])
+            np.clip(data_sample[mask].T, minm, maxm, out=data_sample[mask].T)
 
     return data_sample
 
