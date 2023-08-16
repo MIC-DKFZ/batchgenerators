@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from builtins import range
+from functools import lru_cache
 from typing import Tuple, Union, Callable
 
 import numpy as np
@@ -69,7 +70,8 @@ def augment_contrast(data_sample: np.ndarray,
     return data_sample
 
 
-def augment_brightness_additive(data_sample, mu:float, sigma:float , per_channel:bool=True, p_per_channel:float=1.):
+def augment_brightness_additive(data_sample, mu: float, sigma: float, per_channel: bool = True,
+                                p_per_channel: float = 1.):
     """
     data_sample must have shape (c, x, y(, z)))
     :param data_sample: 
@@ -90,18 +92,28 @@ def augment_brightness_additive(data_sample, mu:float, sigma:float , per_channel
     return data_sample
 
 
-def augment_brightness_multiplicative(data_sample, multiplier_range=(0.5, 2), per_channel=True, batched=False):
-    if not per_channel:
-        size = data_sample.shape[0] if batched else 1
-        axes = tuple(range(1, len(data_sample.shape)))
-    else:
-        if batched:
-            size = data_sample.shape[:2]
-            axes = tuple(range(2, len(data_sample.shape)))
+def setup_augment_brightness_multiplicative(per_channel: bool, batched: bool, shape: Tuple[int]):
+    def get_size(per_channel, batched, shape):
+        if per_channel:
+            if batched:
+                return shape[:2]
+            return shape[0]
         else:
-            size = data_sample.shape[0]
-            axes = tuple(range(1, len(data_sample.shape)))
+            if batched:
+                return shape[0]
+            return 1
 
+    @lru_cache(maxsize=2)  # axes are expected to remain the same
+    def get_axes(per_channel, batched, n):
+        if per_channel and batched:
+            return tuple(range(2, n))
+        return tuple(range(1, n))
+
+    return get_size(per_channel, batched, shape), get_axes(per_channel, batched, len(shape))
+
+
+def augment_brightness_multiplicative(data_sample, multiplier_range=(0.5, 2), per_channel=True, batched=False):
+    size, axes = setup_augment_brightness_multiplicative(per_channel, batched, data_sample.shape)
     data_sample *= np.expand_dims(np.random.uniform(multiplier_range[0], multiplier_range[1], size=size), axis=axes)
     return data_sample
 
@@ -155,8 +167,9 @@ def augment_gamma(data_sample, gamma_range=(0.5, 2), invert_image=False, epsilon
 
         if retain_any_stats:
             data_sample[retain_stats_here] = ((
-                    data_sample[retain_stats_here].T - data_sample[retain_stats_here].mean(axis=axes)) * sd /
-                    (data_sample[retain_stats_here].std(axis=axes) + 1e-8) + mn).T
+                                                      data_sample[retain_stats_here].T - data_sample[
+                                                  retain_stats_here].mean(axis=axes)) * sd /
+                                              (data_sample[retain_stats_here].std(axis=axes) + 1e-8) + mn).T
 
     if invert_image:
         data_sample = - data_sample
