@@ -30,9 +30,7 @@ def augment_rician_noise(data_sample, noise_variance=(0, 0.1)):
     return data_sample
 
 
-def augment_gaussian_noise(data_sample: np.ndarray, noise_variance: Tuple[float, float] = (0, 0.1),
-                           p_per_channel: float = 1, per_channel: bool = False) -> np.ndarray:
-    size = data_sample.shape[0]
+def setup_augment_gaussian_noise(noise_variance: Tuple[float, float], per_channel: bool, size: int):
     if not per_channel:
         variance = noise_variance[0] if noise_variance[0] == noise_variance[1] else \
             random.uniform(noise_variance[0], noise_variance[1])
@@ -40,11 +38,22 @@ def augment_gaussian_noise(data_sample: np.ndarray, noise_variance: Tuple[float,
     else:
         variance = np.repeat(noise_variance[0], size) if noise_variance[0] == noise_variance[1] else \
             np.random.uniform(noise_variance[0], noise_variance[1], size=size)
+    return variance
 
-    for c in range(size):
-        if np.random.uniform() < p_per_channel:
-            # bug fixed: https://github.com/MIC-DKFZ/batchgenerators/issues/86
-            data_sample[c] += np.random.normal(0.0, variance[c], size=data_sample[c].shape)
+
+def augment_gaussian_noise(data_sample: np.ndarray, noise_variance: Tuple[float, float] = (0, 0.1),
+                           p_per_channel: float = 1, per_channel: bool = False, batched: bool = False) -> np.ndarray:
+    mask = np.random.uniform(size=data_sample.shape[1 if batched else 0]) < p_per_channel
+    size = np.count_nonzero(mask)
+    if size:
+        if batched:
+            num_samples = data_sample.shape[0]
+            mask = np.atleast_2d(mask).repeat(num_samples, axis=0)
+            size *= num_samples
+
+        variance = setup_augment_gaussian_noise(noise_variance, per_channel, size)
+        data_sample[mask] += np.random.normal(0.0, variance, data_sample[mask].T.shape).T
+
     return data_sample
 
 

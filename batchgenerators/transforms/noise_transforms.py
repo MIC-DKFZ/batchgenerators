@@ -71,10 +71,10 @@ class GaussianNoiseTransform(AbstractTransform):
         self.per_channel = per_channel
 
     def __call__(self, **data_dict):
-        for b in range(len(data_dict[self.data_key])):
-            if np.random.uniform() < self.p_per_sample:
-                data_dict[self.data_key][b] = augment_gaussian_noise(data_dict[self.data_key][b], self.noise_variance,
-                                                                     self.p_per_channel, self.per_channel)
+        mask = np.random.uniform(size=len(data_dict[self.data_key])) < self.p_per_sample
+        if np.any(mask):
+            data_dict[self.data_key][mask] = augment_gaussian_noise(data_dict[self.data_key][mask], self.noise_variance,
+                                                                    self.p_per_channel, self.per_channel, batched=True)
         return data_dict
 
 
