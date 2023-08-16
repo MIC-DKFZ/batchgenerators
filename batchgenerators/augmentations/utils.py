@@ -375,39 +375,38 @@ def resize_image_by_padding_batched(image, new_shape, pad_value=None):
     return res
 
 
-def create_matrix_rotation_x_3d(angle, matrix=None):
-    rotation_x = np.array([[1, 0, 0],
-                           [0, np.cos(angle), -np.sin(angle)],
-                           [0, np.sin(angle), np.cos(angle)]])
-    if matrix is None:
-        return rotation_x
-
+def create_matrix_rotation_x_3d(angle, matrix: np.ndarray):
+    cos_a = np.cos(angle)
+    sin_a = np.sin(angle)
+    rotation_x = np.array(((1, 0, 0),
+                           (0, cos_a, -sin_a),
+                           (0, sin_a, cos_a)))
     return np.dot(matrix, rotation_x)
 
 
-def create_matrix_rotation_y_3d(angle, matrix=None):
-    rotation_y = np.array([[np.cos(angle), 0, np.sin(angle)],
-                           [0, 1, 0],
-                           [-np.sin(angle), 0, np.cos(angle)]])
-    if matrix is None:
-        return rotation_y
-
+def create_matrix_rotation_y_3d(angle, matrix: np.ndarray):
+    cos_a = np.cos(angle)
+    sin_a = np.sin(angle)
+    rotation_y = np.array(((cos_a, 0, sin_a),
+                           (0, 1, 0),
+                           (-sin_a, 0, cos_a)))
     return np.dot(matrix, rotation_y)
 
 
-def create_matrix_rotation_z_3d(angle, matrix=None):
-    rotation_z = np.array([[np.cos(angle), -np.sin(angle), 0],
-                           [np.sin(angle), np.cos(angle), 0],
-                           [0, 0, 1]])
-    if matrix is None:
-        return rotation_z
-
+def create_matrix_rotation_z_3d(angle, matrix: np.ndarray):
+    cos_a = np.cos(angle)
+    sin_a = np.sin(angle)
+    rotation_z = np.array(((cos_a, -sin_a, 0),
+                           (sin_a, cos_a, 0),
+                           (0, 0, 1)))
     return np.dot(matrix, rotation_z)
 
 
 def create_matrix_rotation_2d(angle, matrix=None):
-    rotation = np.array([[np.cos(angle), -np.sin(angle)],
-                         [np.sin(angle), np.cos(angle)]])
+    cos_a = np.cos(angle)
+    sin_a = np.sin(angle)
+    rotation = np.array(((cos_a, -sin_a),
+                         (sin_a, cos_a)))
     if matrix is None:
         return rotation
 
