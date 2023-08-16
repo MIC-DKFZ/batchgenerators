@@ -102,6 +102,7 @@ class GaussianBlurTransform(AbstractTransform):
         self.p_isotropic = p_isotropic
 
     def __call__(self, **data_dict):
+        # TODO: Do batched gaussian blur
         for b in range(len(data_dict[self.data_key])):
             if np.random.uniform() < self.p_per_sample:
                 data_dict[self.data_key][b] = augment_gaussian_blur(data_dict[self.data_key][b], self.blur_sigma,
