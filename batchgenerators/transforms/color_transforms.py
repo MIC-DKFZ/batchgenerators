@@ -155,6 +155,7 @@ class GammaTransform(AbstractTransform):
         self.invert_image = invert_image
 
     def __call__(self, **data_dict):
+        # TODO: augment_gamma can be vectorized twice (per channel and per sample)
         for b in range(len(data_dict[self.data_key])):
             if np.random.uniform() < self.p_per_sample:
                 data_dict[self.data_key][b] = augment_gamma(data_dict[self.data_key][b], self.gamma_range,

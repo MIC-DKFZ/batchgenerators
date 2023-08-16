@@ -112,7 +112,7 @@ def augment_gamma(data_sample, gamma_range=(0.5, 2), invert_image=False, epsilon
         if retain_stats_here:
             mn = data_sample.mean()
             sd = data_sample.std()
-        if np.random.random() < 0.5 and gamma_range[0] < 1:
+        if gamma_range[0] < 1 and np.random.random() < 0.5:
             gamma = np.random.uniform(gamma_range[0], 1)
         else:
             gamma = np.random.uniform(max(gamma_range[0], 1), gamma_range[1])
@@ -129,7 +129,7 @@ def augment_gamma(data_sample, gamma_range=(0.5, 2), invert_image=False, epsilon
             if retain_stats_here:
                 mn = data_sample[c].mean()
                 sd = data_sample[c].std()
-            if np.random.random() < 0.5 and gamma_range[0] < 1:
+            if gamma_range[0] < 1 and np.random.random() < 0.5:
                 gamma = np.random.uniform(gamma_range[0], 1)
             else:
                 gamma = np.random.uniform(max(gamma_range[0], 1), gamma_range[1])
