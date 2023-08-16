@@ -15,7 +15,7 @@
 
 import unittest
 import numpy as np
-from batchgenerators.augmentations.color_augmentations import augment_contrast, augment_brightness_additive,\
+from batchgenerators.augmentations.color_augmentations import augment_contrast, augment_brightness_additive, \
     augment_brightness_multiplicative, augment_gamma
 
 
@@ -28,8 +28,10 @@ class TestAugmentContrast(unittest.TestCase):
         self.factor = (0.75, 1.25)
         self.data_4D = np.random.random((9, 2, 64, 56, 48))
 
-        self.d_4D = augment_contrast(self.data_4D, contrast_range=self.factor, preserve_range=True, per_channel=True, batched=True)
-        self.d_4D = augment_contrast(self.data_4D, contrast_range=self.factor, preserve_range=False, per_channel=False, batched=True)
+        self.d_4D = augment_contrast(self.data_4D, contrast_range=self.factor, preserve_range=True, per_channel=True,
+                                     batched=True)
+        self.d_4D = augment_contrast(self.data_4D, contrast_range=self.factor, preserve_range=False, per_channel=False,
+                                     batched=True)
         self.d_3D = augment_contrast(self.data_3D, contrast_range=self.factor, preserve_range=True, per_channel=True)
         self.d_3D = augment_contrast(self.data_3D, contrast_range=self.factor, preserve_range=False, per_channel=False)
         self.d_2D = augment_contrast(self.data_2D, contrast_range=self.factor, preserve_range=True, per_channel=True)
@@ -57,7 +59,6 @@ class TestAugmentContrast(unittest.TestCase):
                         "Augmented contrast above mean not within range")
 
     def test_augment_contrast_3D(self):
-
         mean = np.mean(self.data_3D)
 
         idx0 = np.where(self.data_3D < mean)  # where the data is lower than mean value
@@ -78,7 +79,6 @@ class TestAugmentContrast(unittest.TestCase):
                         "Augmented contrast above mean not within range")
 
     def test_augment_contrast_2D(self):
-
         mean = np.mean(self.data_2D)
 
         idx0 = np.where(self.data_2D < mean)  # where the data is lower than mean value
@@ -106,7 +106,7 @@ class TestAugmentBrightness(unittest.TestCase):
         self.data_input_3D = np.random.random((2, 64, 56, 48))
         self.data_input_2D = np.random.random((2, 64, 56))
         self.factor = (0.75, 1.25)
-        self.multiplier_range = [2,4]
+        self.multiplier_range = [2, 4]
 
         self.d_3D_per_channel = augment_brightness_additive(np.copy(self.data_input_3D), mu=100, sigma=10,
                                                             per_channel=True)
@@ -129,8 +129,8 @@ class TestAugmentBrightness(unittest.TestCase):
                                                            multiplier_range=self.multiplier_range, per_channel=False)
 
     def test_augment_brightness_additive_3D(self):
-        add_factor = self.d_3D-self.data_input_3D
-        self.assertTrue(len(np.unique(add_factor.round(decimals=8)))==1,
+        add_factor = self.d_3D - self.data_input_3D
+        self.assertTrue(len(np.unique(add_factor.round(decimals=8))) == 1,
                         "Added brightness factor is not equal for all channels")
 
         add_factor = self.d_3D_per_channel - self.data_input_3D
@@ -138,8 +138,8 @@ class TestAugmentBrightness(unittest.TestCase):
                         "Added brightness factor is not different for each channels")
 
     def test_augment_brightness_additive_2D(self):
-        add_factor = self.d_2D-self.data_input_2D
-        self.assertTrue(len(np.unique(add_factor.round(decimals=8)))==1,
+        add_factor = self.d_2D - self.data_input_2D
+        self.assertTrue(len(np.unique(add_factor.round(decimals=8))) == 1,
                         "Added brightness factor is not equal for all channels")
 
         add_factor = self.d_2D_per_channel - self.data_input_2D
@@ -147,23 +147,41 @@ class TestAugmentBrightness(unittest.TestCase):
                         "Added brightness factor is not different for each channels")
 
     def test_augment_brightness_multiplicative_3D(self):
-        mult_factor = self.d_3D_mult/self.data_input_3D
-        self.assertTrue(len(np.unique(mult_factor.round(decimals=6)))==1,
+        mult_factor = self.d_3D_mult / self.data_input_3D
+        self.assertTrue(len(np.unique(mult_factor.round(decimals=6))) == 1,
                         "Multiplied brightness factor is not equal for all channels")
 
-        mult_factor = self.d_3D_per_channel_mult/self.data_input_3D
+        mult_factor = self.d_3D_per_channel_mult / self.data_input_3D
         self.assertTrue(len(np.unique(mult_factor.round(decimals=6))) == self.data_input_3D.shape[0],
                         "Multiplied brightness factor is not different for each channels")
 
     def test_augment_brightness_multiplicative_2D(self):
-        mult_factor = self.d_2D_mult/self.data_input_2D
-        self.assertTrue(len(np.unique(mult_factor.round(decimals=6)))==1,
+        mult_factor = self.d_2D_mult / self.data_input_2D
+        self.assertTrue(len(np.unique(mult_factor.round(decimals=6))) == 1,
                         "Multiplied brightness factor is not equal for all channels")
 
-        mult_factor = self.d_2D_per_channel_mult/self.data_input_2D
+        mult_factor = self.d_2D_per_channel_mult / self.data_input_2D
         self.assertTrue(len(np.unique(mult_factor.round(decimals=6))) == self.data_input_2D.shape[0],
                         "Multiplied brightness factor is not different for each channels")
 
+    def test_batched_augment_brightness_multiplicative(self):
+        data = np.random.random((9, 2, 64, 56, 48))
+        result_1 = augment_brightness_multiplicative(np.copy(data),
+                                                     multiplier_range=self.multiplier_range,
+                                                     per_channel=False,
+                                                     batched=True)
+        result_2 = augment_brightness_multiplicative(np.copy(data),
+                                                     multiplier_range=self.multiplier_range,
+                                                     per_channel=True,
+                                                     batched=True)
+
+        mult_factor = result_1 / data
+        self.assertEqual(len(np.unique(mult_factor.round(decimals=6))), data.shape[0],
+                        "Multiplied brightness factor per sample is not equal for all channels")
+
+        mult_factor = result_2 / data
+        self.assertEqual(len(np.unique(mult_factor.round(decimals=6))), data.shape[0] * data.shape[1],
+                        "Multiplied brightness factor per sample is not different for all channels")
 
 class TestAugmentGamma(unittest.TestCase):
 
@@ -172,8 +190,10 @@ class TestAugmentGamma(unittest.TestCase):
         self.data_input_3D = np.random.random((2, 64, 56, 48))
         self.data_input_2D = np.random.random((2, 64, 56))
 
-        self.d_3D = augment_gamma(np.copy(self.data_input_3D), gamma_range=(0.2, 1.2), per_channel=True, retain_stats=True)
-        self.d_3D = augment_gamma(np.copy(self.data_input_3D), gamma_range=(0.2, 1.2), per_channel=False, retain_stats=False)
+        self.d_3D = augment_gamma(np.copy(self.data_input_3D), gamma_range=(0.2, 1.2), per_channel=True,
+                                  retain_stats=True)
+        self.d_3D = augment_gamma(np.copy(self.data_input_3D), gamma_range=(0.2, 1.2), per_channel=False,
+                                  retain_stats=False)
 
     def test_augment_gamma_3D(self):
         self.assertTrue(self.d_3D.min().round(decimals=3) == self.data_input_3D.min().round(decimals=3) and

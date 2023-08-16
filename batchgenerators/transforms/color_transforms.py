@@ -54,11 +54,11 @@ class ContrastAugmentationTransform(AbstractTransform):
     def __call__(self, **data_dict):
         mask = np.random.uniform(size=len(data_dict[self.data_key])) < self.p_per_sample
         data_dict[self.data_key][mask] = augment_contrast(data_dict[self.data_key][mask],
-                                                    contrast_range=self.contrast_range,
-                                                    preserve_range=self.preserve_range,
-                                                    per_channel=self.per_channel,
-                                                    p_per_channel=self.p_per_channel,
-                                                    batched=True)
+                                                          contrast_range=self.contrast_range,
+                                                          preserve_range=self.preserve_range,
+                                                          per_channel=self.per_channel,
+                                                          p_per_channel=self.p_per_channel,
+                                                          batched=True)
         return data_dict
 
 
@@ -121,11 +121,11 @@ class BrightnessMultiplicativeTransform(AbstractTransform):
         self.per_channel = per_channel
 
     def __call__(self, **data_dict):
-        for b in range(len(data_dict[self.data_key])):
-            if np.random.uniform() < self.p_per_sample:
-                data_dict[self.data_key][b] = augment_brightness_multiplicative(data_dict[self.data_key][b],
-                                                                                self.multiplier_range,
-                                                                                self.per_channel)
+        mask = np.random.uniform(size=len(data_dict[self.data_key])) < self.p_per_sample
+        data_dict[self.data_key][mask] = augment_brightness_multiplicative(data_dict[self.data_key][mask],
+                                                                           self.multiplier_range,
+                                                                           self.per_channel,
+                                                                           batched=True)
         return data_dict
 
 

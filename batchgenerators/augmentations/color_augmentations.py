@@ -90,15 +90,19 @@ def augment_brightness_additive(data_sample, mu:float, sigma:float , per_channel
     return data_sample
 
 
-def augment_brightness_multiplicative(data_sample, multiplier_range=(0.5, 2), per_channel=True):
+def augment_brightness_multiplicative(data_sample, multiplier_range=(0.5, 2), per_channel=True, batched=False):
     if not per_channel:
-        multiplier = np.random.uniform(multiplier_range[0], multiplier_range[1])
+        size = data_sample.shape[0] if batched else 1
+        axes = tuple(range(1, len(data_sample.shape)))
     else:
-        axes = [1 for _ in range(len(data_sample.shape))]
-        axes[0] = data_sample.shape[0]
-        multiplier = np.random.uniform(multiplier_range[0], multiplier_range[1], size=axes)
+        if batched:
+            size = data_sample.shape[:2]
+            axes = tuple(range(2, len(data_sample.shape)))
+        else:
+            size = data_sample.shape[0]
+            axes = tuple(range(1, len(data_sample.shape)))
 
-    data_sample *= multiplier
+    data_sample *= np.expand_dims(np.random.uniform(multiplier_range[0], multiplier_range[1], size=size), axis=axes)
     return data_sample
 
 
