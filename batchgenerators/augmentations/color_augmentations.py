@@ -124,22 +124,36 @@ def augment_gamma(data_sample, gamma_range=(0.5, 2), invert_image=False, epsilon
             data_sample *= sd / (data_sample.std() + 1e-8)
             data_sample += mn
     else:
-        for c in range(data_sample.shape[0]):
-            retain_stats_here = retain_stats() if callable(retain_stats) else retain_stats
-            if retain_stats_here:
-                mn = data_sample[c].mean()
-                sd = data_sample[c].std()
+        shape_0 = data_sample.shape[0]
+        if callable(retain_stats):
+            retain_stats_here = np.array(retain_stats() for _ in range(shape_0))
+        else:
+            retain_stats_here = np.array([retain_stats]).repeat(shape_0)
+        gamma = []
+        for i in range(shape_0):
             if gamma_range[0] < 1 and np.random.random() < 0.5:
-                gamma = np.random.uniform(gamma_range[0], 1)
+                gamma.append(np.random.uniform(gamma_range[0], 1))
             else:
-                gamma = np.random.uniform(max(gamma_range[0], 1), gamma_range[1])
-            minm = data_sample[c].min()
-            rnge = data_sample[c].max() - minm
-            data_sample[c] = np.power(((data_sample[c] - minm) / float(rnge + epsilon)), gamma) * float(rnge + epsilon) + minm
-            if retain_stats_here:
-                data_sample[c] -= data_sample[c].mean()
-                data_sample[c] *= sd / (data_sample[c].std() + 1e-8)
-                data_sample[c] += mn
+                gamma.append(np.random.uniform(max(gamma_range[0], 1), gamma_range[1]))
+        gamma = np.array(gamma)
+
+        axes = tuple(range(1, len(data_sample.shape)))
+
+        retain_any_stats = np.any(retain_stats_here)
+        if retain_any_stats:
+            mn = data_sample[retain_stats_here].mean(axis=axes)
+            sd = data_sample[retain_stats_here].mean(axis=axes)
+
+        minm = data_sample.min(axis=axes)
+        rnge = data_sample.max(axis=axes) - minm + epsilon
+
+        data_sample = (np.power(((data_sample.T - minm) / rnge), gamma) * rnge + minm).T
+
+        if retain_any_stats:
+            data_sample[retain_stats_here] = ((
+                    data_sample[retain_stats_here].T - data_sample[retain_stats_here].mean(axis=axes)) * sd /
+                    (data_sample[retain_stats_here].std(axis=axes) + 1e-8) + mn).T
+
     if invert_image:
         data_sample = - data_sample
     return data_sample

@@ -172,8 +172,8 @@ class TestAugmentGamma(unittest.TestCase):
         self.data_input_3D = np.random.random((2, 64, 56, 48))
         self.data_input_2D = np.random.random((2, 64, 56))
 
-        self.d_3D = augment_gamma(np.copy(self.data_input_2D), gamma_range=(0.2, 1.2), per_channel=True)
-        self.d_3D = augment_gamma(np.copy(self.data_input_2D), gamma_range=(0.2, 1.2), per_channel=False)
+        self.d_3D = augment_gamma(np.copy(self.data_input_3D), gamma_range=(0.2, 1.2), per_channel=True, retain_stats=True)
+        self.d_3D = augment_gamma(np.copy(self.data_input_3D), gamma_range=(0.2, 1.2), per_channel=False, retain_stats=False)
 
     def test_augment_gamma_3D(self):
         self.assertTrue(self.d_3D.min().round(decimals=3) == self.data_input_3D.min().round(decimals=3) and
