@@ -19,7 +19,7 @@ import numpy as np
 from batchgenerators.augmentations.utils import create_zero_centered_coordinate_mesh, elastic_deform_coordinates, \
     interpolate_img, \
     rotate_coords_2d, rotate_coords_3d, scale_coords, resize_segmentation, resize_multichannel_image, \
-    elastic_deform_coordinates_2
+    elastic_deform_coordinates_2, get_broadcast_axes, reverse_broadcast
 from batchgenerators.augmentations.crop_and_pad_augmentations import random_crop as random_crop_aug
 from batchgenerators.augmentations.crop_and_pad_augmentations import center_crop as center_crop_aug
 
@@ -259,8 +259,11 @@ def augment_spatial(data, seg, patch_size, patch_center_dist_from_border=30,
                 ctr = np.random.uniform(patch_center_dist_from_border, data_shape_here - patch_center_dist_from_border)
             else:
                 ctr = data_shape_here / 2. - 0.5
+
             for d in range(dim):
                 coords[d] += ctr[d]
+            # vectorized version, seems a bit slower
+            # coords += reverse_broadcast(ctr, get_broadcast_axes(len(coords.shape)))
 
             for channel_id in range(data.shape[1]):
                 data_result[sample_id, channel_id] = interpolate_img(data[sample_id, channel_id], coords, order_data,

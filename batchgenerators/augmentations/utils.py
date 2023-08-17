@@ -15,6 +15,7 @@
 
 import random
 from functools import lru_cache
+from typing import Tuple
 
 import numpy as np
 from copy import deepcopy
@@ -36,6 +37,25 @@ def generate_elastic_transform_coordinates(shape, alpha, sigma):
     return indices
 
 
+def get_broadcast_axes(n: int) -> Tuple[int]:
+    """
+    Args:
+        n: len(array.shape), where array is the array for which we want to broadcast to.
+    Returns: broadcast axes, (0, 1, ...)
+    """
+    return tuple(range(n - 1))
+
+
+def reverse_broadcast(a: np.ndarray, axes: Tuple[int]) -> np.ndarray:
+    """
+    Args:
+        a: array which we want to broadcast for batched operations
+        axes: (0, 1, ...)
+    Returns: array of shape (len(a), 1, 1, ...)
+    """
+    return np.expand_dims(a, axis=axes).T
+
+
 @lru_cache(maxsize=None)  # There will be only 1 miss, using maxsize None to remove locking and checks.
 def create_zero_centered_coordinate_mesh(shape):
     coords = np.array(np.meshgrid(*(np.arange(i) for i in shape), indexing='ij'), dtype=float)
@@ -54,7 +74,7 @@ def convert_seg_image_to_one_hot_encoding(image, classes=None):
     '''
     if classes is None:
         classes = np.unique(image)
-    out_image = np.zeros([len(classes)] + list(image.shape), dtype=image.dtype)
+    out_image = np.zeros((len(classes), *image.shape), dtype=image.dtype)
     for i, c in enumerate(classes):
         out_image[i][image == c] = 1
     return out_image
@@ -66,8 +86,7 @@ def convert_seg_image_to_one_hot_encoding_batched(image, classes=None):
     '''
     if classes is None:
         classes = np.unique(image)
-    output_shape = (image.shape[0], len(classes), *image.shape[1:])
-    out_image = np.zeros(output_shape, dtype=image.dtype)
+    out_image = np.zeros((image.shape[0], len(classes), *image.shape[1:]), dtype=image.dtype)
     for i, c in enumerate(classes):
         out_image[:, i][image == c] = 1
     return out_image
@@ -128,9 +147,8 @@ def rotate_coords_2d(coords, angle):
 
 def scale_coords(coords: np.ndarray, scale):
     if isinstance(scale, (tuple, list, np.ndarray)):
-        coords = (coords.T * scale).T
-    else:
-        coords *= scale
+        scale = reverse_broadcast(scale, get_broadcast_axes(len(coords.shape)))
+    coords *= scale
     return coords
 
 

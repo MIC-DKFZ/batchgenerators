@@ -41,7 +41,7 @@ def get_lbs_for_random_crop(crop_size, data_shape, margins):
 def get_lbs_for_center_crop(crop_size, data_shape):
     """
     :param crop_size:
-    :param data_shape: (b,c,x,y(,z)) must be the whole thing!
+    :param data_shape: (b,c,x,y(,z)) must be the only x,y(,z)!
     :return:
     """
     return (data_shape - crop_size) // 2
@@ -110,18 +110,19 @@ def crop(data: Union[Sequence[np.ndarray], np.ndarray], seg: Union[Sequence[np.n
 
         zero = np.zeros(dim, dtype=int)
         temp1 = np.abs(np.minimum(lbs, zero))
-        temp2 = np.abs(np.minimum(zero, data_shape_here - lbs - crop_size))
+        lbs_plus_crop_size = lbs + crop_size
+        temp2 = np.abs(np.minimum(zero, data_shape_here - lbs_plus_crop_size))
         need_to_pad = np.array(((0, 0), *zip(temp1, temp2)))
 
         # we should crop first, then pad -> reduces i/o for memmaps, reduces RAM usage and improves speed
-        ubs = np.minimum(data_shape_here, lbs + crop_size)
+        ubs = np.minimum(data_shape_here, lbs_plus_crop_size)
         lbs = np.maximum(zero, lbs)
 
         slicer_data = (slice(0, data_first_dim), *(slice(lbs[d], ubs[d]) for d in range(dim)))
         data_cropped = data[b][slicer_data]
 
         if seg_return is not None:
-            slicer_data = (slice(0, seg_first_dim), *(slice(lbs[d], ubs[d]) for d in range(dim)))
+            slicer_data = (slice(0, seg_first_dim), *slicer_data[1:])
             seg_cropped = seg[b][slicer_data]
 
         if np.any(need_to_pad):

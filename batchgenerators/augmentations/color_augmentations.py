@@ -18,7 +18,8 @@ from functools import lru_cache
 from typing import Tuple, Union, Callable
 
 import numpy as np
-from batchgenerators.augmentations.utils import general_cc_var_num_channels, illumination_jitter
+from batchgenerators.augmentations.utils import general_cc_var_num_channels, illumination_jitter, get_broadcast_axes, \
+    reverse_broadcast
 
 
 def augment_contrast(data_sample: np.ndarray,
@@ -52,10 +53,11 @@ def augment_contrast(data_sample: np.ndarray,
                 factor = np.random.uniform(max(contrast_range[0], 1), contrast_range[1])
 
     mask = np.random.uniform(size=size) < p_per_channel
-    if batched:
-        mask = np.atleast_2d(mask).repeat(data_sample.shape[0], axis=0)
-    workon = data_sample[mask]
-    if len(workon) > 0:
+    if np.any(mask):
+        if batched:
+            mask = np.atleast_2d(mask).repeat(data_sample.shape[0], axis=0)
+
+        workon = data_sample[mask]
         axes = tuple(range(1, len(workon.shape)))
         mean = workon.mean(axis=axes)
         if preserve_range:
@@ -65,7 +67,10 @@ def augment_contrast(data_sample: np.ndarray,
         data_sample[mask] = (workon.T * factor + mean * (1 - factor)).T  # writing directly in data_sample
 
         if preserve_range:
-            np.clip(data_sample[mask].T, minm, maxm, out=data_sample[mask].T)
+            broadcast_axes = get_broadcast_axes(len(workon.shape))
+            minm = reverse_broadcast(minm, broadcast_axes)
+            maxm = reverse_broadcast(maxm, broadcast_axes)
+            np.clip(data_sample[mask], minm, maxm, out=data_sample[mask])
 
     return data_sample
 
@@ -103,7 +108,6 @@ def get_size(per_channel, batched, shape):
         return 1
 
 
-@lru_cache(maxsize=None)  # There will be only 1 miss, using maxsize None to remove locking and checks.
 def get_axes(per_channel, batched, n):
     if per_channel and batched:
         return tuple(range(2, n))
@@ -165,13 +169,19 @@ def augment_gamma(data_sample, gamma_range=(0.5, 2), invert_image=False, epsilon
         minm = data_sample.min(axis=axes)
         rnge = data_sample.max(axis=axes) - minm + epsilon
 
-        data_sample = (np.power(((data_sample.T - minm) / rnge), gamma) * rnge + minm).T
+        # aux = (np.power(((data_sample.T - minm) / rnge), gamma) * rnge + minm).T  # This is slower
+        broadcast_axes = get_broadcast_axes(len(data_sample.shape))
+        minm = reverse_broadcast(minm, broadcast_axes)
+        rnge = reverse_broadcast(rnge, broadcast_axes)
+        gamma = reverse_broadcast(gamma, broadcast_axes)
+        data_sample = np.power((data_sample - minm) / rnge, gamma) * rnge + minm
 
         if retain_any_stats:
-            data_sample[retain_stats_here] = ((
-                                                      data_sample[retain_stats_here].T - data_sample[
-                                                  retain_stats_here].mean(axis=axes)) * sd /
-                                              (data_sample[retain_stats_here].std(axis=axes) + 1e-8) + mn).T
+            data_sample[retain_stats_here] -= reverse_broadcast(
+                data_sample[retain_stats_here].mean(axis=axes), broadcast_axes)
+            data_sample[retain_stats_here] *= reverse_broadcast(
+                sd / (data_sample[retain_stats_here].std(axis=axes) + 1e-8), broadcast_axes)
+            data_sample[retain_stats_here] += reverse_broadcast(mn, broadcast_axes)
 
     if invert_image:
         data_sample = - data_sample
