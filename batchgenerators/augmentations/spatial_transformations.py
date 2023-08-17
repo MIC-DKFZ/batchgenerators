@@ -199,7 +199,8 @@ def augment_spatial(data, seg, patch_size, patch_center_dist_from_border=30,
     data_result = np.zeros((data.shape[0], data.shape[1], *patch_size), dtype=np.float32)
 
     if not isinstance(patch_center_dist_from_border, (list, tuple, np.ndarray)):
-        patch_center_dist_from_border = dim * [patch_center_dist_from_border]
+        patch_center_dist_from_border = (patch_center_dist_from_border,) * dim
+    patch_center_dist_from_border = np.array(patch_center_dist_from_border)
 
     for sample_id in range(data.shape[0]):
         coords = create_zero_centered_coordinate_mesh(patch_size)
@@ -253,13 +254,14 @@ def augment_spatial(data, seg, patch_size, patch_center_dist_from_border=30,
 
         # now find a nice center location 
         if modified_coords:
+            data_shape_here = np.array(data.shape[2:])
+            if random_crop:
+                ctr = np.random.uniform(patch_center_dist_from_border, data_shape_here - patch_center_dist_from_border)
+            else:
+                ctr = data_shape_here / 2. - 0.5
             for d in range(dim):
-                if random_crop:
-                    ctr = np.random.uniform(patch_center_dist_from_border[d],
-                                            data.shape[d + 2] - patch_center_dist_from_border[d])
-                else:
-                    ctr = data.shape[d + 2] / 2. - 0.5
-                coords[d] += ctr
+                coords[d] += ctr[d]
+
             for channel_id in range(data.shape[1]):
                 data_result[sample_id, channel_id] = interpolate_img(data[sample_id, channel_id], coords, order_data,
                                                                      border_mode_data, cval=border_cval_data)
@@ -274,7 +276,7 @@ def augment_spatial(data, seg, patch_size, patch_center_dist_from_border=30,
             else:
                 s = seg[sample_id:sample_id + 1]
             if random_crop:
-                margin = [patch_center_dist_from_border[d] - patch_size[d] // 2 for d in range(dim)]
+                margin = patch_center_dist_from_border - np.array(patch_size) // 2
                 d, s = random_crop_aug(data[sample_id:sample_id + 1], s, patch_size, margin)
             else:
                 d, s = center_crop_aug(data[sample_id:sample_id + 1], patch_size, s)
