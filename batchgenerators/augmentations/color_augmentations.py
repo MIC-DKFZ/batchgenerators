@@ -92,23 +92,25 @@ def augment_brightness_additive(data_sample, mu: float, sigma: float, per_channe
     return data_sample
 
 
-def setup_augment_brightness_multiplicative(per_channel: bool, batched: bool, shape: Tuple[int]):
-    def get_size(per_channel, batched, shape):
-        if per_channel:
-            if batched:
-                return shape[:2]
+def get_size(per_channel, batched, shape):
+    if per_channel:
+        if batched:
+            return shape[:2]
+        return shape[0]
+    else:
+        if batched:
             return shape[0]
-        else:
-            if batched:
-                return shape[0]
-            return 1
+        return 1
 
-    @lru_cache(maxsize=2)  # axes are expected to remain the same
-    def get_axes(per_channel, batched, n):
-        if per_channel and batched:
-            return tuple(range(2, n))
-        return tuple(range(1, n))
 
+@lru_cache(maxsize=None)  # There will be only 1 miss, using maxsize None to remove locking and checks.
+def get_axes(per_channel, batched, n):
+    if per_channel and batched:
+        return tuple(range(2, n))
+    return tuple(range(1, n))
+
+
+def setup_augment_brightness_multiplicative(per_channel: bool, batched: bool, shape: Tuple[int]):
     return get_size(per_channel, batched, shape), get_axes(per_channel, batched, len(shape))
 
 

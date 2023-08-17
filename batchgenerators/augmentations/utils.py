@@ -36,7 +36,7 @@ def generate_elastic_transform_coordinates(shape, alpha, sigma):
     return indices
 
 
-@lru_cache(maxsize=None)  # we should have only 1 hit
+@lru_cache(maxsize=None)  # There will be only 1 miss, using maxsize None to remove locking and checks.
 def create_zero_centered_coordinate_mesh(shape):
     coords = np.array(np.meshgrid(*(np.arange(i) for i in shape), indexing='ij'), dtype=float)
     to_add = (np.array(shape, dtype=float) - 1) / 2.
@@ -66,7 +66,7 @@ def convert_seg_image_to_one_hot_encoding_batched(image, classes=None):
     '''
     if classes is None:
         classes = np.unique(image)
-    output_shape = (image.shape[0], len(classes)) + image.shape[1:]
+    output_shape = (image.shape[0], len(classes), *image.shape[1:])
     out_image = np.zeros(output_shape, dtype=image.dtype)
     for i, c in enumerate(classes):
         out_image[:, i][image == c] = 1
