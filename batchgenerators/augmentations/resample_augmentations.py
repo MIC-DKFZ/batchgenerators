@@ -50,9 +50,6 @@ def augment_linear_downsampling_scipy(data_sample, zoom_range=(0.5, 1), per_chan
         ignore_axes: tuple/list
 
     '''
-    if not isinstance(zoom_range, (list, tuple, np.ndarray)):
-        zoom_range = [zoom_range]
-
     shp = np.array(data_sample.shape[1:])
     dim = len(shp)
 
@@ -70,7 +67,7 @@ def augment_linear_downsampling_scipy(data_sample, zoom_range=(0.5, 1), per_chan
                 target_shape[i] = shp[i]
 
     if channels is None:
-        channels = list(range(data_sample.shape[0]))
+        channels = range(data_sample.shape[0])
 
     for c in channels:
         if np.random.uniform() < p_per_channel:
@@ -88,8 +85,7 @@ def augment_linear_downsampling_scipy(data_sample, zoom_range=(0.5, 1), per_chan
 
             downsampled = resize(data_sample[c].astype(float), target_shape, order=order_downsample, mode='edge',
                                  anti_aliasing=False)
-            data_sample[c] = resize(downsampled, shp, order=order_upsample, mode='edge',
-                                    anti_aliasing=False)
+            data_sample[c] = resize(downsampled, shp, order=order_upsample, mode='edge', anti_aliasing=False)
 
     return data_sample
 

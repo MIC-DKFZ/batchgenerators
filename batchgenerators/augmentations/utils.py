@@ -14,6 +14,8 @@
 # limitations under the License.
 
 import random
+from functools import lru_cache
+
 import numpy as np
 from copy import deepcopy
 from scipy.ndimage import map_coordinates, fourier_gaussian
@@ -34,10 +36,10 @@ def generate_elastic_transform_coordinates(shape, alpha, sigma):
     return indices
 
 
+@lru_cache(maxsize=None)  # we should have only 1 hit
 def create_zero_centered_coordinate_mesh(shape):
-    tmp = tuple([np.arange(i) for i in shape])
-    coords = np.array(np.meshgrid(*tmp, indexing='ij')).astype(float)
-    to_add = ((np.array(shape).astype(float) - 1) / 2.)
+    coords = np.array(np.meshgrid(*(np.arange(i) for i in shape), indexing='ij'), dtype=float)
+    to_add = (np.array(shape, dtype=float) - 1) / 2.
     for d in range(len(shape)):
         coords[d] -= to_add[d]
     return coords
@@ -52,7 +54,7 @@ def convert_seg_image_to_one_hot_encoding(image, classes=None):
     '''
     if classes is None:
         classes = np.unique(image)
-    out_image = np.zeros([len(classes)]+list(image.shape), dtype=image.dtype)
+    out_image = np.zeros([len(classes)] + list(image.shape), dtype=image.dtype)
     for i, c in enumerate(classes):
         out_image[i][image == c] = 1
     return out_image
@@ -72,9 +74,8 @@ def convert_seg_image_to_one_hot_encoding_batched(image, classes=None):
 
 
 def elastic_deform_coordinates(coordinates, alpha, sigma):
-    n_dim = len(coordinates)
     offsets = []
-    for _ in range(n_dim):
+    for _ in range(len(coordinates)):
         offsets.append(
             gaussian_filter((np.random.random(coordinates.shape[1:]) * 2 - 1), sigma, mode="constant", cval=0) * alpha)
     offsets = np.array(offsets)
@@ -125,11 +126,9 @@ def rotate_coords_2d(coords, angle):
     return coords
 
 
-def scale_coords(coords, scale):
+def scale_coords(coords: np.ndarray, scale):
     if isinstance(scale, (tuple, list, np.ndarray)):
-        assert len(scale) == len(coords)
-        for i in range(len(scale)):
-            coords[i] *= scale[i]
+        coords = (coords.T * scale).T
     else:
         coords *= scale
     return coords
@@ -485,91 +484,90 @@ def general_cc_var_num_channels(img, diff_order=0, mink_norm=1, sigma=1, mask_im
         output_img[c] /= white_colors[c]
 
     if clip_range:
-        np.clip(output_img, minm, maxm, out= output_img)
+        np.clip(output_img, minm, maxm, out=output_img)
 
     return white_colors, output_img
 
 
-def convert_seg_to_bounding_box_coordinates(data_dict, dim, get_rois_from_seg_flag=False, class_specific_seg_flag=False):
+def convert_seg_to_bounding_box_coordinates(data_dict, dim, get_rois_from_seg_flag=False,
+                                            class_specific_seg_flag=False):
+    '''
+    This function generates bounding box annotations from given pixel-wise annotations.
+    :param data_dict: Input data dictionary as returned by the batch generator.
+    :param dim: Dimension in which the model operates (2 or 3).
+    :param get_rois_from_seg: Flag specifying one of the following scenarios:
+    1. A label map with individual ROIs identified by increasing label values, accompanied by a vector containing
+    in each position the class target for the lesion with the corresponding label (set flag to False)
+    2. A binary label map. There is only one foreground class and single lesions are not identified.
+    All lesions have the same class target (foreground). In this case the Dataloader runs a Connected Component
+    Labelling algorithm to create processable lesion - class target pairs on the fly (set flag to True).
+    :param class_specific_seg_flag: if True, returns the pixelwise-annotations in class specific manner,
+    e.g. a multi-class label map. If False, returns a binary annotation map (only foreground vs. background).
+    :return: data_dict: same as input, with additional keys:
+    - 'bb_target': bounding box coordinates (b, n_boxes, (y1, x1, y2, x2, (z1), (z2)))
+    - 'roi_labels': corresponding class labels for each box (b, n_boxes, class_label)
+    - 'roi_masks': corresponding binary segmentation mask for each lesion (box). Only used in Mask RCNN. (b, n_boxes, y, x, (z))
+    - 'seg': now label map (see class_specific_seg_flag)
+    '''
 
-        '''
-        This function generates bounding box annotations from given pixel-wise annotations.
-        :param data_dict: Input data dictionary as returned by the batch generator.
-        :param dim: Dimension in which the model operates (2 or 3).
-        :param get_rois_from_seg: Flag specifying one of the following scenarios:
-        1. A label map with individual ROIs identified by increasing label values, accompanied by a vector containing
-        in each position the class target for the lesion with the corresponding label (set flag to False)
-        2. A binary label map. There is only one foreground class and single lesions are not identified.
-        All lesions have the same class target (foreground). In this case the Dataloader runs a Connected Component
-        Labelling algorithm to create processable lesion - class target pairs on the fly (set flag to True).
-        :param class_specific_seg_flag: if True, returns the pixelwise-annotations in class specific manner,
-        e.g. a multi-class label map. If False, returns a binary annotation map (only foreground vs. background).
-        :return: data_dict: same as input, with additional keys:
-        - 'bb_target': bounding box coordinates (b, n_boxes, (y1, x1, y2, x2, (z1), (z2)))
-        - 'roi_labels': corresponding class labels for each box (b, n_boxes, class_label)
-        - 'roi_masks': corresponding binary segmentation mask for each lesion (box). Only used in Mask RCNN. (b, n_boxes, y, x, (z))
-        - 'seg': now label map (see class_specific_seg_flag)
-        '''
+    bb_target = []
+    roi_masks = []
+    roi_labels = []
+    out_seg = np.copy(data_dict['seg'])
+    for b in range(data_dict['seg'].shape[0]):
 
-        bb_target = []
-        roi_masks = []
-        roi_labels = []
-        out_seg = np.copy(data_dict['seg'])
-        for b in range(data_dict['seg'].shape[0]):
+        p_coords_list = []
+        p_roi_masks_list = []
+        p_roi_labels_list = []
 
-            p_coords_list = []
-            p_roi_masks_list = []
-            p_roi_labels_list = []
-
-            if np.sum(data_dict['seg'][b]!=0) > 0:
-                if get_rois_from_seg_flag:
-                    clusters, n_cands = lb(data_dict['seg'][b])
-                    data_dict['class_target'][b] = [data_dict['class_target'][b]] * n_cands
-                else:
-                    n_cands = int(np.max(data_dict['seg'][b]))
-                    clusters = data_dict['seg'][b]
-
-                rois = np.array([(clusters == ii) * 1 for ii in range(1, n_cands + 1)])  # separate clusters and concat
-                for rix, r in enumerate(rois):
-                    if np.sum(r !=0) > 0: #check if the lesion survived data augmentation
-                        seg_ixs = np.argwhere(r != 0)
-                        coord_list = [np.min(seg_ixs[:, 1])-1, np.min(seg_ixs[:, 2])-1, np.max(seg_ixs[:, 1])+1,
-                                         np.max(seg_ixs[:, 2])+1]
-                        if dim == 3:
-
-                            coord_list.extend([np.min(seg_ixs[:, 3])-1, np.max(seg_ixs[:, 3])+1])
-
-                        p_coords_list.append(coord_list)
-                        p_roi_masks_list.append(r)
-                        # add background class = 0. rix is a patient wide index of lesions. since 'class_target' is
-                        # also patient wide, this assignment is not dependent on patch occurrances.
-                        p_roi_labels_list.append(data_dict['class_target'][b][rix] + 1)
-
-                    if class_specific_seg_flag:
-                        out_seg[b][data_dict['seg'][b] == rix + 1] = data_dict['class_target'][b][rix] + 1
-
-                if not class_specific_seg_flag:
-                    out_seg[b][data_dict['seg'][b] > 0] = 1
-
-                bb_target.append(np.array(p_coords_list))
-                roi_masks.append(np.array(p_roi_masks_list).astype('uint8'))
-                roi_labels.append(np.array(p_roi_labels_list))
-
-
+        if np.sum(data_dict['seg'][b] != 0) > 0:
+            if get_rois_from_seg_flag:
+                clusters, n_cands = lb(data_dict['seg'][b])
+                data_dict['class_target'][b] = [data_dict['class_target'][b]] * n_cands
             else:
-                bb_target.append([])
-                roi_masks.append(np.zeros_like(data_dict['seg'][b])[None])
-                roi_labels.append(np.array([-1]))
+                n_cands = int(np.max(data_dict['seg'][b]))
+                clusters = data_dict['seg'][b]
 
-        if get_rois_from_seg_flag:
-            data_dict.pop('class_target', None)
+            rois = np.array([(clusters == ii) * 1 for ii in range(1, n_cands + 1)])  # separate clusters and concat
+            for rix, r in enumerate(rois):
+                if np.sum(r != 0) > 0:  # check if the lesion survived data augmentation
+                    seg_ixs = np.argwhere(r != 0)
+                    coord_list = [np.min(seg_ixs[:, 1]) - 1, np.min(seg_ixs[:, 2]) - 1, np.max(seg_ixs[:, 1]) + 1,
+                                  np.max(seg_ixs[:, 2]) + 1]
+                    if dim == 3:
+                        coord_list.extend([np.min(seg_ixs[:, 3]) - 1, np.max(seg_ixs[:, 3]) + 1])
 
-        data_dict['bb_target'] = np.array(bb_target)
-        data_dict['roi_masks'] = np.array(roi_masks)
-        data_dict['class_target'] = np.array(roi_labels)
-        data_dict['seg'] = out_seg
+                    p_coords_list.append(coord_list)
+                    p_roi_masks_list.append(r)
+                    # add background class = 0. rix is a patient wide index of lesions. since 'class_target' is
+                    # also patient wide, this assignment is not dependent on patch occurrances.
+                    p_roi_labels_list.append(data_dict['class_target'][b][rix] + 1)
 
-        return data_dict
+                if class_specific_seg_flag:
+                    out_seg[b][data_dict['seg'][b] == rix + 1] = data_dict['class_target'][b][rix] + 1
+
+            if not class_specific_seg_flag:
+                out_seg[b][data_dict['seg'][b] > 0] = 1
+
+            bb_target.append(np.array(p_coords_list))
+            roi_masks.append(np.array(p_roi_masks_list).astype('uint8'))
+            roi_labels.append(np.array(p_roi_labels_list))
+
+
+        else:
+            bb_target.append([])
+            roi_masks.append(np.zeros_like(data_dict['seg'][b])[None])
+            roi_labels.append(np.array([-1]))
+
+    if get_rois_from_seg_flag:
+        data_dict.pop('class_target', None)
+
+    data_dict['bb_target'] = np.array(bb_target)
+    data_dict['roi_masks'] = np.array(roi_masks)
+    data_dict['class_target'] = np.array(roi_labels)
+    data_dict['seg'] = out_seg
+
+    return data_dict
 
 
 def transpose_channels(batch):
@@ -595,13 +593,15 @@ def resize_segmentation(segmentation, new_shape, order=3):
     unique_labels = np.unique(segmentation)
     assert len(segmentation.shape) == len(new_shape), "new shape must have same dimensionality as segmentation"
     if order == 0:
-        return resize(segmentation.astype(float), new_shape, order, mode="edge", clip=True, anti_aliasing=False).astype(tpe)
+        return resize(segmentation.astype(float), new_shape, order, mode="edge", clip=True, anti_aliasing=False).astype(
+            tpe)
     else:
         reshaped = np.zeros(new_shape, dtype=segmentation.dtype)
 
         for c in unique_labels:
             mask = segmentation == c
-            reshaped_multihot = resize(mask.astype(float), new_shape, order, mode="edge", clip=True, anti_aliasing=False)
+            reshaped_multihot = resize(mask.astype(float), new_shape, order, mode="edge", clip=True,
+                                       anti_aliasing=False)
             reshaped[reshaped_multihot >= 0.5] = c
         return reshaped
 
@@ -660,7 +660,8 @@ def uniform(low, high, size=None):
         return np.random.uniform(low, high, size)
 
 
-def pad_nd_image(image, new_shape=None, mode="constant", kwargs=None, return_slicer=False, shape_must_be_divisible_by=None):
+def pad_nd_image(image, new_shape=None, mode="constant", kwargs=None, return_slicer=False,
+                 shape_must_be_divisible_by=None):
     """
     one padder to pad them all. Documentation? Well okay. A little bit
 
@@ -710,7 +711,7 @@ def pad_nd_image(image, new_shape=None, mode="constant", kwargs=None, return_sli
     difference = new_shape - old_shape
     pad_below = difference // 2
     pad_above = pad_below + difference % 2
-    pad_list = [[0, 0]]*num_axes_nopad + list([list(i) for i in zip(pad_below, pad_above)])
+    pad_list = [[0, 0]] * num_axes_nopad + list([list(i) for i in zip(pad_below, pad_above)])
 
     if np.any(pad_below) or np.any(pad_above):
         res = np.pad(image, pad_list, mode, **kwargs)
