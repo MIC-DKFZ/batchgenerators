@@ -308,7 +308,7 @@ class SpatialTransform(AbstractTransform):
         self.p_el_per_sample = p_el_per_sample
         self.data_key = data_key
         self.label_key = label_key
-        self.patch_size = patch_size
+        self.patch_size = tuple(patch_size)
         self.patch_center_dist_from_border = patch_center_dist_from_border
         self.do_elastic_deform = do_elastic_deform
         self.alpha = alpha

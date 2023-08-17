@@ -194,17 +194,9 @@ def augment_spatial(data, seg, patch_size, patch_center_dist_from_border=30,
     dim = len(patch_size)
     seg_result = None
     if seg is not None:
-        if dim == 2:
-            seg_result = np.zeros((seg.shape[0], seg.shape[1], patch_size[0], patch_size[1]), dtype=np.float32)
-        else:
-            seg_result = np.zeros((seg.shape[0], seg.shape[1], patch_size[0], patch_size[1], patch_size[2]),
-                                  dtype=np.float32)
+        seg_result = np.zeros((seg.shape[0], seg.shape[1], *patch_size), dtype=np.float32)
 
-    if dim == 2:
-        data_result = np.zeros((data.shape[0], data.shape[1], patch_size[0], patch_size[1]), dtype=np.float32)
-    else:
-        data_result = np.zeros((data.shape[0], data.shape[1], patch_size[0], patch_size[1], patch_size[2]),
-                               dtype=np.float32)
+    data_result = np.zeros((data.shape[0], data.shape[1], *patch_size), dtype=np.float32)
 
     if not isinstance(patch_center_dist_from_border, (list, tuple, np.ndarray)):
         patch_center_dist_from_border = dim * [patch_center_dist_from_border]
@@ -246,12 +238,12 @@ def augment_spatial(data, seg, patch_size, patch_center_dist_from_border=30,
             if independent_scale_for_each_axis and np.random.uniform() < p_independent_scale_per_axis:
                 sc = []
                 for _ in range(dim):
-                    if np.random.random() < 0.5 and scale[0] < 1:
+                    if scale[0] < 1 and np.random.random() < 0.5:
                         sc.append(np.random.uniform(scale[0], 1))
                     else:
                         sc.append(np.random.uniform(max(scale[0], 1), scale[1]))
             else:
-                if np.random.random() < 0.5 and scale[0] < 1:
+                if scale[0] < 1 and np.random.random() < 0.5:
                     sc = np.random.uniform(scale[0], 1)
                 else:
                     sc = np.random.uniform(max(scale[0], 1), scale[1])

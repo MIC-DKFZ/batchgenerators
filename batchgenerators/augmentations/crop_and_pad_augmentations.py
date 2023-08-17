@@ -16,6 +16,7 @@
 from builtins import range
 import numpy as np
 from batchgenerators.augmentations.utils import pad_nd_image
+from typing import Union, Sequence
 
 
 def center_crop(data, crop_size, seg=None):
@@ -30,15 +31,11 @@ def get_lbs_for_random_crop(crop_size, data_shape, margins):
     :param margins:
     :return:
     """
-    lbs = []
-    for i in range(len(data_shape) - 2):
-        new_shape = data_shape[i+2] - crop_size[i]
-        margin = margins[i]
-        if new_shape > 2 * margin:
-            lbs.append(np.random.randint(margin, new_shape - margin))
-        else:
-            lbs.append(new_shape // 2)
-    return lbs
+    new_shape = data_shape - crop_size
+    mask = new_shape > 2 * margins
+    new_shape[mask] = np.random.randint(margins[mask], new_shape[mask] - margins[mask])
+    new_shape[~mask] //= 2
+    return new_shape
 
 
 def get_lbs_for_center_crop(crop_size, data_shape):
@@ -47,13 +44,11 @@ def get_lbs_for_center_crop(crop_size, data_shape):
     :param data_shape: (b,c,x,y(,z)) must be the whole thing!
     :return:
     """
-    lbs = []
-    for i in range(len(data_shape) - 2):
-        lbs.append((data_shape[i + 2] - crop_size[i]) // 2)
-    return lbs
+    return (data_shape - crop_size) // 2
 
 
-def crop(data, seg=None, crop_size=128, margins=(0, 0, 0), crop_type="center",
+def crop(data: Union[Sequence[np.ndarray], np.ndarray], seg: Union[Sequence[np.ndarray], np.ndarray] = None,
+         crop_size=128, margins=(0, 0, 0), crop_type="center",
          pad_mode='constant', pad_kwargs={'constant_values': 0},
          pad_mode_seg='constant', pad_kwargs_seg={'constant_values': 0}):
     """
@@ -71,45 +66,40 @@ def crop(data, seg=None, crop_size=128, margins=(0, 0, 0), crop_type="center",
     :param crop_type: random or center
     :return:
     """
-    if not isinstance(data, (list, tuple, np.ndarray)):
-        raise TypeError("data has to be either a numpy array or a list")
-
-    data_shape = tuple([len(data)] + list(data[0].shape))
+    data_shape = (len(data), *data[0].shape)
     data_dtype = data[0].dtype
     dim = len(data_shape) - 2
 
     if seg is not None:
-        seg_shape = tuple([len(seg)] + list(seg[0].shape))
+        seg_shape = (len(seg), *seg[0].shape)
         seg_dtype = seg[0].dtype
 
-        if not isinstance(seg, (list, tuple, np.ndarray)):
-            raise TypeError("data has to be either a numpy array or a list")
-
-        assert all([i == j for i, j in zip(seg_shape[2:], data_shape[2:])]), "data and seg must have the same spatial " \
-                                                                             "dimensions. Data: %s, seg: %s" % \
-                                                                             (str(data_shape), str(seg_shape))
+        assert np.array_equal(seg_shape[2:], data_shape[2:]), "data and seg must have the same spatial dimensions. " \
+                                                              f"Data: {data_shape}, seg: {seg_shape}"
 
     if type(crop_size) not in (tuple, list, np.ndarray):
-        crop_size = (crop_size, ) * dim
+        crop_size = (crop_size,) * dim
     else:
-        assert len(crop_size) == len(
-            data_shape) - 2, "If you provide a list/tuple as center crop make sure it has the same dimension as your " \
-                             "data (2d/3d)"
-    crop_size = tuple(crop_size)
+        assert len(crop_size) == dim, ("If you provide a list/tuple as center crop make sure it has the same dimension "
+                                       "as your data (2d/3d)")
+    crop_size = np.array(crop_size)
 
     if not isinstance(margins, (np.ndarray, tuple, list)):
-        margins = [margins] * dim
+        margins = (margins,) * dim
+    margins = np.array(margins)
 
-    data_return = np.zeros((data_shape[0], data_shape[1]) + crop_size, dtype=data_dtype)
+    data_return = np.zeros((data_shape[0], data_shape[1], *crop_size), dtype=data_dtype)
     if seg is not None:
-        seg_return = np.zeros((seg_shape[0], seg_shape[1]) + crop_size, dtype=seg_dtype)
+        seg_return = np.zeros((seg_shape[0], seg_shape[1], *crop_size), dtype=seg_dtype)
     else:
         seg_return = None
 
+
     for b in range(data_shape[0]):
-        data_shape_here = [data_shape[0]] + list(data[b].shape)
+        data_first_dim = data[b].shape[0]
+        data_shape_here = np.array(data[b].shape[1:])
         if seg is not None:
-            seg_shape_here = [seg_shape[0]] + list(seg[b].shape)
+            seg_first_dim = seg[b].shape[0]
 
         if crop_type == "center":
             lbs = get_lbs_for_center_crop(crop_size, data_shape_here)
@@ -118,22 +108,23 @@ def crop(data, seg=None, crop_size=128, margins=(0, 0, 0), crop_type="center",
         else:
             raise NotImplementedError("crop_type must be either center or random")
 
-        need_to_pad = [[0, 0]] + [[abs(min(0, lbs[d])),
-                                   abs(min(0, data_shape_here[d + 2] - (lbs[d] + crop_size[d])))]
-                                  for d in range(dim)]
+        zero = np.zeros(dim, dtype=int)
+        temp1 = np.abs(np.minimum(lbs, zero))
+        temp2 = np.abs(np.minimum(zero, data_shape_here - lbs - crop_size))
+        need_to_pad = np.array(((0, 0), *zip(temp1, temp2)))
 
         # we should crop first, then pad -> reduces i/o for memmaps, reduces RAM usage and improves speed
-        ubs = [min(lbs[d] + crop_size[d], data_shape_here[d+2]) for d in range(dim)]
-        lbs = [max(0, lbs[d]) for d in range(dim)]
+        ubs = np.minimum(data_shape_here, lbs + crop_size)
+        lbs = np.maximum(zero, lbs)
 
-        slicer_data = [slice(0, data_shape_here[1])] + [slice(lbs[d], ubs[d]) for d in range(dim)]
-        data_cropped = data[b][tuple(slicer_data)]
+        slicer_data = (slice(0, data_first_dim), *(slice(lbs[d], ubs[d]) for d in range(dim)))
+        data_cropped = data[b][slicer_data]
 
         if seg_return is not None:
-            slicer_seg = [slice(0, seg_shape_here[1])] + [slice(lbs[d], ubs[d]) for d in range(dim)]
-            seg_cropped = seg[b][tuple(slicer_seg)]
+            slicer_data = (slice(0, seg_first_dim), *(slice(lbs[d], ubs[d]) for d in range(dim)))
+            seg_cropped = seg[b][slicer_data]
 
-        if any([i > 0 for j in need_to_pad for i in j]):
+        if np.any(need_to_pad):
             data_return[b] = np.pad(data_cropped, need_to_pad, pad_mode, **pad_kwargs)
             if seg_return is not None:
                 seg_return[b] = np.pad(seg_cropped, need_to_pad, pad_mode_seg, **pad_kwargs_seg)
