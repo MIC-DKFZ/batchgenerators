@@ -16,7 +16,7 @@
 from batchgenerators.transforms.abstract_transforms import AbstractTransform
 from batchgenerators.augmentations.spatial_transformations import augment_spatial, augment_spatial_2, \
     augment_channel_translation, \
-    augment_mirroring, augment_transpose_axes, augment_zoom, augment_resize, augment_rot90
+    augment_mirroring, augment_transpose_axes, augment_zoom, augment_resize, augment_rot90, augment_mirroring_batched
 import numpy as np
 
 
@@ -203,19 +203,14 @@ class MirrorTransform(AbstractTransform):
         data = data_dict.get(self.data_key)
         seg = data_dict.get(self.label_key)
 
-        for b in range(len(data)):
-            if np.random.uniform() < self.p_per_sample:
-                sample_seg = None
-                if seg is not None:
-                    sample_seg = seg[b]
-                ret_val = augment_mirroring(data[b], sample_seg, axes=self.axes)
-                data[b] = ret_val[0]
-                if seg is not None:
-                    seg[b] = ret_val[1]
-
-        data_dict[self.data_key] = data
-        if seg is not None:
-            data_dict[self.label_key] = seg
+        mask = np.random.uniform(size=len(data)) < self.p_per_sample
+        if np.any(mask):
+            if seg is None:
+                data[mask], _ = augment_mirroring_batched(data[mask], None, self.axes)
+            else:
+                data[mask], seg[mask] = augment_mirroring_batched(data[mask], seg[mask], self.axes)
+                data_dict[self.label_key] = seg
+            data_dict[self.data_key] = data
 
         return data_dict
 
