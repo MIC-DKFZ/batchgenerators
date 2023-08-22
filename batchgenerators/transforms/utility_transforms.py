@@ -35,24 +35,19 @@ class NumpyToTensor(AbstractTransform):
         if keys is not None and not isinstance(keys, (list, tuple)):
             keys = [keys]
         self.keys = keys
-        if cast_to is not None:
-            if cast_to == 'half':
-                self.cast_to = torch.half
-            elif cast_to == 'float':
-                self.cast_to = torch.float
-            elif cast_to == 'long':
-                self.cast_to = torch.long
-            elif cast_to == 'bool':
-                self.cast_to = torch.bool
-            else:
-                raise ValueError(f'Unknown value for cast_to: {self.cast_to}')
-        else:
-            self.cast_to = None
 
-    def cast(self, tensor):
-        if self.cast_to is not None:
-            tensor = tensor.to(self.cast_to)
-        return tensor
+        if cast_to is None:
+            self.cast = lambda x: x
+        elif cast_to == 'half':
+            self.cast = lambda x: x.to(torch.half)
+        elif cast_to == 'float':
+            self.cast = lambda x: x.to(torch.float)
+        elif cast_to == 'long':
+            self.cast = lambda x: x.to(torch.long)
+        elif cast_to == 'bool':
+            self.cast = lambda x: x.to(torch.bool)
+        else:
+            raise ValueError(f'Unknown value for cast_to: {cast_to}')
 
     def __call__(self, **data_dict):
         if self.keys is None:
