@@ -18,6 +18,7 @@ from functools import lru_cache
 from typing import Tuple
 
 import numpy as np
+import pandas as pd
 from copy import deepcopy
 from scipy.ndimage import map_coordinates, fourier_gaussian
 from scipy.ndimage.filters import gaussian_filter, gaussian_gradient_magnitude
@@ -73,7 +74,7 @@ def convert_seg_image_to_one_hot_encoding(image, classes=None):
     Prefer convert_seg_image_to_one_hot_encoding_batched.
     '''
     if classes is None:
-        classes = np.unique(image)
+        classes = pd.unique(image.reshape(-1))
     out_image = np.zeros((len(classes), *image.shape), dtype=image.dtype)
     for i, c in enumerate(classes):
         out_image[i][image == c] = 1
@@ -85,7 +86,7 @@ def convert_seg_image_to_one_hot_encoding_batched(image, classes=None):
     same as convert_seg_image_to_one_hot_encoding, but expects image to be (b, x, y, z) or (b, x, y)
     '''
     if classes is None:
-        classes = np.unique(image)
+        classes = pd.unique(image.reshape(-1))
     out_image = np.zeros((image.shape[0], len(classes), *image.shape[1:]), dtype=image.dtype)
     for i, c in enumerate(classes):
         out_image[:, i][image == c] = 1
@@ -162,7 +163,7 @@ def uncenter_coords(coords):
 
 def interpolate_img(img, coords, order=3, mode='nearest', cval=0.0, is_seg=False):
     if is_seg and order != 0:
-        unique_labels = np.unique(img)
+        unique_labels = pd.unique(img.reshape(-1))
         result = np.zeros(coords.shape[1:], img.dtype)
         for c in unique_labels:
             res_new = map_coordinates((img == c).astype(float), coords, order=order, mode=mode, cval=cval)
@@ -349,7 +350,7 @@ def random_crop_2D_image_batched(img, crop_size):
 
 def resize_image_by_padding(image, new_shape, pad_value=None):
     shape = image.shape
-    new_shape = np.max(np.concatenate((shape, new_shape)).reshape((2, len(shape))), axis=0)
+    new_shape = np.maximum(shape, new_shape)
     if pad_value is None:
         if len(shape) == 2:
             pad_value = image[0, 0]
@@ -368,8 +369,8 @@ def resize_image_by_padding(image, new_shape, pad_value=None):
 
 
 def resize_image_by_padding_batched(image, new_shape, pad_value=None):
-    shape = image.shape[2:]
-    new_shape = np.max(np.concatenate((shape, new_shape)).reshape((2, len(shape))), axis=0)
+    shape = image.shape[1:]
+    new_shape = np.maximum(shape, new_shape)
     if pad_value is None:
         if len(shape) == 2:
             pad_value = image[0, 0]
@@ -608,7 +609,7 @@ def resize_segmentation(segmentation, new_shape, order=3):
     :return:
     '''
     tpe = segmentation.dtype
-    unique_labels = np.unique(segmentation)
+    unique_labels = pd.unique(segmentation.reshape(-1))
     assert len(segmentation.shape) == len(new_shape), "new shape must have same dimensionality as segmentation"
     if order == 0:
         return resize(segmentation.astype(float), new_shape, order, mode="edge", clip=True, anti_aliasing=False).astype(

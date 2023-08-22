@@ -16,7 +16,8 @@ setup(name='batchgenerators',
             "scikit-image",
             "scikit-learn",
             "future",
-            "threadpoolctl"
+            "threadpoolctl",
+            "pandas"
       ],
       keywords=['data augmentation', 'deep learning', 'image segmentation', 'image classification',
                 'medical image analysis', 'medical image segmentation'],
