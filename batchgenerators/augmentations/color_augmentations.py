@@ -14,7 +14,6 @@
 # limitations under the License.
 
 from builtins import range
-from functools import lru_cache
 from typing import Tuple, Union, Callable
 
 import numpy as np

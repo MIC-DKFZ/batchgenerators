@@ -20,7 +20,6 @@ from batchgenerators.transforms.abstract_transforms import AbstractTransform
 import numpy as np
 from typing import Union, Tuple
 
-from scipy import ndimage
 from scipy.ndimage import median_filter
 from scipy.signal import convolve
 
