@@ -74,8 +74,8 @@ def mean_std_normalization(data, mean, std, per_channel=True):
             assert len(std) == channel_dimension
 
         broadcast_axes = tuple(range(2, len(data.shape)))
-        mean = np.expand_dims(np.broadcast_to(mean, (len(data), len(mean))), axis=broadcast_axes)
-        std = np.expand_dims(np.broadcast_to(std, (len(data), len(std))), axis=broadcast_axes)
+        mean = np.expand_dims(np.broadcast_to(mean, (len(data), len(mean))), broadcast_axes)
+        std = np.expand_dims(np.broadcast_to(std, (len(data), len(std))), broadcast_axes)
 
     data_normalized = (data - mean) / std
     return data_normalized
@@ -88,7 +88,7 @@ def cut_off_outliers(data, percentile_lower=0.2, percentile_upper=99.8, per_chan
         axes = tuple(range(1, len(data.shape)))
 
     cut_off_lower, cut_off_upper = np.percentile(data, (percentile_lower, percentile_upper), axis=axes)
-    cut_off_lower = np.expand_dims(cut_off_lower, axis=axes)
-    cut_off_upper = np.expand_dims(cut_off_upper, axis=axes)
+    cut_off_lower = np.expand_dims(cut_off_lower, axes)
+    cut_off_upper = np.expand_dims(cut_off_upper, axes)
     np.clip(data, cut_off_lower, cut_off_upper, out=data)
     return data

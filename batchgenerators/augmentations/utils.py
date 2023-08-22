@@ -54,7 +54,7 @@ def reverse_broadcast(a: np.ndarray, axes: Tuple[int]) -> np.ndarray:
         axes: (0, 1, ...)
     Returns: array of shape (len(a), 1, 1, ...)
     """
-    return np.expand_dims(a, axis=axes).T
+    return np.expand_dims(a, axes).T
 
 
 @lru_cache(maxsize=None)  # There will be only 1 miss, using maxsize None to remove locking and checks.

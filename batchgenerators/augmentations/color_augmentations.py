@@ -111,7 +111,7 @@ def setup_augment_brightness_multiplicative(per_channel: bool, batched: bool, sh
 
 def augment_brightness_multiplicative(data_sample, multiplier_range=(0.5, 2), per_channel=True, batched=False):
     size, axes = setup_augment_brightness_multiplicative(per_channel, batched, data_sample.shape)
-    data_sample *= np.expand_dims(np.random.uniform(multiplier_range[0], multiplier_range[1], size=size), axis=axes)
+    data_sample *= np.expand_dims(np.random.uniform(multiplier_range[0], multiplier_range[1], size=size), axes)
     return data_sample
 
 
