@@ -92,30 +92,18 @@ def augment_brightness_additive(data_sample, mu: float, sigma: float, per_channe
     else:
         rnd_nb = np.repeat(np.random.normal(mu, sigma), size)
     rnd_nb[np.random.uniform(size=size) > p_per_channel] = 0.0
-    axes = tuple(range(len(data_sample.shape) - 1))
-    data_sample += np.expand_dims(rnd_nb, axis=axes).T  # Broadcasting rules require this
+    data_sample += reverse_broadcast(rnd_nb, get_broadcast_axes(len(data_sample.shape)))
     return data_sample
 
 
-def get_size(per_channel, batched, shape):
+def setup_augment_brightness_multiplicative(per_channel: bool, batched: bool, shape: Tuple[int]):
     if per_channel:
         if batched:
-            return shape[:2]
-        return shape[0]
-    else:
-        if batched:
-            return shape[0]
-        return 1
-
-
-def get_axes(per_channel, batched, n):
-    if per_channel and batched:
-        return tuple(range(2, n))
-    return tuple(range(1, n))
-
-
-def setup_augment_brightness_multiplicative(per_channel: bool, batched: bool, shape: Tuple[int]):
-    return get_size(per_channel, batched, shape), get_axes(per_channel, batched, len(shape))
+            return shape[:2], tuple(range(2, len(shape)))
+        return shape[0], tuple(range(1, len(shape)))
+    if batched:
+        return shape[0], tuple(range(1, len(shape)))
+    return 1, tuple(range(1, len(shape)))
 
 
 def augment_brightness_multiplicative(data_sample, multiplier_range=(0.5, 2), per_channel=True, batched=False):
@@ -148,9 +136,10 @@ def augment_gamma(data_sample, gamma_range=(0.5, 2), invert_image=False, epsilon
     else:
         shape_0 = data_sample.shape[0]
         if callable(retain_stats):
-            retain_stats_here = np.array(retain_stats() for _ in range(shape_0))
+            retain_stats_here = [retain_stats() for _ in range(shape_0)]
         else:
-            retain_stats_here = np.array([retain_stats]).repeat(shape_0)
+            retain_stats_here = (retain_stats,) * shape_0
+        retain_stats_here = np.array(retain_stats_here)
         gamma = []
         for i in range(shape_0):
             if gamma_range[0] < 1 and np.random.random() < 0.5:

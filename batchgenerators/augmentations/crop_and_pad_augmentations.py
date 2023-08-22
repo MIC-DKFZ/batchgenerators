@@ -66,12 +66,12 @@ def crop(data: Union[Sequence[np.ndarray], np.ndarray], seg: Union[Sequence[np.n
     :param crop_type: random or center
     :return:
     """
-    data_shape = (len(data), *data[0].shape)
+    data_shape = (len(data),) + data[0].shape
     data_dtype = data[0].dtype
     dim = len(data_shape) - 2
 
     if seg is not None:
-        seg_shape = (len(seg), *seg[0].shape)
+        seg_shape = (len(seg),) + seg[0].shape
         seg_dtype = seg[0].dtype
 
         assert np.array_equal(seg_shape[2:], data_shape[2:]), "data and seg must have the same spatial dimensions. " \
@@ -112,7 +112,8 @@ def crop(data: Union[Sequence[np.ndarray], np.ndarray], seg: Union[Sequence[np.n
         temp1 = np.abs(np.minimum(lbs, zero))
         lbs_plus_crop_size = lbs + crop_size
         temp2 = np.abs(np.minimum(zero, data_shape_here - lbs_plus_crop_size))
-        need_to_pad = np.array(((0, 0), *zip(temp1, temp2)))
+        need_to_pad = ((0, 0),) + tuple(zip(temp1, temp2))
+        need_to_pad = np.array(need_to_pad)
 
         # we should crop first, then pad -> reduces i/o for memmaps, reduces RAM usage and improves speed
         ubs = np.minimum(data_shape_here, lbs_plus_crop_size)
