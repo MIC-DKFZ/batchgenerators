@@ -43,14 +43,9 @@ def setup_augment_gaussian_noise(noise_variance: Tuple[float, float], per_channe
 
 def augment_gaussian_noise(data_sample: np.ndarray, noise_variance: Tuple[float, float] = (0, 0.1),
                            p_per_channel: float = 1, per_channel: bool = False, batched: bool = False) -> np.ndarray:
-    mask = np.random.uniform(size=data_sample.shape[1 if batched else 0]) < p_per_channel
+    mask = np.random.uniform(size=data_sample.shape[:2] if batched else data_sample.shape[0]) < p_per_channel
     size = np.count_nonzero(mask)
     if size:
-        if batched:
-            num_samples = data_sample.shape[0]
-            mask = np.atleast_2d(mask).repeat(num_samples, axis=0)
-            size *= num_samples
-
         variance = setup_augment_gaussian_noise(noise_variance, per_channel, size)
         data_sample[mask] += np.random.normal(0.0, variance, data_sample[mask].T.shape).T
 

@@ -238,11 +238,12 @@ def augment_spatial(data, seg, patch_size, patch_center_dist_from_border=30,
         if do_scale and np.random.uniform() < p_scale_per_sample:
             if independent_scale_for_each_axis and np.random.uniform() < p_independent_scale_per_axis:
                 sc = []
+                scale_l = max(scale[0], 1)
                 for _ in range(dim):
                     if scale[0] < 1 and np.random.random() < 0.5:
                         sc.append(np.random.uniform(scale[0], 1))
                     else:
-                        sc.append(np.random.uniform(max(scale[0], 1), scale[1]))
+                        sc.append(np.random.uniform(scale_l, scale[1]))
             else:
                 if scale[0] < 1 and np.random.random() < 0.5:
                     sc = np.random.uniform(scale[0], 1)

@@ -22,27 +22,23 @@ from batchgenerators.augmentations.utils import general_cc_var_num_channels, ill
     reverse_broadcast
 
 
-def augment_contrast(data_sample: np.ndarray,
-                     contrast_range: Union[Tuple[float, float], Callable[[], float]] = (0.75, 1.25),
-                     preserve_range: bool = True,
-                     per_channel: bool = True,
-                     p_per_channel: float = 1,
-                     batched=False) -> np.ndarray:
-    size = data_sample.shape[1 if batched else 0]
+def get_augment_contrast_factor(contrast_range: Union[Tuple[float, float], Callable[[], float]],
+                                per_channel: bool,
+                                size: int):
+    # TODO: callable contrast_range is not used. Remove this feature.
     if per_channel:
         if callable(contrast_range):
             factor = [contrast_range() for _ in range(size)]
         else:
             factor = []
+            contrast_l = max(contrast_range[0], 1)
             for _ in range(size):
                 if contrast_range[0] < 1 and np.random.random() < 0.5:
                     factor.append(np.random.uniform(contrast_range[0], 1))
                 else:
-                    factor.append(np.random.uniform(max(contrast_range[0], 1), contrast_range[1]))
+                    factor.append(np.random.uniform(contrast_l, contrast_range[1]))
 
         factor = np.array(factor)
-        if batched:
-            factor = factor.repeat(data_sample.shape[0])
     else:
         if callable(contrast_range):
             factor = contrast_range()
@@ -52,12 +48,19 @@ def augment_contrast(data_sample: np.ndarray,
             else:
                 factor = np.random.uniform(max(contrast_range[0], 1), contrast_range[1])
 
-    mask = np.random.uniform(size=size) < p_per_channel
-    if np.any(mask):
-        if batched:
-            mask = np.atleast_2d(mask).repeat(data_sample.shape[0], axis=0)
+    return factor
 
+
+def augment_contrast(data_sample: np.ndarray,
+                     contrast_range: Union[Tuple[float, float], Callable[[], float]] = (0.75, 1.25),
+                     preserve_range: bool = True,
+                     per_channel: bool = True,
+                     p_per_channel: float = 1,
+                     batched=False) -> np.ndarray:
+    mask = np.random.uniform(size=data_sample.shape[:2] if batched else data_sample.shape[0]) < p_per_channel
+    if np.any(mask):
         workon = data_sample[mask]
+        factor = get_augment_contrast_factor(contrast_range, per_channel, len(workon))
         axes = tuple(range(1, len(workon.shape)))
         mean = workon.mean(axis=axes)
         if preserve_range:
@@ -141,11 +144,12 @@ def augment_gamma(data_sample, gamma_range=(0.5, 2), invert_image=False, epsilon
             retain_stats_here = (retain_stats,) * shape_0
         retain_stats_here = np.array(retain_stats_here)
         gamma = []
+        gamma_l = max(gamma_range[0], 1)
         for i in range(shape_0):
             if gamma_range[0] < 1 and np.random.random() < 0.5:
                 gamma.append(np.random.uniform(gamma_range[0], 1))
             else:
-                gamma.append(np.random.uniform(max(gamma_range[0], 1), gamma_range[1]))
+                gamma.append(np.random.uniform(gamma_l, gamma_range[1]))
         gamma = np.array(gamma)
 
         axes = tuple(range(1, len(data_sample.shape)))
