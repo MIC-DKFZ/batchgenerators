@@ -122,9 +122,10 @@ class BrightnessMultiplicativeTransform(AbstractTransform):
         self.per_channel = per_channel
 
     def __call__(self, **data_dict):
-        mask = np.random.uniform(size=len(data_dict[self.data_key])) < self.p_per_sample
+        data = data_dict[self.data_key]
+        mask = np.random.uniform(size=len(data)) < self.p_per_sample
         if np.any(mask):
-            data_dict[self.data_key][mask] = augment_brightness_multiplicative(data_dict[self.data_key][mask],
+            data_dict[self.data_key][mask] = augment_brightness_multiplicative(data[mask],
                                                                                self.multiplier_range,
                                                                                self.per_channel,
                                                                                batched=True)

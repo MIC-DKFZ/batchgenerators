@@ -34,9 +34,9 @@ def setup_augment_gaussian_noise(noise_variance: Tuple[float, float], per_channe
     if not per_channel:
         variance = noise_variance[0] if noise_variance[0] == noise_variance[1] else \
             random.uniform(noise_variance[0], noise_variance[1])
-        variance = np.repeat(variance, size)
+        variance = np.array((variance,) * size)
     else:
-        variance = np.repeat(noise_variance[0], size) if noise_variance[0] == noise_variance[1] else \
+        variance = np.array((noise_variance[0],) * size) if noise_variance[0] == noise_variance[1] else \
             np.random.uniform(noise_variance[0], noise_variance[1], size=size)
     return variance
 
