@@ -116,13 +116,17 @@ def augment_mirroring_batched(sample_data, sample_seg=None, axes=(0, 1, 2)):
     assert len(sample_data.shape) == 5 or len(sample_data.shape) == 4, \
         "Invalid dimension for sample_data and sample_seg. sample_data and sample_seg should be either " \
         "[batch, channels, x, y] or [batch, channels, x, y, z]"
+    size = len(sample_data)
     workon = np.expand_dims(sample_data, 0) if sample_seg is None else np.stack((sample_data, sample_seg))
-    if 0 in axes and np.random.uniform() < 0.5:
-        workon[:, :, :, :] = workon[:, :, :, ::-1]
-    if 1 in axes and np.random.uniform() < 0.5:
-        workon[:, :, :, :, :] = workon[:, :, :, :, ::-1]
-    if 2 in axes and len(sample_data.shape) == 6 and np.random.uniform() < 0.5:
-        workon[:, :, :, :, :, :] = workon[:, :, :, :, :, ::-1]
+    if 0 in axes:
+        mask = np.random.uniform(size=size) < 0.5
+        workon[:, mask] = np.flip(workon[:, mask], 3)
+    if 1 in axes:
+        mask = np.random.uniform(size=size) < 0.5
+        workon[:, mask] = np.flip(workon[:, mask], 4)
+    if 2 in axes and size == 5:
+        mask = np.random.uniform(size=size) < 0.5
+        workon[:, mask] = np.flip(workon[:, mask], 5)
     if sample_seg is None:
         return workon[0], None
     return workon
@@ -132,8 +136,21 @@ def augment_mirroring(sample_data, sample_seg=None, axes=(0, 1, 2)):
     sample_data = np.expand_dims(sample_data, 0)
     if sample_seg is not None:
         sample_seg = np.expand_dims(sample_seg, 0)
-    sample_data, sample_seg = augment_mirroring_batched(sample_data, sample_seg, axes)
-    return sample_data[0], sample_seg[0] if sample_seg is not None else None
+    return augment_mirroring_batched(sample_data, sample_seg, axes)
+    if 0 in axes and np.random.uniform() < 0.5:
+        sample_data[:, :] = sample_data[:, ::-1]
+        if sample_seg is not None:
+            sample_seg[:, :] = sample_seg[:, ::-1]
+    if 1 in axes and np.random.uniform() < 0.5:
+        sample_data[:, :, :] = sample_data[:, :, ::-1]
+        if sample_seg is not None:
+            sample_seg[:, :, :] = sample_seg[:, :, ::-1]
+    if 2 in axes and len(sample_data.shape) == 4:
+        if np.random.uniform() < 0.5:
+            sample_data[:, :, :, :] = sample_data[:, :, :, ::-1]
+            if sample_seg is not None:
+                sample_seg[:, :, :, :] = sample_seg[:, :, :, ::-1]
+    return sample_data, sample_seg
 
 
 def augment_channel_translation(data, const_channel=0, max_shifts=None):
