@@ -124,7 +124,7 @@ def augment_mirroring_batched(sample_data, sample_seg=None, axes=(0, 1, 2)):
     if 1 in axes:
         mask = np.random.uniform(size=size) < 0.5
         workon[:, mask] = np.flip(workon[:, mask], 4)
-    if 2 in axes and size == 5:
+    if 2 in axes and len(workon.shape) == 6:
         mask = np.random.uniform(size=size) < 0.5
         workon[:, mask] = np.flip(workon[:, mask], 5)
     if sample_seg is None:
