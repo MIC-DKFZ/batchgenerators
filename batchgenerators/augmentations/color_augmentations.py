@@ -23,7 +23,8 @@ from batchgenerators.augmentations.utils import general_cc_var_num_channels, ill
 
 def get_augment_contrast_factor(contrast_range: Union[Tuple[float, float], Callable[[], float]],
                                 per_channel: bool,
-                                size: int):
+                                size: int,
+                                broadcast_size: int):
     # TODO: callable contrast_range is not used. Remove this feature.
     if per_channel:
         if callable(contrast_range):
@@ -37,7 +38,7 @@ def get_augment_contrast_factor(contrast_range: Union[Tuple[float, float], Calla
                 else:
                     factor.append(np.random.uniform(contrast_l, contrast_range[1]))
 
-        factor = np.array(factor)
+        factor = reverse_broadcast(np.array(factor), get_broadcast_axes(broadcast_size))
     else:
         if callable(contrast_range):
             factor = contrast_range()
@@ -59,19 +60,16 @@ def augment_contrast(data_sample: np.ndarray,
     mask = np.random.uniform(size=data_sample.shape[:2] if batched else data_sample.shape[0]) < p_per_channel
     if np.any(mask):
         workon = data_sample[mask]
-        factor = get_augment_contrast_factor(contrast_range, per_channel, len(workon))
+        factor = get_augment_contrast_factor(contrast_range, per_channel, len(workon), len(workon.shape))
         axes = tuple(range(1, len(workon.shape)))
-        mean = workon.mean(axis=axes)
+        mean = workon.mean(axis=axes, keepdims=True)
         if preserve_range:
-            minm = workon.min(axis=axes)
-            maxm = workon.max(axis=axes)
+            minm = workon.min(axis=axes, keepdims=True)
+            maxm = workon.max(axis=axes, keepdims=True)
 
-        data_sample[mask] = (workon.T * factor + mean * (1 - factor)).T  # writing directly in data_sample
+        data_sample[mask] = workon * factor + mean * (1 - factor)  # writing directly in data_sample
 
         if preserve_range:
-            broadcast_axes = get_broadcast_axes(len(workon.shape))
-            minm = reverse_broadcast(minm, broadcast_axes)
-            maxm = reverse_broadcast(maxm, broadcast_axes)
             np.clip(data_sample[mask], minm, maxm, out=data_sample[mask])
 
     return data_sample
@@ -155,25 +153,20 @@ def augment_gamma(data_sample, gamma_range=(0.5, 2), invert_image=False, epsilon
 
         retain_any_stats = np.any(retain_stats_here)
         if retain_any_stats:
-            mn = data_sample[retain_stats_here].mean(axis=axes)
-            sd = data_sample[retain_stats_here].mean(axis=axes)
+            mn = data_sample[retain_stats_here].mean(axis=axes, keepdims=True)
+            sd = data_sample[retain_stats_here].mean(axis=axes, keepdims=True)
 
-        minm = data_sample.min(axis=axes)
-        rnge = data_sample.max(axis=axes) - minm + epsilon
+        minm = data_sample.min(axis=axes, keepdims=True)
+        rnge = data_sample.max(axis=axes, keepdims=True) - minm + epsilon
 
-        # aux = (np.power(((data_sample.T - minm) / rnge), gamma) * rnge + minm).T  # This is slower
         broadcast_axes = get_broadcast_axes(len(data_sample.shape))
-        minm = reverse_broadcast(minm, broadcast_axes)
-        rnge = reverse_broadcast(rnge, broadcast_axes)
-        gamma = reverse_broadcast(gamma, broadcast_axes)
+        gamma = reverse_broadcast(gamma, broadcast_axes)  # TODO: Remove
         data_sample = np.power((data_sample - minm) / rnge, gamma) * rnge + minm
 
         if retain_any_stats:
-            data_sample[retain_stats_here] -= reverse_broadcast(
-                data_sample[retain_stats_here].mean(axis=axes), broadcast_axes)
-            data_sample[retain_stats_here] *= reverse_broadcast(
-                sd / (data_sample[retain_stats_here].std(axis=axes) + 1e-8), broadcast_axes)
-            data_sample[retain_stats_here] += reverse_broadcast(mn, broadcast_axes)
+            data_sample[retain_stats_here] -= data_sample[retain_stats_here].mean(axis=axes, keepdims=True)
+            data_sample[retain_stats_here] *= sd / (data_sample[retain_stats_here].std(axis=axes, keepdims=True) + 1e-8)
+            data_sample[retain_stats_here] += mn
 
     if invert_image:
         data_sample = - data_sample

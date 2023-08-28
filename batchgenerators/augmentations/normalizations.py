@@ -29,15 +29,11 @@ def range_normalization(data, rnge=(0, 1), per_channel=True, eps=1e-8):
 
 
 def min_max_normalization_batched(data, eps, axes):
-    mn = data.min(axis=axes)
-    mx = data.max(axis=axes)
+    mn = data.min(axis=axes, keepdims=True)
+    mx = data.max(axis=axes, keepdims=True)
     old_range = mx - mn + eps
 
-    data_normalized = ((data.T - mn.T) / old_range.T).T
-    # broadcast_axes = get_broadcast_axes(len(data.shape))
-    # mn = reverse_broadcast(mn, broadcast_axes)
-    # old_range = reverse_broadcast(old_range, broadcast_axes)
-    # data_normalized = (data - mn) / old_range
+    data_normalized = (data - mn) / old_range
     return data_normalized
 
 
@@ -55,9 +51,9 @@ def zero_mean_unit_variance_normalization(data, per_channel=True, epsilon=1e-8):
     else:
         axes = tuple(range(1, len(data.shape)))
 
-    mean = np.mean(data, axis=axes)
-    std = np.std(data, axis=axes) + epsilon
-    data_normalized = ((data.T - mean.T) / std.T).T
+    mean = np.mean(data, axis=axes, keepdims=True)
+    std = np.std(data, axis=axes, keepdims=True) + epsilon
+    data_normalized = (data - mean) / std
     return data_normalized
 
 
@@ -85,8 +81,6 @@ def cut_off_outliers(data, percentile_lower=0.2, percentile_upper=99.8, per_chan
     else:
         axes = tuple(range(1, len(data.shape)))
 
-    cut_off_lower, cut_off_upper = np.percentile(data, (percentile_lower, percentile_upper), axis=axes)
-    cut_off_lower = np.expand_dims(cut_off_lower, axes)
-    cut_off_upper = np.expand_dims(cut_off_upper, axes)
+    cut_off_lower, cut_off_upper = np.percentile(data, (percentile_lower, percentile_upper), axis=axes, keepdims=True)
     np.clip(data, cut_off_lower, cut_off_upper, out=data)
     return data
