@@ -74,7 +74,7 @@ def convert_seg_image_to_one_hot_encoding(image, classes=None):
     Prefer convert_seg_image_to_one_hot_encoding_batched.
     '''
     if classes is None:
-        classes = pd.unique(image.reshape(-1))
+        classes = np.sort(pd.unique(image.reshape(-1)))
     out_image = np.zeros((len(classes), *image.shape), dtype=image.dtype)
     for i, c in enumerate(classes):
         out_image[i][image == c] = 1
@@ -86,7 +86,7 @@ def convert_seg_image_to_one_hot_encoding_batched(image, classes=None):
     same as convert_seg_image_to_one_hot_encoding, but expects image to be (b, x, y, z) or (b, x, y)
     '''
     if classes is None:
-        classes = pd.unique(image.reshape(-1))
+        classes = np.sort(pd.unique(image.reshape(-1)))
     out_image = np.zeros((image.shape[0], len(classes), *image.shape[1:]), dtype=image.dtype)
     for i, c in enumerate(classes):
         out_image[:, i][image == c] = 1
@@ -163,7 +163,7 @@ def uncenter_coords(coords):
 
 def interpolate_img(img, coords, order=3, mode='nearest', cval=0.0, is_seg=False):
     if is_seg and order != 0:
-        unique_labels = pd.unique(img.reshape(-1))
+        unique_labels = pd.unique(img.reshape(-1))  # does not need sorting
         result = np.zeros(coords.shape[1:], img.dtype)
         for c in unique_labels:
             res_new = map_coordinates((img == c).astype(float), coords, order=order, mode=mode, cval=cval)
@@ -609,12 +609,12 @@ def resize_segmentation(segmentation, new_shape, order=3):
     :return:
     '''
     tpe = segmentation.dtype
-    unique_labels = pd.unique(segmentation.reshape(-1))
     assert len(segmentation.shape) == len(new_shape), "new shape must have same dimensionality as segmentation"
     if order == 0:
         return resize(segmentation.astype(float), new_shape, order, mode="edge", clip=True, anti_aliasing=False).astype(
             tpe)
     else:
+        unique_labels = pd.unique(segmentation.reshape(-1))  # does not need sorting
         reshaped = np.zeros(new_shape, dtype=segmentation.dtype)
 
         for c in unique_labels:
