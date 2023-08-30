@@ -712,7 +712,6 @@ def pad_nd_image(image, new_shape=None, mode="constant", kwargs=None, return_sli
         old_shape = new_shape
 
     num_axes_nopad = len(image.shape) - len(new_shape)
-
     new_shape = np.maximum(new_shape, old_shape)
 
     if shape_must_be_divisible_by is not None:

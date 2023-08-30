@@ -268,7 +268,7 @@ class TestCrop(unittest.TestCase):
         print('Zero padding with new_shape.shape smaller than data.shape. [DONE]')
 
         print('Zero padding with new_shape.shape bigger than data.shape. [START]')
-        self.assertRaises(IndexError, pad_nd_image_and_seg, data, seg,  new_shape=new_shape6)
+        self.assertRaises(ValueError, pad_nd_image_and_seg, data, seg,  new_shape=new_shape6)
         print('Zero padding with new_shape.shape bigger than data.shape. [DONE]')
 
         print('Padding to bigger output shape in all dimensions with constant_value=1 for segmentation padding . [START]')
@@ -352,7 +352,7 @@ class TestCrop(unittest.TestCase):
         print('Zero padding with new_shape.shape smaller than data.shape. [DONE]')
 
         print('Zero padding with new_shape.shape bigger than data.shape. [START]')
-        self.assertRaises(IndexError, pad_nd_image_and_seg, data, seg,  new_shape=new_shape6)
+        self.assertRaises(ValueError, pad_nd_image_and_seg, data, seg,  new_shape=new_shape6)
         print('Zero padding with new_shape.shape bigger than data.shape. [DONE]')
 
         print('Padding to bigger output shape in all dimensions with constant_value=1 for segmentation padding . [START]')
