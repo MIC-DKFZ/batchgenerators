@@ -325,7 +325,7 @@ class SpatialTransform(AbstractTransform):
         self.p_independent_scale_per_axis = p_independent_scale_per_axis
 
     def __call__(self, **data_dict):
-        data = data_dict.get(self.data_key)
+        data = data_dict[self.data_key]
         seg = data_dict.get(self.label_key)
 
         if self.patch_size is None:

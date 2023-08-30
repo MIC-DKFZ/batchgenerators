@@ -713,8 +713,7 @@ def pad_nd_image(image, new_shape=None, mode="constant", kwargs=None, return_sli
 
     num_axes_nopad = len(image.shape) - len(new_shape)
 
-    new_shape = [max(new_shape[i], old_shape[i]) for i in range(len(new_shape))]
-    new_shape = np.array(new_shape)
+    new_shape = np.maximum(new_shape, old_shape)
 
     if shape_must_be_divisible_by is not None:
         if not isinstance(shape_must_be_divisible_by, (list, tuple, np.ndarray)):

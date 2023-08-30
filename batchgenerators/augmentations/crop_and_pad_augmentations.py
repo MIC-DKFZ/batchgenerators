@@ -82,11 +82,11 @@ def crop(data: Union[Sequence[np.ndarray], np.ndarray], seg: Union[Sequence[np.n
     else:
         assert len(crop_size) == dim, ("If you provide a list/tuple as center crop make sure it has the same dimension "
                                        "as your data (2d/3d)")
-    crop_size = np.array(crop_size)
+    crop_size = np.asarray(crop_size)
 
     if not isinstance(margins, (np.ndarray, tuple, list)):
         margins = (margins,) * dim
-    margins = np.array(margins)
+    margins = np.asarray(margins)
 
     data_return = np.zeros((data_shape[0], data_shape[1], *crop_size), dtype=data_dtype)
     if seg is not None:
