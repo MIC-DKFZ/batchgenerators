@@ -49,43 +49,43 @@ class NumpyToTensor(AbstractTransform):
         else:
             raise ValueError(f'Unknown value for cast_to: {cast_to}')
 
-    def cast(self, x):
+    def cast(self, x: np.ndarray) -> torch.Tensor:
         pass
 
     @staticmethod
-    def no_cast(x):
-        return x
+    def no_cast(x: np.ndarray) -> torch.Tensor:
+        return torch.from_numpy(x).contiguous()
 
     @staticmethod
-    def float_cast(x):
-        return x.to(torch.float)
+    def float_cast(x: np.ndarray) -> torch.Tensor:
+        return torch.from_numpy(x).to(torch.float, memory_format=torch.contiguous_format)
 
     @staticmethod
-    def long_cast(x):
-        return x.to(torch.long)
+    def long_cast(x: np.ndarray) -> torch.Tensor:
+        return torch.from_numpy(x).to(torch.long, memory_format=torch.contiguous_format)
 
     @staticmethod
-    def bool_cast( x):
-        return x.to(torch.bool)
+    def bool_cast(x: np.ndarray) -> torch.Tensor:
+        return torch.from_numpy(x).to(torch.bool, memory_format=torch.contiguous_format)
 
     @staticmethod
-    def half_cast(x):
-        return x.to(torch.half)
+    def half_cast(x: np.ndarray) -> torch.Tensor:
+        return torch.from_numpy(x).to(torch.half, memory_format=torch.contiguous_format)
 
     def __call__(self, **data_dict):
         if self.keys is None:
             for key, val in data_dict.items():
                 if isinstance(val, np.ndarray):
-                    data_dict[key] = self.cast(torch.from_numpy(val)).contiguous()
+                    data_dict[key] = self.cast(val)
                 elif isinstance(val, (list, tuple)) and all([isinstance(i, np.ndarray) for i in val]):
-                    data_dict[key] = [self.cast(torch.from_numpy(i)).contiguous() for i in val]
+                    data_dict[key] = [self.cast(i) for i in val]
         else:
             for key in self.keys:
                 if isinstance(data_dict[key], np.ndarray):
-                    data_dict[key] = self.cast(torch.from_numpy(data_dict[key])).contiguous()
+                    data_dict[key] = self.cast(data_dict[key])
                 elif isinstance(data_dict[key], (list, tuple)) and all(
                         [isinstance(i, np.ndarray) for i in data_dict[key]]):
-                    data_dict[key] = [self.cast(torch.from_numpy(i)).contiguous() for i in data_dict[key]]
+                    data_dict[key] = [self.cast(i) for i in data_dict[key]]
 
         return data_dict
 
