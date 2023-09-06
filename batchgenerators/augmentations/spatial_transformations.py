@@ -103,9 +103,8 @@ def augment_zoom(sample_data, sample_seg, zoom_factors, order=3, order_seg=1):
     sample_data = resize_multichannel_image(sample_data, target_shape_here, order)
 
     if sample_seg is not None:
-        target_seg = np.ones([sample_seg.shape[0]] + target_shape_here)
-        for c in range(sample_seg.shape[0]):
-            target_seg[c] = resize_segmentation(sample_seg[c], target_shape_here, order_seg)
+        target_seg = np.array([
+            resize_segmentation(sample_seg[c], target_shape_here, order_seg) for c in range(sample_seg.shape[0])])
     else:
         target_seg = None
 
@@ -117,19 +116,23 @@ def augment_mirroring_batched(sample_data, sample_seg=None, axes=(0, 1, 2)):
         "Invalid dimension for sample_data and sample_seg. sample_data and sample_seg should be either " \
         "[batch, channels, x, y] or [batch, channels, x, y, z]"
     size = len(sample_data)
-    workon = np.expand_dims(sample_data, 0) if sample_seg is None else np.stack((sample_data, sample_seg))
+    has_sample_seg = sample_seg is not None
     if 0 in axes:
         mask = np.random.uniform(size=size) < 0.5
-        workon[:, mask] = np.flip(workon[:, mask], 3)
+        sample_data[mask] = np.flip(sample_data[mask], 2)
+        if has_sample_seg:
+            sample_seg[mask] = np.flip(sample_seg[mask], 2)
     if 1 in axes:
         mask = np.random.uniform(size=size) < 0.5
-        workon[:, mask] = np.flip(workon[:, mask], 4)
-    if 2 in axes and len(workon.shape) == 6:
+        sample_data[mask] = np.flip(sample_data[mask], 3)
+        if has_sample_seg:
+            sample_seg[mask] = np.flip(sample_seg[mask], 3)
+    if 2 in axes and len(sample_data.shape) == 5:
         mask = np.random.uniform(size=size) < 0.5
-        workon[:, mask] = np.flip(workon[:, mask], 5)
-    if sample_seg is None:
-        return workon[0], None
-    return workon
+        sample_data[mask] = np.flip(sample_data[mask], 4)
+        if has_sample_seg:
+            sample_seg[mask] = np.flip(sample_seg[mask], 4)
+    return sample_data, sample_seg
 
 
 def augment_mirroring(sample_data, sample_seg=None, axes=(0, 1, 2)):
