@@ -674,7 +674,7 @@ def uniform(low, high, size=None):
         if size is None:
             return low
         else:
-            return np.ones(size) * low
+            return np.full(size, low)
     else:
         return np.random.uniform(low, high, size)
 
@@ -740,7 +740,7 @@ def pad_nd_image(image, new_shape=None, mode="constant", kwargs=None, return_sli
     else:
         pad_list = np.array(pad_list)
         pad_list[:, 1] = np.array(res.shape) - pad_list[:, 1]
-        slicer = list(slice(*i) for i in pad_list)
+        slicer = [slice(*i) for i in pad_list]
         return res, slicer
 
 
@@ -761,23 +761,23 @@ def mask_random_square(img, square_size, n_val, channel_wise_n_val=False, square
         h_start = pos_wh[1]
 
     if img.ndim == 2:
-        rnd_n_val = get_range_val(n_val)
+        rnd_n_val = uniform(n_val[0], n_val[1])
         img[h_start:(h_start + square_size), w_start:(w_start + square_size)] = rnd_n_val
     elif img.ndim == 3:
         if channel_wise_n_val:
             for i in range(img.shape[0]):
-                rnd_n_val = get_range_val(n_val)
+                rnd_n_val = uniform(n_val[0], n_val[1])
                 img[i, h_start:(h_start + square_size), w_start:(w_start + square_size)] = rnd_n_val
         else:
-            rnd_n_val = get_range_val(n_val)
+            rnd_n_val = uniform(n_val[0], n_val[1])
             img[:, h_start:(h_start + square_size), w_start:(w_start + square_size)] = rnd_n_val
     elif img.ndim == 4:
         if channel_wise_n_val:
             for i in range(img.shape[0]):
-                rnd_n_val = get_range_val(n_val)
+                rnd_n_val = uniform(n_val[0], n_val[1])
                 img[:, i, h_start:(h_start + square_size), w_start:(w_start + square_size)] = rnd_n_val
         else:
-            rnd_n_val = get_range_val(n_val)
+            rnd_n_val = uniform(n_val[0], n_val[1])
             img[:, :, h_start:(h_start + square_size), w_start:(w_start + square_size)] = rnd_n_val
 
     return img

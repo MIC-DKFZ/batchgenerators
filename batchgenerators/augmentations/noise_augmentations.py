@@ -17,7 +17,7 @@ import random
 from typing import Tuple
 
 import numpy as np
-from batchgenerators.augmentations.utils import get_range_val, mask_random_squares
+from batchgenerators.augmentations.utils import mask_random_squares, uniform
 from builtins import range
 from scipy.ndimage import gaussian_filter
 
@@ -66,18 +66,18 @@ def augment_gaussian_blur(data_sample: np.ndarray, sigma_range: Tuple[float, flo
 
         # Godzilla revived
         if not different_sigma_per_axis or np.random.uniform() < p_isotropic:
-            sigma = get_range_val(sigma_range)
+            sigma = uniform(sigma_range[0], sigma_range[1])
         else:
-            sigma = [get_range_val(sigma_range) for _ in data_sample.shape[1:]]
+            sigma = [uniform(sigma_range[0], sigma_range[1]) for _ in data_sample.shape[1:]]
     else:
         sigma = None
     for c in range(data_sample.shape[0]):
         if np.random.uniform() <= p_per_channel:
             if per_channel:
                 if not different_sigma_per_axis or np.random.uniform() < p_isotropic:
-                    sigma = get_range_val(sigma_range)
+                    sigma = uniform(sigma_range[0], sigma_range[1])
                 else:
-                    sigma = [get_range_val(sigma_range) for _ in data_sample.shape[1:]]
+                    sigma = [uniform(sigma_range[0], sigma_range[1]) for _ in data_sample.shape[1:]]
 
             data_sample[c] = gaussian_filter(data_sample[c], sigma, order=0)
     return data_sample
@@ -86,8 +86,8 @@ def augment_gaussian_blur(data_sample: np.ndarray, sigma_range: Tuple[float, flo
 def augment_blank_square_noise(data_sample, square_size, n_squares, noise_val=(0, 0), channel_wise_n_val=False,
                                square_pos=None):
     # rnd_n_val = get_range_val(noise_val)
-    rnd_square_size = get_range_val(square_size)
-    rnd_n_squares = get_range_val(n_squares)
+    rnd_square_size = uniform(square_size[0], square_size[1])
+    rnd_n_squares = uniform(n_squares[0], n_squares[1])
 
     data_sample = mask_random_squares(data_sample, square_size=rnd_square_size, n_squares=rnd_n_squares,
                                       n_val=noise_val, channel_wise_n_val=channel_wise_n_val,
