@@ -56,7 +56,7 @@ def augment_resize(sample_data, sample_seg, target_size, order=3, order_seg=1):
     np.ndarray (just like data). Must also be (c, x, y(, z))
     :return:
     """
-    dimensionality = len(sample_data.shape) - 1
+    dimensionality = sample_data.ndim - 1
     if not isinstance(target_size, (list, tuple)):
         target_size_here = [target_size] * dimensionality
     else:
@@ -90,7 +90,7 @@ def augment_zoom(sample_data, sample_seg, zoom_factors, order=3, order_seg=1):
     :return:
     """
 
-    dimensionality = len(sample_data.shape) - 1
+    dimensionality = sample_data.ndim - 1
     shape = np.array(sample_data.shape[1:])
     if not isinstance(zoom_factors, (list, tuple)):
         zoom_factors_here = np.array([zoom_factors] * dimensionality)
@@ -112,7 +112,7 @@ def augment_zoom(sample_data, sample_seg, zoom_factors, order=3, order_seg=1):
 
 
 def augment_mirroring_batched(sample_data, sample_seg=None, axes=(0, 1, 2)):
-    assert len(sample_data.shape) == 5 or len(sample_data.shape) == 4, \
+    assert sample_data.ndim == 5 or sample_data.ndim == 4, \
         "Invalid dimension for sample_data and sample_seg. sample_data and sample_seg should be either " \
         "[batch, channels, x, y] or [batch, channels, x, y, z]"
     size = len(sample_data)
@@ -127,7 +127,7 @@ def augment_mirroring_batched(sample_data, sample_seg=None, axes=(0, 1, 2)):
         sample_data[mask] = np.flip(sample_data[mask], 3)
         if has_sample_seg:
             sample_seg[mask] = np.flip(sample_seg[mask], 3)
-    if 2 in axes and len(sample_data.shape) == 5:
+    if 2 in axes and sample_data.ndim == 5:
         mask = np.random.uniform(size=size) < 0.5
         sample_data[mask] = np.flip(sample_data[mask], 4)
         if has_sample_seg:
@@ -148,7 +148,7 @@ def augment_mirroring(sample_data, sample_seg=None, axes=(0, 1, 2)):
         sample_data[:, :, :] = sample_data[:, :, ::-1]
         if sample_seg is not None:
             sample_seg[:, :, :] = sample_seg[:, :, ::-1]
-    if 2 in axes and len(sample_data.shape) == 4:
+    if 2 in axes and sample_data.ndim == 4:
         if np.random.uniform() < 0.5:
             sample_data[:, :, :, :] = sample_data[:, :, :, ::-1]
             if sample_seg is not None:
@@ -287,7 +287,7 @@ def augment_spatial(data, seg, patch_size, patch_center_dist_from_border=30,
             for d in range(dim):
                 coords[d] += ctr[d]
             # vectorized version, seems a bit slower
-            # coords += reverse_broadcast(ctr, get_broadcast_axes(len(coords.shape)))
+            # coords += reverse_broadcast(ctr, get_broadcast_axes(coords.ndim))
 
             for channel_id in range(data.shape[1]):
                 data_result[sample_id, channel_id] = interpolate_img(data[sample_id, channel_id], coords, order_data,
@@ -381,7 +381,7 @@ def augment_spatial_2(data, seg, patch_size, patch_center_dist_from_border=30,
             # one scale per case, scale is in percent of patch_size
             def_scale = np.random.uniform(deformation_scale[0], deformation_scale[1])
 
-            for d in range(len(data[sample_id].shape) - 1):
+            for d in range(data[sample_id].ndim - 1):
                 # transform relative def_scale in pixels
                 sigmas.append(def_scale * patch_size[d])
 
@@ -446,7 +446,7 @@ def augment_spatial_2(data, seg, patch_size, patch_center_dist_from_border=30,
         # now find a nice center location
         if modified_coords:
             # recenter coordinates
-            coords_mean = coords.mean(axis=tuple(range(1, len(coords.shape))), keepdims=True)
+            coords_mean = coords.mean(axis=tuple(range(1, coords.ndim)), keepdims=True)
             coords -= coords_mean
 
             for d in range(dim):
@@ -490,8 +490,8 @@ def augment_transpose_axes(data_sample, seg_sample, axes=(0, 1, 2)):
     """
     axes = list(np.array(axes) + 1)  # need list to allow shuffle; +1 to accomodate for color channel
 
-    assert np.max(axes) <= len(data_sample.shape), "axes must only contain valid axis ids"
-    static_axes = list(range(len(data_sample.shape)))
+    assert np.max(axes) <= data_sample.ndim, "axes must only contain valid axis ids"
+    static_axes = list(range(data_sample.ndim))
     for i in axes: static_axes[i] = -1
     np.random.shuffle(axes)
 

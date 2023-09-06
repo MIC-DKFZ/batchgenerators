@@ -455,13 +455,13 @@ class ConvertToChannelLastTransform(AbstractTransform):
             if data is None:
                 print("WARNING in ConvertToChannelLastTransform: data_dict has no key named", k)
             else:
-                if len(data.shape) == 4:
+                if data.ndim == 4:
                     new_ordering = (0, 2, 3, 1)
-                elif len(data.shape) == 5:
+                elif data.ndim == 5:
                     new_ordering = (0, 2, 3, 4, 1)
                 else:
                     raise RuntimeError("unsupported dimensionality for ConvertToChannelLastTransform:",
-                                       len(data.shape),
+                                       data.ndim,
                                        ". Only 2d (b, c, x, y) and 3d (b, c, x, y, z) are supported for now.")
                 assert isinstance(data, np.ndarray), "data_dict[k] must be a numpy array"
                 data = data.transpose(new_ordering)

@@ -18,9 +18,9 @@ import numpy as np
 
 def range_normalization(data, rnge=(0, 1), per_channel=True, eps=1e-8):
     if per_channel:
-        axes = tuple(range(2, len(data.shape)))
+        axes = tuple(range(2, data.ndim))
     else:
-        axes = tuple(range(1, len(data.shape)))
+        axes = tuple(range(1, data.ndim))
 
     data_normalized = min_max_normalization_batched(data, eps, axes)
     data_normalized *= (rnge[1] - rnge[0])
@@ -47,9 +47,9 @@ def min_max_normalization(data, eps):
 
 def zero_mean_unit_variance_normalization(data, per_channel=True, epsilon=1e-8):
     if per_channel:
-        axes = tuple(range(2, len(data.shape)))
+        axes = tuple(range(2, data.ndim))
     else:
-        axes = tuple(range(1, len(data.shape)))
+        axes = tuple(range(1, data.ndim))
 
     mean = np.mean(data, axis=axes, keepdims=True)
     std = np.std(data, axis=axes, keepdims=True) + epsilon
@@ -67,7 +67,7 @@ def mean_std_normalization(data, mean, std, per_channel=True):
             assert len(mean) == channel_dimension
             assert len(std) == channel_dimension
 
-        broadcast_axes = tuple(range(2, len(data.shape)))
+        broadcast_axes = tuple(range(2, data.ndim))
         mean = np.expand_dims(np.broadcast_to(mean, (len(data), len(mean))), broadcast_axes)
         std = np.expand_dims(np.broadcast_to(std, (len(data), len(std))), broadcast_axes)
 
@@ -77,9 +77,9 @@ def mean_std_normalization(data, mean, std, per_channel=True):
 
 def cut_off_outliers(data, percentile_lower=0.2, percentile_upper=99.8, per_channel=False):
     if per_channel:
-        axes = tuple(range(2, len(data.shape)))
+        axes = tuple(range(2, data.ndim))
     else:
-        axes = tuple(range(1, len(data.shape)))
+        axes = tuple(range(1, data.ndim))
 
     cut_off_lower, cut_off_upper = np.percentile(data, (percentile_lower, percentile_upper), axis=axes, keepdims=True)
     np.clip(data, cut_off_lower, cut_off_upper, out=data)

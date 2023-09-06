@@ -255,14 +255,15 @@ class LocalGammaTransform(LocalTransform):
     def _apply_gamma_gradient(self, img: np.ndarray, kernel: np.ndarray) -> np.ndarray:
         # store keep original image range
         mn, mx = img.min(), img.max()
+        rng = mx - mn
 
         # rescale tp [0, 1]
-        img = (img - mn) / (max(mx - mn, 1e-8))
+        img = (img - mn) / (max(rng, 1e-8))
 
         gamma = sample_scalar(self.gamma)
         img_modified = np.power(img, gamma)
 
-        return self.run_interpolation(img, img_modified, kernel) * (mx - mn) + mn
+        return self.run_interpolation(img, img_modified, kernel) * rng + mn
 
 
 class LocalSmoothingTransform(LocalTransform):

@@ -329,9 +329,9 @@ class SpatialTransform(AbstractTransform):
         seg = data_dict.get(self.label_key)
 
         if self.patch_size is None:
-            if len(data.shape) == 4:
+            if data.ndim == 4:
                 patch_size = (data.shape[2], data.shape[3])
-            elif len(data.shape) == 5:
+            elif data.ndim == 5:
                 patch_size = (data.shape[2], data.shape[3], data.shape[4])
             else:
                 raise ValueError("only support 2D/3D batch data.")
@@ -444,9 +444,9 @@ class SpatialTransform_2(AbstractTransform):
         seg = data_dict.get(self.label_key)
 
         if self.patch_size is None:
-            if len(data.shape) == 4:
+            if data.ndim == 4:
                 patch_size = (data.shape[2], data.shape[3])
-            elif len(data.shape) == 5:
+            elif data.ndim == 5:
                 patch_size = (data.shape[2], data.shape[3], data.shape[4])
             else:
                 raise ValueError("only support 2D/3D batch data.")

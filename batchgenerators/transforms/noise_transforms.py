@@ -314,7 +314,7 @@ class SharpeningTransform(AbstractTransform):
                     mn, mx = data[b].min(), data[b].max()
                     strength_here = self.strength if isinstance(self.strength, float) else np.random.uniform(
                         *self.strength)
-                    if len(data.shape) == 4:
+                    if data.ndim == 4:
                         filter_here = self.filter_2d * strength_here
                         filter_here[1, 1] += 1
                     else:
@@ -333,7 +333,7 @@ class SharpeningTransform(AbstractTransform):
                             mn, mx = data[b, c].min(), data[b, c].max()
                             strength_here = self.strength if isinstance(self.strength, float) else np.random.uniform(
                                 *self.strength)
-                            if len(data.shape) == 4:
+                            if data.ndim == 4:
                                 filter_here = self.filter_2d * strength_here
                                 filter_here[1, 1] += 1
                             else:

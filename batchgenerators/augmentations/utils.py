@@ -148,7 +148,7 @@ def rotate_coords_2d(coords, angle):
 
 def scale_coords(coords: np.ndarray, scale):
     if isinstance(scale, (tuple, list, np.ndarray)):
-        scale = reverse_broadcast(scale, get_broadcast_axes(len(coords.shape)))
+        scale = reverse_broadcast(scale, get_broadcast_axes(coords.ndim))
     coords *= scale
     return coords
 
@@ -189,11 +189,10 @@ def find_entries_in_array(entries, myarray):
 def center_crop_3D_image(img, crop_size):
     center = np.array(img.shape) / 2.
     if type(crop_size) not in (tuple, list):
-        center_crop = [int(crop_size)] * len(img.shape)
+        center_crop = [int(crop_size)] * img.ndim
     else:
         center_crop = crop_size
-        assert len(center_crop) == len(
-            img.shape), "If you provide a list/tuple as center crop make sure it has the same len as your data has dims (3d)"
+        assert len(center_crop) == img.ndim, "If you provide a list/tuple as center crop make sure it has the same len as your data has dims (3d)"
     return img[int(center[0] - center_crop[0] / 2.):int(center[0] + center_crop[0] / 2.),
            int(center[1] - center_crop[1] / 2.):int(center[1] + center_crop[1] / 2.),
            int(center[2] - center_crop[2] / 2.):int(center[2] + center_crop[2] / 2.)]
@@ -203,11 +202,10 @@ def center_crop_3D_image_batched(img, crop_size):
     # dim 0 is batch, dim 1 is channel, dim 2, 3 and 4 are x y z
     center = np.array(img.shape[2:]) / 2.
     if type(crop_size) not in (tuple, list):
-        center_crop = [int(crop_size)] * (len(img.shape) - 2)
+        center_crop = [int(crop_size)] * (img.ndim - 2)
     else:
         center_crop = crop_size
-        assert len(center_crop) == (len(
-            img.shape) - 2), "If you provide a list/tuple as center crop make sure it has the same len as your data has dims (3d)"
+        assert len(center_crop) == (img.ndim - 2), "If you provide a list/tuple as center crop make sure it has the same len as your data has dims (3d)"
     return img[:, :, int(center[0] - center_crop[0] / 2.):int(center[0] + center_crop[0] / 2.),
            int(center[1] - center_crop[1] / 2.):int(center[1] + center_crop[1] / 2.),
            int(center[2] - center_crop[2] / 2.):int(center[2] + center_crop[2] / 2.)]
@@ -216,11 +214,10 @@ def center_crop_3D_image_batched(img, crop_size):
 def center_crop_2D_image(img, crop_size):
     center = np.array(img.shape) / 2.
     if type(crop_size) not in (tuple, list):
-        center_crop = [int(crop_size)] * len(img.shape)
+        center_crop = [int(crop_size)] * img.ndim
     else:
         center_crop = crop_size
-        assert len(center_crop) == len(
-            img.shape), "If you provide a list/tuple as center crop make sure it has the same len as your data has dims (2d)"
+        assert len(center_crop) == img.ndim, "If you provide a list/tuple as center crop make sure it has the same len as your data has dims (2d)"
     return img[int(center[0] - center_crop[0] / 2.):int(center[0] + center_crop[0] / 2.),
            int(center[1] - center_crop[1] / 2.):int(center[1] + center_crop[1] / 2.)]
 
@@ -229,21 +226,19 @@ def center_crop_2D_image_batched(img, crop_size):
     # dim 0 is batch, dim 1 is channel, dim 2 and 3 are x y
     center = np.array(img.shape[2:]) / 2.
     if type(crop_size) not in (tuple, list):
-        center_crop = [int(crop_size)] * (len(img.shape) - 2)
+        center_crop = [int(crop_size)] * (img.ndim - 2)
     else:
         center_crop = crop_size
-        assert len(center_crop) == (len(
-            img.shape) - 2), "If you provide a list/tuple as center crop make sure it has the same len as your data has dims (2d)"
+        assert len(center_crop) == (img.ndim - 2), "If you provide a list/tuple as center crop make sure it has the same len as your data has dims (2d)"
     return img[:, :, int(center[0] - center_crop[0] / 2.):int(center[0] + center_crop[0] / 2.),
            int(center[1] - center_crop[1] / 2.):int(center[1] + center_crop[1] / 2.)]
 
 
 def random_crop_3D_image(img, crop_size):
     if type(crop_size) not in (tuple, list):
-        crop_size = [crop_size] * len(img.shape)
+        crop_size = [crop_size] * img.ndim
     else:
-        assert len(crop_size) == len(
-            img.shape), "If you provide a list/tuple as center crop make sure it has the same len as your data has dims (3d)"
+        assert len(crop_size) == img.ndim, "If you provide a list/tuple as center crop make sure it has the same len as your data has dims (3d)"
 
     if crop_size[0] < img.shape[0]:
         lb_x = np.random.randint(0, img.shape[0] - crop_size[0])
@@ -271,10 +266,9 @@ def random_crop_3D_image(img, crop_size):
 
 def random_crop_3D_image_batched(img, crop_size):
     if type(crop_size) not in (tuple, list):
-        crop_size = [crop_size] * (len(img.shape) - 2)
+        crop_size = [crop_size] * (img.ndim - 2)
     else:
-        assert len(crop_size) == (len(
-            img.shape) - 2), "If you provide a list/tuple as center crop make sure it has the same len as your data has dims (3d)"
+        assert len(crop_size) == (img.ndim - 2), "If you provide a list/tuple as center crop make sure it has the same len as your data has dims (3d)"
 
     if crop_size[0] < img.shape[2]:
         lb_x = np.random.randint(0, img.shape[2] - crop_size[0])
@@ -302,10 +296,9 @@ def random_crop_3D_image_batched(img, crop_size):
 
 def random_crop_2D_image(img, crop_size):
     if type(crop_size) not in (tuple, list):
-        crop_size = [crop_size] * len(img.shape)
+        crop_size = [crop_size] * img.ndim
     else:
-        assert len(crop_size) == len(
-            img.shape), "If you provide a list/tuple as center crop make sure it has the same len as your data has dims (2d)"
+        assert len(crop_size) == img.ndim, "If you provide a list/tuple as center crop make sure it has the same len as your data has dims (2d)"
 
     if crop_size[0] < img.shape[0]:
         lb_x = np.random.randint(0, img.shape[0] - crop_size[0])
@@ -326,10 +319,9 @@ def random_crop_2D_image(img, crop_size):
 
 def random_crop_2D_image_batched(img, crop_size):
     if type(crop_size) not in (tuple, list):
-        crop_size = [crop_size] * (len(img.shape) - 2)
+        crop_size = [crop_size] * (img.ndim - 2)
     else:
-        assert len(crop_size) == (len(
-            img.shape) - 2), "If you provide a list/tuple as center crop make sure it has the same len as your data has dims (2d)"
+        assert len(crop_size) == (img.ndim - 2), "If you provide a list/tuple as center crop make sure it has the same len as your data has dims (2d)"
 
     if crop_size[0] < img.shape[2]:
         lb_x = np.random.randint(0, img.shape[2] - crop_size[0])
@@ -590,9 +582,9 @@ def convert_seg_to_bounding_box_coordinates(data_dict, dim, get_rois_from_seg_fl
 
 
 def transpose_channels(batch):
-    if len(batch.shape) == 4:
+    if batch.ndim == 4:
         return np.transpose(batch, axes=[0, 2, 3, 1])
-    elif len(batch.shape) == 5:
+    elif batch.ndim == 5:
         return np.transpose(batch, axes=[0, 4, 2, 3, 1])
     else:
         raise ValueError("wrong dimensions in transpose_channel generator!")
@@ -609,7 +601,7 @@ def resize_segmentation(segmentation, new_shape, order=3):
     :return:
     '''
     tpe = segmentation.dtype
-    assert len(segmentation.shape) == len(new_shape), "new shape must have same dimensionality as segmentation"
+    assert segmentation.ndim == len(new_shape), "new shape must have same dimensionality as segmentation"
     if order == 0:
         return resize(segmentation.astype(float), new_shape, order, mode="edge", clip=True, anti_aliasing=False).astype(
             tpe)
@@ -711,7 +703,7 @@ def pad_nd_image(image, new_shape=None, mode="constant", kwargs=None, return_sli
         new_shape = image.shape[-len(shape_must_be_divisible_by):]
         old_shape = new_shape
 
-    num_axes_nopad = len(image.shape) - len(new_shape)
+    num_axes_nopad = image.ndim - len(new_shape)
     new_shape = np.maximum(new_shape, old_shape)
 
     if shape_must_be_divisible_by is not None:

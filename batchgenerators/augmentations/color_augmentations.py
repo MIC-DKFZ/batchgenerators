@@ -60,8 +60,8 @@ def augment_contrast(data_sample: np.ndarray,
     mask = np.random.uniform(size=data_sample.shape[:2] if batched else data_sample.shape[0]) < p_per_channel
     if np.any(mask):
         workon = data_sample[mask]
-        factor = get_augment_contrast_factor(contrast_range, per_channel, len(workon), len(workon.shape))
-        axes = tuple(range(1, len(workon.shape)))
+        factor = get_augment_contrast_factor(contrast_range, per_channel, len(workon), workon.ndim)
+        axes = tuple(range(1, workon.ndim))
         mean = workon.mean(axis=axes, keepdims=True)
         if preserve_range:
             minm = workon.min(axis=axes, keepdims=True)
@@ -92,7 +92,7 @@ def augment_brightness_additive(data_sample, mu: float, sigma: float, per_channe
     else:
         rnd_nb = np.repeat(np.random.normal(mu, sigma), size)
     rnd_nb[np.random.uniform(size=size) > p_per_channel] = 0.0
-    data_sample += reverse_broadcast(rnd_nb, get_broadcast_axes(len(data_sample.shape)))
+    data_sample += reverse_broadcast(rnd_nb, get_broadcast_axes(data_sample.ndim))
     return data_sample
 
 
@@ -149,7 +149,7 @@ def augment_gamma(data_sample, gamma_range=(0.5, 2), invert_image=False, epsilon
                 gamma.append(np.random.uniform(gamma_l, gamma_range[1]))
         gamma = np.array(gamma)
 
-        axes = tuple(range(1, len(data_sample.shape)))
+        axes = tuple(range(1, data_sample.ndim))
 
         retain_any_stats = np.any(retain_stats_here)
         if retain_any_stats:
@@ -159,7 +159,7 @@ def augment_gamma(data_sample, gamma_range=(0.5, 2), invert_image=False, epsilon
         minm = data_sample.min(axis=axes, keepdims=True)
         rnge = data_sample.max(axis=axes, keepdims=True) - minm + epsilon
 
-        broadcast_axes = get_broadcast_axes(len(data_sample.shape))
+        broadcast_axes = get_broadcast_axes(data_sample.ndim)
         gamma = reverse_broadcast(gamma, broadcast_axes)  # TODO: Remove
         data_sample = np.power((data_sample - minm) / rnge, gamma) * rnge + minm
 
