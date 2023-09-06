@@ -94,7 +94,6 @@ def crop(data: Union[Sequence[np.ndarray], np.ndarray], seg: Union[Sequence[np.n
     else:
         seg_return = None
 
-
     for b in range(data_shape[0]):
         data_first_dim = data[b].shape[0]
         data_shape_here = np.array(data[b].shape[1:])
@@ -119,11 +118,11 @@ def crop(data: Union[Sequence[np.ndarray], np.ndarray], seg: Union[Sequence[np.n
         ubs = np.minimum(data_shape_here, lbs_plus_crop_size)
         lbs = np.maximum(zero, lbs)
 
-        slicer_data = (slice(0, data_first_dim), *(slice(lbs[d], ubs[d]) for d in range(dim)))
+        slicer_data = (slice(0, data_first_dim), *[slice(lbs[d], ubs[d]) for d in range(dim)])
         data_cropped = data[b][slicer_data]
 
         if seg_return is not None:
-            slicer_data = (slice(0, seg_first_dim), *slicer_data[1:])
+            slicer_data = (slice(0, seg_first_dim),) + slicer_data[1:]
             seg_cropped = seg[b][slicer_data]
 
         if np.any(need_to_pad):
