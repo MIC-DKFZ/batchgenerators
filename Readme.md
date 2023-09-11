@@ -1,4 +1,9 @@
 # batchgenerators by MIC@DKFZ
+
+Copyright German Cancer Research Center (DKFZ) and contributors.
+Please make sure that your usage of this code is in compliance with its
+[`license`](https://github.com/MIC-DKFZ/batchgenerators/blob/master/LICENSE).
+
 batchgenerators is a python package for data augmentation. It is developed jointly between the Division of
 Medical Image Computing at the German Cancer Research Center (DKFZ) and the Applied Computer 
 Vision Lab of the Helmholtz Imaging Platform.
@@ -13,6 +18,13 @@ Schock Justus, Klein Andre, Roß Tobias, Wirkert Sebastian, Neher Peter, Dinkela
 Köhler Gregor, Maier-Hein Klaus (2020). batchgenerators - a python framework for data 
 augmentation. doi:10.5281/zenodo.3632567
 ```
+
+batchgenerators also contains the following augmentations:
+* **Anatomy-informed Data Augmentation**  
+Proposed at MICCAI 2023.
+You can find more information [here](https://github.com/MIC-DKFZ/anatomy_informed_DA).
+
+If you use these augmentations please cite them too.
 
 [![Build Status](https://travis-ci.com/MIC-DKFZ/batchgenerators.svg?branch=master)](https://travis-ci.com/github/MIC-DKFZ/batchgenerators)
 
@@ -39,6 +51,7 @@ that was missing in most other frameworks).
   * random crop
   * center crop
   * padding
+* **Anatomy-informed Augmentation**
 
 Note: Stack transforms by using batchgenerators.transforms.abstract_transforms.Compose. Finish it up by plugging the
 composed transform into our **multithreader**: batchgenerators.dataloading.multi_threaded_augmenter.MultiThreadedAugmenter
@@ -108,7 +121,8 @@ This is not required on Linux.
 
 ## Release Notes
 (only highlights, not an exhaustive list)
-
+- 0.23.1:
+  - Anatomy-informed-data augmentation added
 - 0.23: 
   - fixed the import mess. `__init__.py` files are now empty. This is a breaking change for some users! 
   Please adapt your imports :-)

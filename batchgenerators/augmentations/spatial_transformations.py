@@ -16,10 +16,12 @@
 from builtins import range
 
 import numpy as np
+from scipy.ndimage import map_coordinates
 from batchgenerators.augmentations.utils import create_zero_centered_coordinate_mesh, elastic_deform_coordinates, \
     interpolate_img, \
     rotate_coords_2d, rotate_coords_3d, scale_coords, resize_segmentation, resize_multichannel_image, \
-    elastic_deform_coordinates_2
+    elastic_deform_coordinates_2, \
+    get_organ_gradient_field, ignore_anatomy
 from batchgenerators.augmentations.crop_and_pad_augmentations import random_crop as random_crop_aug
 from batchgenerators.augmentations.crop_and_pad_augmentations import center_crop as center_crop_aug
 
@@ -484,3 +486,48 @@ def augment_transpose_axes(data_sample, seg_sample, axes=(0, 1, 2)):
     if seg_sample is not None:
         seg_sample = seg_sample.transpose(*static_axes)
     return data_sample, seg_sample
+
+def augment_anatomy_informed(data, seg,
+                             active_organs, dilation_ranges, directions_of_trans, modalities,
+                             spacing_ratio=0.3125/3.0, blur=32, anisotropy_safety= True,
+                             max_annotation_value=1, replace_value=0):
+    if sum(active_organs) > 0:
+        data_shape = data.shape
+        coords = create_zero_centered_coordinate_mesh(data_shape[-3:])
+
+        for organ_idx, active in reversed(list(enumerate(active_organs))):
+            if active:
+                dil_magnitude = np.random.uniform(low=dilation_ranges[organ_idx][0], high=dilation_ranges[organ_idx][1])
+
+                t, u, v = get_organ_gradient_field(seg == organ_idx + 2,
+                                                   spacing_ratio=spacing_ratio,
+                                                   blur=blur)
+
+                if directions_of_trans[organ_idx][0]:
+                    coords[0, :, :, :] = coords[0, :, :, :] + t * dil_magnitude * spacing_ratio
+                if directions_of_trans[organ_idx][1]:
+                    coords[1, :, :, :] = coords[1, :, :, :] + u * dil_magnitude
+                if directions_of_trans[organ_idx][2]:
+                    coords[2, :, :, :] = coords[2, :, :, :] + v * dil_magnitude
+
+        for d in range(3):
+            ctr = data.shape[d+1] / 2  # !!!
+            coords[d] += ctr - 0.5  # !!!
+
+        if anisotropy_safety:
+            coords[0, 0, :, :][coords[0, 0, :, :] < 0] = 0.0
+            coords[0, 1, :, :][coords[0, 1, :, :] < 0] = 0.0
+            coords[0, -1, :, :][coords[0, -1, :, :] > (data_shape[-3] - 1)] = data_shape[-3] - 1
+            coords[0, -2, :, :][coords[0, -2, :, :] > (data_shape[-3] - 1)] = data_shape[-3] - 1
+
+
+        for modality in modalities:
+            data[modality, :, :, :] = map_coordinates(data[modality, :, :, :], coords, order=1, mode='constant')
+
+        seg[:, :, :] = ignore_anatomy(seg[:, :, :], max_annotation_value=max_annotation_value, replace_value=replace_value)
+        seg[:, :, :] = map_coordinates(seg[:, :, :], coords, order=0, mode='constant')
+
+    else:
+        seg[:, :, :] = ignore_anatomy(seg[:, :, :], max_annotation_value=max_annotation_value, replace_value=replace_value)
+
+    return data, seg

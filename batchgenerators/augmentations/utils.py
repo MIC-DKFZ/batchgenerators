@@ -773,3 +773,25 @@ def mask_random_squares(img, square_size, n_squares, n_val, channel_wise_n_val=F
         img = mask_random_square(img, square_size, n_val, channel_wise_n_val=channel_wise_n_val,
                                  square_pos=square_pos)
     return img
+
+def get_organ_gradient_field(organ, spacing_ratio=0.3125/3.0, blur=32):
+    """
+    Calculates the gradient field around the organ segmentations for the anatomy-informed augmentation
+
+    :param organ: binary organ segmentation
+    :param spacing_ratio: ratio of the axial spacing and the slice thickness, needed for the right vector field calculation
+    :param blur: kernel constant
+    """
+    organ_blurred = gaussian_filter(organ.astype(float),
+                                    sigma=(blur * spacing_ratio, blur, blur),
+                                    order=0,
+                                    mode='nearest')
+
+    t, u, v = np.gradient(organ_blurred)
+    t = t * spacing_ratio
+
+    return t, u, v
+
+def ignore_anatomy(segm, max_annotation_value=1, replace_value=0):
+    segm[segm > max_annotation_value] = replace_value
+    return segm

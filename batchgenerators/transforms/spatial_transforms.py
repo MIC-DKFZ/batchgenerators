@@ -16,8 +16,10 @@
 from batchgenerators.transforms.abstract_transforms import AbstractTransform
 from batchgenerators.augmentations.spatial_transformations import augment_spatial, augment_spatial_2, \
     augment_channel_translation, \
-    augment_mirroring, augment_transpose_axes, augment_zoom, augment_resize, augment_rot90
+    augment_mirroring, augment_transpose_axes, augment_zoom, augment_resize, augment_rot90, \
+    augment_anatomy_informed
 import numpy as np
+from batchgenerators.augmentations.utils import get_organ_gradient_field
 
 
 class Rot90Transform(AbstractTransform):
@@ -524,3 +526,65 @@ class TransposeAxesTransform(AbstractTransform):
             data_dict[self.label_key] = seg
         return data_dict
 
+class AnatomyInformedTransform(AbstractTransform):
+    """
+    The data augmentation is presented at MICCAI 2023 in the proceedings of 'Anatomy-informed Data Augmentation for enhanced Prostate Cancer Detection'.
+    It simulates the distension or evacuation of the bladder or/and rectal space to mimic typical physiological soft tissue deformations of the prostate
+    and generates unique lesion shapes without altering their label.
+    You can find more information here: https://github.com/MIC-DKFZ/anatomy_informed_DA
+    If you use this augmentation please cite it.
+
+    Args:
+        `dil_ranges`: dilation range per organs
+        `modalities`: on which input channels should the transformation be applied
+        `directions_of_trans`: to which directions should the organs be dilated per organs
+        `p_per_sample`: probability of the transformation per organs
+        `spacing_ratio`: ratio of the transversal plane spacing and the slice thickness, in our case it was 0.3125/3
+        `blur`: Gaussian kernel parameter, we used the value 32 for 0.3125mm transversal plane spacing
+        `anisotropy_safety`: it provides a certain protection against transformation artifacts in 2 slices from the image border
+        `max_annotation_value`: the value that should be still relevant for the main task
+        `replace_value`: segmentation values larger than the `max_annotation_value` will be replaced with
+    """
+    def __init__(self, dil_ranges, modalities, directions_of_trans, p_per_sample,
+                 spacing_ratio=0.3125/3.0, blur=32, anisotropy_safety= True,
+                 max_annotation_value=1, replace_value=0):
+        self.dil_ranges = dil_ranges
+        self.modalities = modalities
+
+        self.directions_of_trans = directions_of_trans
+        self.p_per_sample = p_per_sample
+        self.spacing_ratio = spacing_ratio
+        self.blur = blur
+        self.anisotropy_safety = anisotropy_safety
+
+        self.max_annotation_value = max_annotation_value
+        self.replace_value = replace_value
+
+        self.dim = 3
+
+    def __call__(self, **batch_dict):
+
+        data_shape = batch_dict['data'].shape
+        if len(data_shape) == 5:
+            self.dim = 3
+
+        active_organs = []
+        for prob in self.p_per_sample:
+            if np.random.uniform() < prob:
+                active_organs.append(1)
+            else:
+                active_organs.append(0)
+
+        for b in range(data_shape[0]):
+            batch_dict['data'][b, :, :, :, :], batch_dict['seg'][b, 0, :, :, :] = augment_anatomy_informed(data=batch_dict['data'][b, :, :, :, :],
+                                                                                                           seg=batch_dict['seg'][b, 0, :, :, :],
+                                                                                                           active_organs=active_organs,
+                                                                                                           dilation_ranges=self.dil_ranges,
+                                                                                                           directions_of_trans=self.directions_of_trans,
+                                                                                                           modalities=self.modalities,
+                                                                                                           spacing_ratio=self.spacing_ratio,
+                                                                                                           blur=self.blur,
+                                                                                                           anisotropy_safety=self.anisotropy_safety,
+                                                                                                           max_annotation_value=self.max_annotation_value,
+                                                                                                           replace_value=self.replace_value)
+        return batch_dict
