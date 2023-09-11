@@ -24,7 +24,7 @@ from batchgenerators.transforms.abstract_transforms import AbstractTransform
 
 class ContrastAugmentationTransform(AbstractTransform):
     def __init__(self,
-                 contrast_range: Union[Tuple[float, float], Callable[[], float]] = (0.75, 1.25),
+                 contrast_range: Tuple[float, float] = (0.75, 1.25),
                  preserve_range: bool = True,
                  per_channel: bool = True,
                  data_key: str = "data",
@@ -36,7 +36,6 @@ class ContrastAugmentationTransform(AbstractTransform):
             (float, float): range from which to sample a random contrast that is applied to the data. If
                             one value is smaller and one is larger than 1, half of the contrast modifiers will be >1
                             and the other half <1 (in the inverval that was specified)
-            callable      : must be contrast_range() -> float
         :param preserve_range: if True then the intensity values after contrast augmentation will be cropped to min and
         max values of the data before augmentation.
         :param per_channel: whether to use the same contrast modifier for all color channels or a separate one for each
@@ -134,7 +133,7 @@ class BrightnessMultiplicativeTransform(AbstractTransform):
 
 class GammaTransform(AbstractTransform):
     def __init__(self, gamma_range=(0.5, 2), invert_image=False, per_channel=False, data_key="data",
-                 retain_stats: Union[bool, Callable[[], bool]] = False, p_per_sample=1):
+                 retain_stats: bool = False, p_per_sample=1):
         """
         Augments by changing 'gamma' of the image (same as gamma correction in photos or computer monitors
 
@@ -146,8 +145,7 @@ class GammaTransform(AbstractTransform):
         :param per_channel:
         :param data_key:
         :param retain_stats: Gamma transformation will alter the mean and std of the data in the patch. If retain_stats=True,
-        the data will be transformed to match the mean and standard deviation before gamma augmentation. retain_stats
-        can also be callable (signature retain_stats() -> bool)
+        the data will be transformed to match the mean and standard deviation before gamma augmentation.
         :param p_per_sample:
         """
         self.p_per_sample = p_per_sample

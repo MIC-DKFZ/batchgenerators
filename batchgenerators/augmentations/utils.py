@@ -607,7 +607,7 @@ def resize_segmentation(segmentation, new_shape, order=3):
             tpe)
     else:
         unique_labels = pd.unique(segmentation.reshape(-1))  # does not need sorting
-        reshaped = np.zeros(new_shape, dtype=segmentation.dtype)
+        reshaped = np.zeros(new_shape, dtype=tpe)
 
         for c in unique_labels:
             mask = segmentation == c

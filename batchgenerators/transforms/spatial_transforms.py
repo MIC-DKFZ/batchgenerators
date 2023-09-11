@@ -330,9 +330,9 @@ class SpatialTransform(AbstractTransform):
 
         if self.patch_size is None:
             if data.ndim == 4:
-                patch_size = (data.shape[2], data.shape[3])
+                patch_size = data.shape[2:4]
             elif data.ndim == 5:
-                patch_size = (data.shape[2], data.shape[3], data.shape[4])
+                patch_size = data.shape[2:5]
             else:
                 raise ValueError("only support 2D/3D batch data.")
         else:
