@@ -18,7 +18,6 @@ from typing import Tuple
 
 import numpy as np
 from batchgenerators.augmentations.utils import mask_random_squares, uniform
-from builtins import range
 from scipy.ndimage import gaussian_filter
 
 

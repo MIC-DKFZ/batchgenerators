@@ -14,7 +14,6 @@
 # limitations under the License.
 
 from abc import ABCMeta, abstractmethod
-from builtins import object
 import warnings
 from collections import OrderedDict
 from warnings import warn

@@ -13,10 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from builtins import range
-from typing import Tuple, Union, Callable
+from typing import Tuple
 
 import numpy as np
+
 from batchgenerators.augmentations.utils import general_cc_var_num_channels, illumination_jitter, get_broadcast_axes, \
     reverse_broadcast
 
