@@ -61,7 +61,7 @@ def producer(queue, data_loader, transform, thread_id, seed, abort_event, wait_t
         abort_event.set()
         return
     except Exception as e:
-        print("Exception in background worker %d:\n" % thread_id, e)
+        print(f"Exception in background worker {thread_id}:\n", e)
         traceback.print_exc()
         abort_event.set()
         return
@@ -216,7 +216,7 @@ class MultiThreadedAugmenter(object):
             return item
 
         except KeyboardInterrupt:
-            logging.error("MultiThreadedGenerator: caught exception: {}".format(sys.exc_info()))
+            logging.error(f"MultiThreadedGenerator: caught exception: {sys.exc_info()}")
             self.abort_event.set()
             self._finish()
             raise KeyboardInterrupt

@@ -68,7 +68,7 @@ def producer(queue: Queue, data_loader, transform, thread_id: int, seed,
             return
 
         except Exception as e:
-            print("Exception in background worker %d:\n" % thread_id, e)
+            print(f"Exception in background worker {thread_id}:\n", e)
             traceback.print_exc()
             abort_event.set()
             return

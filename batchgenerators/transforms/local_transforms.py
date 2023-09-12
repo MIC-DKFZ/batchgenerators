@@ -150,7 +150,7 @@ class BrightnessGradientAdditiveTransform(LocalTransform):
 
     def __call__(self, **data_dict):
         data = data_dict.get(self.data_key)
-        assert data is not None, "Could not find data key '%s'" % self.data_key
+        assert data is not None, f"Could not find data key '{self.data_key}'"
         b, c, *img_shape = data.shape
         for bi in range(b):
             if np.random.uniform() < self.p_per_sample:
@@ -235,7 +235,7 @@ class LocalGammaTransform(LocalTransform):
 
     def __call__(self, **data_dict):
         data = data_dict.get(self.data_key)
-        assert data is not None, "Could not find data key '%s'" % self.data_key
+        assert data is not None, f"Could not find data key '{self.data_key}'"
         b, c, *img_shape = data.shape
         for bi in range(b):
             if np.random.uniform() < self.p_per_sample:
@@ -302,7 +302,7 @@ class LocalSmoothingTransform(LocalTransform):
 
     def __call__(self, **data_dict):
         data = data_dict.get(self.data_key)
-        assert data is not None, "Could not find data key '%s'" % self.data_key
+        assert data is not None, f"Could not find data key '{self.data_key}'"
         b, c, *img_shape = data.shape
         for bi in range(b):
             if np.random.uniform() < self.p_per_sample:
@@ -324,7 +324,7 @@ class LocalSmoothingTransform(LocalTransform):
         kernel = np.copy(kernel)
 
         smoothing = sample_scalar(self.smoothing_strength)
-        assert 0 <= smoothing <= 1, 'smoothing_strength must be between 0 and 1, is %f' % smoothing
+        assert 0 <= smoothing <= 1, f'smoothing_strength must be between 0 and 1, is {smoothing}'
 
         # prepare kernel by rescaling it to gamma_range
         # kernel is already [0, 1]
@@ -354,7 +354,7 @@ class LocalContrastTransform(LocalTransform):
 
     def __call__(self, **data_dict):
         data = data_dict.get(self.data_key)
-        assert data is not None, "Could not find data key '%s'" % self.data_key
+        assert data is not None, f"Could not find data key '{self.data_key}'"
         b, c, *img_shape = data.shape
         for bi in range(b):
             if np.random.uniform() < self.p_per_sample:

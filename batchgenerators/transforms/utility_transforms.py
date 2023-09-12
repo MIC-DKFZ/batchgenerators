@@ -219,8 +219,7 @@ class ConvertMultiSegToArgmaxTransform(AbstractTransform):
             if not seg.shape[1] % self.output_channels == 0:
                 from warnings import warn
                 warn(
-                    "Calling ConvertMultiSegToArgmaxTransform but number of input channels {} cannot be divided into {} output channels.".format(
-                        seg.shape[1], self.output_channels))
+                    f"Calling ConvertMultiSegToArgmaxTransform but number of input channels {seg.shape[1]} cannot be divided into {self.output_channels} output channels.")
             n_labels = seg.shape[1] // self.output_channels
             target_size = list(seg.shape)
             target_size[1] = self.output_channels
@@ -355,7 +354,7 @@ class CopyTransform(AbstractTransform):
         return new_dict
 
     def __repr__(self):
-        return str(type(self).__name__) + " ( " + repr(self.transforms) + " )"
+        return f"{str(type(self).__name__)} ( {repr(self.transforms)} )"
 
 
 class ReshapeTransform(AbstractTransform):
@@ -422,7 +421,7 @@ class AppendChannelsTransform(AbstractTransform):
         inp = data_dict.get(self.input_key)
         outp = data_dict.get(self.output_key)
 
-        assert inp is not None, "input_key %s is not present in data_dict" % self.input_key
+        assert inp is not None, f"input_key {self.input_key} is not present in data_dict"
 
         selected_channels = inp[:, self.channel_indexes]
 
