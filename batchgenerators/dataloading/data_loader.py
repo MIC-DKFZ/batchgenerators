@@ -231,11 +231,11 @@ def default_collate(batch):
     if isinstance(batch[0], np.ndarray):
         return np.vstack(batch)
     elif isinstance(batch[0], (int, np.int64)):
-        return np.array(batch).astype(np.int32)
+        return np.array(batch, dtype=np.int32)
     elif isinstance(batch[0], (float, np.float32)):
-        return np.array(batch).astype(np.float32)
+        return np.array(batch, dtype=np.float32)
     elif isinstance(batch[0], (np.float64,)):
-        return np.array(batch).astype(np.float64)
+        return np.array(batch, dtype=np.float64)
     elif isinstance(batch[0], (dict, OrderedDict)):
         return {key: default_collate([d[key] for d in batch]) for key in batch[0]}
     elif isinstance(batch[0], (tuple, list)):

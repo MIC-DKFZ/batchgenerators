@@ -561,7 +561,7 @@ def convert_seg_to_bounding_box_coordinates(data_dict, dim, get_rois_from_seg_fl
                 out_seg[b][data_dict['seg'][b] > 0] = 1
 
             bb_target.append(np.array(p_coords_list))
-            roi_masks.append(np.array(p_roi_masks_list).astype('uint8'))
+            roi_masks.append(np.array(p_roi_masks_list, dtype=np.uint8))
             roi_labels.append(np.array(p_roi_labels_list))
 
 
@@ -590,7 +590,7 @@ def transpose_channels(batch):
         raise ValueError("wrong dimensions in transpose_channel generator!")
 
 
-def resize_segmentation(segmentation, new_shape, order=3):
+def resize_segmentation(segmentation, new_shape: tuple, order=3):
     '''
     Resizes a segmentation map. Supports all orders (see skimage documentation). Will transform segmentation map to one
     hot encoding which is resized and transformed back to a segmentation map.
@@ -617,7 +617,7 @@ def resize_segmentation(segmentation, new_shape, order=3):
         return reshaped
 
 
-def resize_multichannel_image(multichannel_image, new_shape, order=3):
+def resize_multichannel_image(multichannel_image, new_shape: tuple, order=3):
     '''
     Resizes multichannel_image. Resizes each channel in c separately and fuses results back together
 
@@ -626,12 +626,11 @@ def resize_multichannel_image(multichannel_image, new_shape, order=3):
     :param order:
     :return:
     '''
-    tpe = multichannel_image.dtype
-    new_shp = [multichannel_image.shape[0]] + list(new_shape)
+    new_shp = (multichannel_image.shape[0], ) + new_shape
     result = np.zeros(new_shp, dtype=multichannel_image.dtype)
     for i in range(multichannel_image.shape[0]):
         result[i] = resize(multichannel_image[i].astype(float), new_shape, order, clip=True, anti_aliasing=False)
-    return result.astype(tpe)
+    return result
 
 
 def get_range_val(value, rnd_type="uniform"):

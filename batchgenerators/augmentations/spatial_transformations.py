@@ -56,16 +56,16 @@ def augment_resize(sample_data, sample_seg, target_size, order=3, order_seg=1):
     """
     dimensionality = sample_data.ndim - 1
     if not isinstance(target_size, (list, tuple)):
-        target_size_here = [target_size] * dimensionality
+        target_size_here = (target_size,) * dimensionality
     else:
         assert len(target_size) == dimensionality, "If you give a tuple/list as target size, make sure it has " \
                                                    "the same dimensionality as data!"
-        target_size_here = list(target_size)
+        target_size_here = tuple(target_size)
 
     sample_data = resize_multichannel_image(sample_data, target_size_here, order)
 
     if sample_seg is not None:
-        target_seg = np.ones([sample_seg.shape[0]] + target_size_here)
+        target_seg = np.ones((sample_seg.shape[0],) + target_size_here)
         for c in range(sample_seg.shape[0]):
             target_seg[c] = resize_segmentation(sample_seg[c], target_size_here, order_seg)
     else:
@@ -96,7 +96,7 @@ def augment_zoom(sample_data, sample_seg, zoom_factors, order=3, order_seg=1):
         assert len(zoom_factors) == dimensionality, "If you give a tuple/list as target size, make sure it has " \
                                                     "the same dimensionality as data!"
         zoom_factors_here = np.array(zoom_factors)
-    target_shape_here = list(np.round(shape * zoom_factors_here).astype(int))
+    target_shape_here = tuple(np.round(shape * zoom_factors_here).astype(int))
 
     sample_data = resize_multichannel_image(sample_data, target_shape_here, order)
 
