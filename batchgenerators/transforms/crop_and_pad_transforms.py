@@ -181,7 +181,7 @@ class RandomShiftTransform(AbstractTransform):
                         if np.random.uniform(0, 1) < self.p_per_channel:
                             shift_here = []
                             for d in range(workon.ndim - 2):
-                                shift_here.append(int(np.round(np.random.normal(
+                                shift_here.append(int(np.rint(np.random.normal(
                                     self.shift_mu[d] if isinstance(self.shift_mu, (list, tuple)) else self.shift_mu,
                                     self.shift_sigma[d] if isinstance(self.shift_sigma,
                                                                       (list, tuple)) else self.shift_sigma,

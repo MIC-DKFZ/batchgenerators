@@ -58,7 +58,7 @@ def augment_linear_downsampling_scipy(data_sample, zoom_range=(0.5, 1), per_chan
         else:
             zoom = uniform(zoom_range[0], zoom_range[1])
 
-        target_shape = np.round(shp * zoom).astype(int)
+        target_shape = np.rint(shp * zoom).astype(int)
 
         if ignore_axes is not None:
             for i in ignore_axes:
@@ -76,7 +76,7 @@ def augment_linear_downsampling_scipy(data_sample, zoom_range=(0.5, 1), per_chan
                 else:
                     zoom = uniform(zoom_range[0], zoom_range[1])
 
-                target_shape = np.round(shp * zoom).astype(int)
+                target_shape = np.rint(shp * zoom).astype(int)
                 if ignore_axes is not None:
                     for i in ignore_axes:
                         target_shape[i] = shp[i]
