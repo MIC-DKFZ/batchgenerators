@@ -19,10 +19,13 @@ Köhler Gregor, Maier-Hein Klaus (2020). batchgenerators - a python framework fo
 augmentation. doi:10.5281/zenodo.3632567
 ```
 
-batchgenerators also contains the following augmentations:
+batchgenerators also contains the following application-specific augmentations:
 * **Anatomy-informed Data Augmentation**  
-Proposed at MICCAI 2023.
-You can find more information [here](https://github.com/MIC-DKFZ/anatomy_informed_DA).
+Proposed at [MICCAI 2023](https://arxiv.org/abs/2309.03652).
+Implementation details can be found [here](https://github.com/MIC-DKFZ/anatomy_informed_DA).
+* **Misalignment Data Augmentation**  
+Proposed in [Nature Scientific Reports 2023](https://www.nature.com/articles/s41598-023-46747-z).
+Implementation details can be found [here](https://github.com/MIC-DKFZ/misalignment_DA).
 
 If you use these augmentations please cite them too.
 
@@ -39,6 +42,7 @@ that was missing in most other frameworks).
   * rotations
   * scaling
   * resampling
+  * multi-channel misalignments
 * **Color Augmentations**
   * brightness (additive, multiplivative)
   * contrast
