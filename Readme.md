@@ -21,11 +21,11 @@ augmentation. doi:10.5281/zenodo.3632567
 
 batchgenerators also contains the following application-specific augmentations:
 * **Anatomy-informed Data Augmentation**  
-Proposed at [MICCAI 2023](https://arxiv.org/abs/2309.03652).
-Implementation details can be found [here](https://github.com/MIC-DKFZ/anatomy_informed_DA).
+Proposed at [MICCAI 2023](https://arxiv.org/abs/2309.03652) for simulation of soft-tissue deformations. Implementation details can be found [here](https://github.com/MIC-DKFZ/anatomy_informed_DA).
 * **Misalignment Data Augmentation**  
-Proposed in [Nature Scientific Reports 2023](https://www.nature.com/articles/s41598-023-46747-z).
-Implementation details can be found [here](https://github.com/MIC-DKFZ/misalignment_DA).
+Proposed in [Nature Scientific Reports 2023](https://www.nature.com/articles/s41598-023-46747-z)
+for enhancing model's adaptability to diverse misalignments\
+between multi-modal (multi-channel) images and thereby ensuring robust performance. Implementation details can be found [here](https://github.com/MIC-DKFZ/misalignment_DA).
 
 If you use these augmentations please cite them too.
 
@@ -125,8 +125,10 @@ This is not required on Linux.
 
 ## Release Notes
 (only highlights, not an exhaustive list)
+- 0.23.2:
+  - Misalignment data augmentation added
 - 0.23.1:
-  - Anatomy-informed-data augmentation added
+  - Anatomy-informed data augmentation added
 - 0.23: 
   - fixed the import mess. `__init__.py` files are now empty. This is a breaking change for some users! 
   Please adapt your imports :-)

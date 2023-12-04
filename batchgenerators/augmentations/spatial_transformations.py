@@ -531,3 +531,128 @@ def augment_anatomy_informed(data, seg,
         seg[:, :, :] = ignore_anatomy(seg[:, :, :], max_annotation_value=max_annotation_value, replace_value=replace_value)
 
     return data, seg
+
+
+def augment_misalign(data, seg, data_size,
+                     im_channels_2_misalign=[0, ],
+                     label_channels_2_misalign=[0, ],
+                     do_squeeze=False,
+                     sq_x=[1.0, 1.0], sq_y=[0.9, 1.1], sq_z=[1.0, 1.0],
+                     p_sq_per_sample=0.1, p_sq_per_dir=1.0,
+                     do_rotation=False,
+                     angle_x=(-0 / 360. * 2 * np.pi, 0 / 360. * 2 * np.pi),
+                     angle_y=(-0 / 360. * 2 * np.pi, 0 / 360. * 2 * np.pi),
+                     angle_z=(-15 / 360. * 2 * np.pi, 15 / 360. * 2 * np.pi),
+                     p_rot_per_sample=0.1, p_rot_per_axis=1.0,
+                     tr_x=[-32, 32], tr_y=[-32, 32], tr_z=[-2, 2],
+                     p_transl_per_sample=0.1, p_transl_per_dir=1.0,
+                     do_transl=False,
+                     border_mode_data='constant', border_cval_data=0,
+                     border_mode_seg='constant', border_cval_seg=0,
+                     order_data=3, order_seg=0):
+
+    dim = len(data_size)
+
+    for sample_id in range(data.shape[0]):
+
+        if do_squeeze and np.random.uniform() < p_sq_per_sample:
+            coords = create_zero_centered_coordinate_mesh(data_size)
+            sq = []
+            if dim == 3:
+                if np.random.uniform() <= p_sq_per_dir:
+                    sq.append(np.random.uniform(sq_z[0], sq_z[1]))
+                else:
+                    sq.append(1.0)
+
+            if np.random.uniform() <= p_sq_per_dir:
+                sq.append(np.random.uniform(sq_y[0], sq_y[1]))
+            else:
+                sq.append(1.0)
+
+            if np.random.uniform() <= p_sq_per_dir:
+                sq.append(np.random.uniform(sq_x[0], sq_x[1]))
+            else:
+                sq.append(1.0)
+            coords = scale_coords(coords, sq)
+            for d in range(dim):
+                ctr = data.shape[d + 2] / 2. - 0.5
+                coords[d] += ctr
+
+            for channel_id in range(data.shape[1]):
+                if channel_id in im_channels_2_misalign:
+                    data[sample_id, channel_id] = interpolate_img(data[sample_id, channel_id], coords, order_data,
+                                                                  border_mode_data, cval=border_cval_data)
+            if seg is not None:
+                for channel_id in range(seg.shape[1]):
+                    if channel_id in im_channels_2_misalign:
+                        seg[sample_id, channel_id] = interpolate_img(seg[sample_id, channel_id], coords, order_seg,
+                                                                     border_mode_seg, cval=border_cval_seg,
+                                                                     is_seg=True)
+
+        if do_rotation and np.random.uniform() < p_rot_per_sample:
+            coords = create_zero_centered_coordinate_mesh(data_size)
+            if np.random.uniform() <= p_rot_per_axis:
+                a_z = np.random.uniform(angle_z[0], angle_z[1])
+            else:
+                a_z = 0
+            if dim == 3:
+                if np.random.uniform() <= p_rot_per_axis:
+                    a_y = np.random.uniform(angle_y[0], angle_y[1])
+                else:
+                    a_y = 0
+                if np.random.uniform() <= p_rot_per_axis:
+                    a_x = np.random.uniform(angle_x[0], angle_x[1])
+                else:
+                    a_x = 0
+                coords = rotate_coords_3d(coords, a_z, a_y, a_x)
+            else:
+                coords = rotate_coords_2d(coords, a_z)
+            for d in range(dim):
+                ctr = data.shape[d + 2] / 2. - 0.5
+                coords[d] += ctr
+
+            for channel_id in range(data.shape[1]):
+                if channel_id in im_channels_2_misalign:
+                    data[sample_id, channel_id] = interpolate_img(data[sample_id, channel_id], coords, order_data,
+                                                                  border_mode_data, cval=border_cval_data)
+            if seg is not None:
+                for channel_id in range(seg.shape[1]):
+                    if channel_id in im_channels_2_misalign:
+                        seg[sample_id, channel_id] = interpolate_img(seg[sample_id, channel_id], coords, order_seg,
+                                                                     border_mode_seg, cval=border_cval_seg,
+                                                                     is_seg=True)
+
+        if do_transl and np.random.uniform() < p_transl_per_sample:
+            coords = create_zero_centered_coordinate_mesh(data_size)
+            tr = []
+            if dim == 3:
+                if np.random.uniform() <= p_transl_per_dir:
+                    tr.append(np.random.uniform(tr_z[0], tr_z[1]))
+                else:
+                    tr.append(1.0)
+
+            if np.random.uniform() <= p_transl_per_dir:
+                tr.append(np.random.uniform(tr_y[0], tr_y[1]))
+            else:
+                tr.append(1.0)
+
+            if np.random.uniform() <= p_transl_per_dir:
+                tr.append(np.random.uniform(tr_x[0], tr_x[1]))
+            else:
+                tr.append(1.0)
+
+            for d in range(dim):
+                ctr = data.shape[d + 2] / 2. - 0.5 + tr[d]
+                coords[d] += ctr
+
+            for channel_id in range(data.shape[1]):
+                if channel_id in im_channels_2_misalign:
+                    data[sample_id, channel_id] = interpolate_img(data[sample_id, channel_id], coords, order_data,
+                                                                  border_mode_data, cval=border_cval_data)
+            if seg is not None:
+                for channel_id in range(seg.shape[1]):
+                    if channel_id in label_channels_2_misalign:
+                        seg[sample_id, channel_id] = interpolate_img(seg[sample_id, channel_id], coords, order_seg,
+                                                                     border_mode_seg, cval=border_cval_seg,
+                                                                     is_seg=True)
+    return data, seg
