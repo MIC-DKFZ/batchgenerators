@@ -179,14 +179,16 @@ class BlankRectangleTransform(AbstractTransform):
         self.p_per_sample = p_per_sample
         self.p_per_channel = p_per_channel
         self.apply_to_keys = apply_to_keys
+        self.rectangle_value = rectangle_value
 
+    def color_fn(self, x):
         # intensity value
-        if np.isscalar(rectangle_value):
-            self.color_fn = lambda x: rectangle_value
-        elif callable(rectangle_value):
-            self.color_fn = lambda x: rectangle_value(x)
-        elif isinstance(rectangle_value, (tuple, list)):
-            self.color_fn = lambda x: np.random.uniform(*rectangle_value)
+        if np.isscalar(self.rectangle_value):
+            return self.rectangle_value
+        elif callable(self.rectangle_value):
+            return self.rectangle_value(x)
+        elif isinstance(self.rectangle_value, (tuple, list)):
+            return np.random.uniform(*x)
         else:
             raise RuntimeError("unrecognized format for rectangle_value")
 
