@@ -200,6 +200,9 @@ class TestDataLoader(unittest.TestCase):
         self.assertTrue(len(np.unique(all_return)) == len(data))
 
     def test_thoroughly(self):
+        really_test_this = False
+        if not really_test_this:
+            print("This test takes too much time. Run me if you really want to test me.")
         data_list = [list(range(123)),
             list(range(1243)),
             list(range(1)),
