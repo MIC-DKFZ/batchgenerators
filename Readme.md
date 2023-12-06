@@ -1,4 +1,9 @@
 # batchgenerators by MIC@DKFZ
+
+Copyright German Cancer Research Center (DKFZ) and contributors.
+Please make sure that your usage of this code is in compliance with its
+[`license`](https://github.com/MIC-DKFZ/batchgenerators/blob/master/LICENSE).
+
 batchgenerators is a python package for data augmentation. It is developed jointly between the Division of
 Medical Image Computing at the German Cancer Research Center (DKFZ) and the Applied Computer 
 Vision Lab of the Helmholtz Imaging Platform.
@@ -14,6 +19,16 @@ Köhler Gregor, Maier-Hein Klaus (2020). batchgenerators - a python framework fo
 augmentation. doi:10.5281/zenodo.3632567
 ```
 
+batchgenerators also contains the following application-specific augmentations:
+* **Anatomy-informed Data Augmentation**  
+Proposed at [MICCAI 2023](https://arxiv.org/abs/2309.03652) for simulation of soft-tissue deformations. Implementation details can be found [here](https://github.com/MIC-DKFZ/anatomy_informed_DA).
+* **Misalignment Data Augmentation**  
+Proposed in [Nature Scientific Reports 2023](https://www.nature.com/articles/s41598-023-46747-z)
+for enhancing model's adaptability to diverse misalignments\
+between multi-modal (multi-channel) images and thereby ensuring robust performance. Implementation details can be found [here](https://github.com/MIC-DKFZ/misalignment_DA).
+
+If you use these augmentations please cite them too.
+
 [![Build Status](https://travis-ci.com/MIC-DKFZ/batchgenerators.svg?branch=master)](https://travis-ci.com/github/MIC-DKFZ/batchgenerators)
 
 ## Supported Augmentations
@@ -27,6 +42,7 @@ that was missing in most other frameworks).
   * rotations
   * scaling
   * resampling
+  * multi-channel misalignments
 * **Color Augmentations**
   * brightness (additive, multiplivative)
   * contrast
@@ -39,6 +55,7 @@ that was missing in most other frameworks).
   * random crop
   * center crop
   * padding
+* **Anatomy-informed Augmentation**
 
 Note: Stack transforms by using batchgenerators.transforms.abstract_transforms.Compose. Finish it up by plugging the
 composed transform into our **multithreader**: batchgenerators.dataloading.multi_threaded_augmenter.MultiThreadedAugmenter
@@ -108,7 +125,10 @@ This is not required on Linux.
 
 ## Release Notes
 (only highlights, not an exhaustive list)
-
+- 0.23.2:
+  - Misalignment data augmentation added
+- 0.23.1:
+  - Anatomy-informed data augmentation added
 - 0.23: 
   - fixed the import mess. `__init__.py` files are now empty. This is a breaking change for some users! 
   Please adapt your imports :-)

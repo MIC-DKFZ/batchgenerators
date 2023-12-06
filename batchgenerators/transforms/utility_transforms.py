@@ -19,8 +19,9 @@ from typing import List, Union, Tuple
 import numpy as np
 import torch
 
+from batchgenerators.augmentations.utils import convert_seg_image_to_one_hot_encoding_batched
 from batchgenerators.augmentations.utils import convert_seg_to_bounding_box_coordinates, transpose_channels, \
-    convert_seg_image_to_one_hot_encoding_batched
+    ignore_anatomy
 from batchgenerators.transforms.abstract_transforms import AbstractTransform
 
 
@@ -294,6 +295,21 @@ class RemoveLabelTransform(AbstractTransform):
         seg = data_dict[self.input_key]
         seg[seg == self.remove_label] = self.replace_with
         data_dict[self.output_key] = seg
+        return data_dict
+
+
+class IgnoreAnatomy(AbstractTransform):
+    """
+    Replaces every annotation values larger than the max_annotation_value with the replace_value.
+    This transform is used for the anatomy-informed augmentation scheme to remove all additional anatomical annotations.
+    You can find more information here: https://github.com/MIC-DKFZ/anatomy_informed_DA
+    """
+    def __init__(self, max_annotation_value=1, replace_value=0):
+        self.max_annotation_value = max_annotation_value
+        self.replace_value = replace_value
+
+    def __call__(self, **data_dict):
+        data_dict['seg'] = ignore_anatomy(data_dict['seg'], max_annotation_value=self.max_annotation_value, replace_value=self.replace_value)
         return data_dict
 
 

@@ -16,30 +16,46 @@
 import os
 import pickle
 import json
-from typing import List
+from typing import List, Union
 
 
-def subdirs(folder: str, join: bool = True, prefix: str = None, suffix: str = None, sort: bool = True) -> List[str]:
+def subdirs(folder: str, join: bool = True, prefix: Union[List[str], str] = None,
+            suffix: Union[List[str], str] = None, sort: bool = True) -> List[str]:
     if join:
         l = os.path.join
     else:
         l = lambda x, y: y
+
+    if prefix is not None and isinstance(prefix, str):
+        prefix = [prefix]
+    if suffix is not None and isinstance(suffix, str):
+        suffix = [suffix]
+
     res = [l(folder, i) for i in os.listdir(folder) if os.path.isdir(os.path.join(folder, i))
-           and (prefix is None or i.startswith(prefix))
-           and (suffix is None or i.endswith(suffix))]
+           and (prefix is None or any([i.startswith(j) for j in prefix]))
+           and (suffix is None or any([i.endswith(j) for j in suffix]))]
+
     if sort:
         res.sort()
     return res
 
 
-def subfiles(folder: str, join: bool = True, prefix: str = None, suffix: str = None, sort: bool = True) -> List[str]:
+def subfiles(folder: str, join: bool = True, prefix: Union[List[str], str] = None,
+             suffix: Union[List[str], str] = None, sort: bool = True) -> List[str]:
     if join:
         l = os.path.join
     else:
         l = lambda x, y: y
+
+    if prefix is not None and isinstance(prefix, str):
+        prefix = [prefix]
+    if suffix is not None and isinstance(suffix, str):
+        suffix = [suffix]
+
     res = [l(folder, i) for i in os.listdir(folder) if os.path.isfile(os.path.join(folder, i))
-           and (prefix is None or i.startswith(prefix))
-           and (suffix is None or i.endswith(suffix))]
+           and (prefix is None or any([i.startswith(j) for j in prefix]))
+           and (suffix is None or any([i.endswith(j) for j in suffix]))]
+
     if sort:
         res.sort()
     return res
