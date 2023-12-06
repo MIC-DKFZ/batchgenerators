@@ -10,12 +10,10 @@ setup(name='batchgenerators',
       license='Apache License Version 2.0, January 2004',
       packages=find_packages(exclude=["tests"]),
       install_requires=[
-            "pillow>=7.1.2",
             "numpy>=1.10.2",
             "scipy",
             "scikit-image",
             "scikit-learn",
-            "future",
             "threadpoolctl",
             "pandas"
       ],
