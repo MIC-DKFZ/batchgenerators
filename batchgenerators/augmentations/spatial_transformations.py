@@ -521,7 +521,7 @@ def augment_anatomy_informed(data, seg,
                 t, u, v = get_organ_gradient_field(seg == organ_idx + 2,
                                                    spacing_ratio=spacing_ratio,
                                                    blur=blur)
-
+                # TODO:
                 if directions_of_trans[organ_idx][0]:
                     coords[0, :, :, :] = coords[0, :, :, :] + t * dil_magnitude * spacing_ratio
                 if directions_of_trans[organ_idx][1]:

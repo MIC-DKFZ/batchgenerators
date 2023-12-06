@@ -138,6 +138,7 @@ class ColorFunctionExtractor:
         self.rectangle_value = rectangle_value
 
     def __call__(self, x):
+        # TODO: Change this
         if np.isscalar(self.rectangle_value):
             return self.rectangle_value
         elif callable(self.rectangle_value):
@@ -146,6 +147,8 @@ class ColorFunctionExtractor:
             return np.random.uniform(*self.rectangle_value)
         else:
             raise RuntimeError("unrecognized format for rectangle_value")
+
+
 
 
 class BlankRectangleTransform(AbstractTransform):

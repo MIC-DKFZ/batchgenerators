@@ -567,6 +567,7 @@ class AnatomyInformedTransform(AbstractTransform):
             self.dim = 3
 
         active_organs = []
+        # TODO: Optimize this
         for prob in self.p_per_sample:
             if np.random.uniform() < prob:
                 active_organs.append(1)
@@ -669,9 +670,10 @@ class MisalignTransform(AbstractTransform):
         self.border_cval_seg = border_cval_seg
 
     def __call__(self, **data_dict):
-        data = data_dict.get(self.data_key)
+        data = data_dict[self.data_key]
         seg = data_dict.get(self.label_key)
 
+        # TODO
         if data.shape[1] < 2:
             raise ValueError("only support multi-modal images")
         else:
