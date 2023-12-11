@@ -16,11 +16,14 @@
 import random
 import numpy as np
 from copy import deepcopy
-from scipy.ndimage import map_coordinates, fourier_gaussian
-from scipy.ndimage.filters import gaussian_filter, gaussian_gradient_magnitude
-from scipy.ndimage.morphology import grey_dilation
+from scipy.ndimage import (
+    gaussian_filter,
+    gaussian_gradient_magnitude,
+    grey_dilation,
+    fourier_gaussian,
+    label as lb,
+    map_coordinates)
 from skimage.transform import resize
-from scipy.ndimage.measurements import label as lb
 
 
 def generate_elastic_transform_coordinates(shape, alpha, sigma):
