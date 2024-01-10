@@ -205,5 +205,5 @@ class ClipValueRange(AbstractTransform):
         self.max = max
 
     def __call__(self, **data_dict):
-        data_dict[self.data_key] = np.clip(data_dict[self.data_key], self.min, self.max)
+        np.clip(data_dict[self.data_key], self.min, self.max, out=data_dict[self.data_key])
         return data_dict

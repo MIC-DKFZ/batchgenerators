@@ -334,7 +334,7 @@ class SharpeningTransform(AbstractTransform):
                                                   filter_here,
                                                   mode='same'
                                                   )
-                            data[b, c] = np.clip(data[b, c], mn, mx)
+                            np.clip(data[b, c], mn, mx, out=data[b, c])
                 else:
                     for c in range(data.shape[1]):
                         if np.random.uniform() < self.p_per_channel:
@@ -351,7 +351,7 @@ class SharpeningTransform(AbstractTransform):
                                                   filter_here,
                                                   mode='same'
                                                   )
-                            data[b, c] = np.clip(data[b, c], mn, mx)
+                            np.clip(data[b, c], mn, mx, out=data[b, c])
         return data_dict
 
 
