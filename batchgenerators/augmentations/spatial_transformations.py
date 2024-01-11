@@ -98,7 +98,7 @@ def augment_zoom(sample_data, sample_seg, zoom_factors, order=3, order_seg=1):
         assert len(zoom_factors) == dimensionality, "If you give a tuple/list as target size, make sure it has " \
                                                     "the same dimensionality as data!"
         zoom_factors_here = np.array(zoom_factors)
-    target_shape_here = tuple(np.rint(shape * zoom_factors_here).astype(int))
+    target_shape_here = tuple(np.rint(shape * zoom_factors_here).astype(int, copy=False))
 
     sample_data = resize_multichannel_image(sample_data, target_shape_here, order)
 

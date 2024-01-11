@@ -170,7 +170,8 @@ def interpolate_img(img, coords, order=3, mode='nearest', cval=0.0, is_seg=False
             result[res_new >= 0.5] = c
         return result
     else:
-        return map_coordinates(img.astype(float), coords, order=order, mode=mode, cval=cval).astype(img.dtype)
+        return map_coordinates(
+            img.astype(float, copy=False), coords, order=order, mode=mode, cval=cval).astype(img.dtype, copy=False)
 
 
 def generate_noise(shape, alpha, sigma):
@@ -183,7 +184,7 @@ def find_entries_in_array(entries, myarray):
     entries = np.array(entries, dtype=int)
     lut = np.zeros(np.max(myarray) + 1, 'bool')
     lut[entries] = True
-    return np.take(lut, myarray.astype(int))
+    return np.take(lut, myarray.astype(int, copy=False))
 
 
 def center_crop_3D_image(img, crop_size):
@@ -629,7 +630,7 @@ def resize_multichannel_image(multichannel_image, new_shape: tuple, order=3):
     new_shp = (multichannel_image.shape[0], ) + new_shape
     result = np.zeros(new_shp, dtype=multichannel_image.dtype)
     for i in range(multichannel_image.shape[0]):
-        result[i] = resize(multichannel_image[i].astype(float), new_shape, order, clip=True, anti_aliasing=False)
+        result[i] = resize(multichannel_image[i].astype(float, copy=False), new_shape, order, clip=True, anti_aliasing=False)
     return result
 
 
@@ -789,7 +790,7 @@ def get_organ_gradient_field(organ, spacing_ratio=0.3125/3.0, blur=32):
     :param spacing_ratio: ratio of the axial spacing and the slice thickness, needed for the right vector field calculation
     :param blur: kernel constant
     """
-    organ_blurred = gaussian_filter(organ.astype(float),
+    organ_blurred = gaussian_filter(organ.astype(float, copy=False),
                                     sigma=(blur * spacing_ratio, blur, blur),
                                     order=0,
                                     mode='nearest')
