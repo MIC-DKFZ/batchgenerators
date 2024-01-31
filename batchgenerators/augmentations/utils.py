@@ -613,7 +613,7 @@ def resize_segmentation(segmentation, new_shape: tuple, order=3):
     assert segmentation.ndim == len(new_shape), "new shape must have same dimensionality as segmentation"
     if order == 0:
         return resize(segmentation.astype(np.float64, copy=False), new_shape, order, mode="edge", clip=True,
-                      anti_aliasing=False).astype(tpe)
+                      anti_aliasing=False).astype(tpe, copy=False)
     else:
         unique_labels = pd.unique(segmentation.reshape(-1))  # does not need sorting
         reshaped = np.zeros(new_shape, dtype=tpe)
