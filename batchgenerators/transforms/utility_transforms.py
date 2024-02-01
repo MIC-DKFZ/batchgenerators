@@ -14,12 +14,13 @@
 # limitations under the License.
 
 import copy
-from typing import List, Type, Union, Tuple
+from typing import List, Union, Tuple
 
 import numpy as np
+import torch
 
-from batchgenerators.augmentations.utils import convert_seg_image_to_one_hot_encoding, \
-    convert_seg_to_bounding_box_coordinates, transpose_channels, \
+from batchgenerators.augmentations.utils import convert_seg_image_to_one_hot_encoding_batched
+from batchgenerators.augmentations.utils import convert_seg_to_bounding_box_coordinates, transpose_channels, \
     ignore_anatomy
 from batchgenerators.transforms.abstract_transforms import AbstractTransform
 
@@ -35,40 +36,59 @@ class NumpyToTensor(AbstractTransform):
         if keys is not None and not isinstance(keys, (list, tuple)):
             keys = [keys]
         self.keys = keys
-        self.cast_to = cast_to
 
-    def cast(self, tensor):
-        if self.cast_to is not None:
-            if self.cast_to == 'half':
-                tensor = tensor.half()
-            elif self.cast_to == 'float':
-                tensor = tensor.float()
-            elif self.cast_to == 'long':
-                tensor = tensor.long()
-            elif self.cast_to == 'bool':
-                tensor = tensor.bool()
-            else:
-                raise ValueError('Unknown value for cast_to: %s' % self.cast_to)
-        return tensor
+        if cast_to is None:
+            self.cast = self.no_cast
+        elif cast_to == 'half':
+            self.cast = self.half_cast
+        elif cast_to == 'float':
+            self.cast = self.float_cast
+        elif cast_to == 'long':
+            self.cast = self.long_cast
+        elif cast_to == 'bool':
+            self.cast = self.bool_cast
+        else:
+            raise ValueError(f'Unknown value for cast_to: {cast_to}')
+
+    def cast(self, x: np.ndarray) -> torch.Tensor:
+        pass
+
+    @staticmethod
+    def no_cast(x: np.ndarray) -> torch.Tensor:
+        return torch.from_numpy(x).contiguous()
+
+    @staticmethod
+    def float_cast(x: np.ndarray) -> torch.Tensor:
+        return torch.from_numpy(x).to(torch.float, memory_format=torch.contiguous_format)
+
+    @staticmethod
+    def long_cast(x: np.ndarray) -> torch.Tensor:
+        return torch.from_numpy(x).to(torch.long, memory_format=torch.contiguous_format)
+
+    @staticmethod
+    def bool_cast(x: np.ndarray) -> torch.Tensor:
+        return torch.from_numpy(x).to(torch.bool, memory_format=torch.contiguous_format)
+
+    @staticmethod
+    def half_cast(x: np.ndarray) -> torch.Tensor:
+        return torch.from_numpy(x).to(torch.half, memory_format=torch.contiguous_format)
 
     def __call__(self, **data_dict):
-        import torch
-
         if self.keys is None:
             for key, val in data_dict.items():
                 if isinstance(val, np.ndarray):
-                    data_dict[key] = self.cast(torch.from_numpy(val)).contiguous()
+                    data_dict[key] = self.cast(val)
                 elif isinstance(val, (list, tuple)) and all([isinstance(i, np.ndarray) for i in val]):
-                    data_dict[key] = [self.cast(torch.from_numpy(i)).contiguous() for i in val]
+                    data_dict[key] = [self.cast(i) for i in val]
         else:
             for key in self.keys:
                 if isinstance(data_dict[key], np.ndarray):
-                    data_dict[key] = self.cast(torch.from_numpy(data_dict[key])).contiguous()
-                elif isinstance(data_dict[key], (list, tuple)) and all([isinstance(i, np.ndarray) for i in data_dict[key]]):
-                    data_dict[key] = [self.cast(torch.from_numpy(i)).contiguous() for i in data_dict[key]]
+                    data_dict[key] = self.cast(data_dict[key])
+                elif isinstance(data_dict[key], (list, tuple)) and all(
+                        [isinstance(i, np.ndarray) for i in data_dict[key]]):
+                    data_dict[key] = [self.cast(i) for i in data_dict[key]]
 
         return data_dict
-
 
 
 class ListToNumpy(AbstractTransform):
@@ -119,9 +139,7 @@ class ConvertSegToOnehotTransform(AbstractTransform):
     def __call__(self, **data_dict):
         seg = data_dict.get("seg")
         if seg is not None:
-            new_seg = np.zeros([seg.shape[0], len(self.classes)] + list(seg.shape[2:]), dtype=seg.dtype)
-            for b in range(seg.shape[0]):
-                new_seg[b] = convert_seg_image_to_one_hot_encoding(seg[b, self.seg_channel], self.classes)
+            new_seg = convert_seg_image_to_one_hot_encoding_batched(seg[:, self.seg_channel], self.classes)
             data_dict[self.output_key] = new_seg
         else:
             from warnings import warn
@@ -140,9 +158,9 @@ class ConvertMultiSegToOnehotTransform(AbstractTransform):
         seg = data_dict.get("seg")
         if seg is not None:
             new_seg = np.zeros([seg.shape[0], len(self.classes) * seg.shape[1]] + list(seg.shape[2:]), dtype=seg.dtype)
-            for b in range(seg.shape[0]):
-                for c in range(seg.shape[1]):
-                    new_seg[b, c*len(self.classes):(c+1)*len(self.classes)] = convert_seg_image_to_one_hot_encoding(seg[b, c], self.classes)
+            for c in range(seg.shape[1]):
+                new_seg[:, c * len(self.classes):(c + 1) * len(self.classes)] = \
+                    convert_seg_image_to_one_hot_encoding_batched(seg[:, c], self.classes)
             data_dict["seg"] = new_seg
         else:
             from warnings import warn
@@ -201,13 +219,14 @@ class ConvertMultiSegToArgmaxTransform(AbstractTransform):
         if seg is not None:
             if not seg.shape[1] % self.output_channels == 0:
                 from warnings import warn
-                warn("Calling ConvertMultiSegToArgmaxTransform but number of input channels {} cannot be divided into {} output channels.".format(seg.shape[1], self.output_channels))
+                warn(
+                    f"Calling ConvertMultiSegToArgmaxTransform but number of input channels {seg.shape[1]} cannot be divided into {self.output_channels} output channels.")
             n_labels = seg.shape[1] // self.output_channels
             target_size = list(seg.shape)
             target_size[1] = self.output_channels
             output = np.zeros(target_size, dtype=seg.dtype)
             for i in range(self.output_channels):
-                output[:, i] = np.argmax(seg[:, i*n_labels:(i+1)*n_labels], 1)
+                output[:, i] = np.argmax(seg[:, i * n_labels:(i + 1) * n_labels], 1)
             if self.labels is not None:
                 if list(self.labels) != list(range(n_labels)):
                     for index, value in enumerate(reversed(self.labels)):
@@ -231,7 +250,8 @@ class ConvertSegToBoundingBoxCoordinates(AbstractTransform):
         self.class_specific_seg_flag = class_specific_seg_flag
 
     def __call__(self, **data_dict):
-        data_dict = convert_seg_to_bounding_box_coordinates(data_dict, self.dim, self.get_rois_from_seg_flag, class_specific_seg_flag=self.class_specific_seg_flag)
+        data_dict = convert_seg_to_bounding_box_coordinates(data_dict, self.dim, self.get_rois_from_seg_flag,
+                                                            class_specific_seg_flag=self.class_specific_seg_flag)
         return data_dict
 
 
@@ -239,6 +259,7 @@ class MoveSegToDataChannel(AbstractTransform):
     """
     concatenates data_dict['seg'] to data_dict['data']
     """
+
     def __call__(self, **data_dict):
         data_dict['data'] = np.concatenate((data_dict['data'], data_dict['seg']), axis=1)
         return data_dict
@@ -349,7 +370,7 @@ class CopyTransform(AbstractTransform):
         return new_dict
 
     def __repr__(self):
-        return str(type(self).__name__) + " ( " + repr(self.transforms) + " )"
+        return f"{str(type(self).__name__)} ( {repr(self.transforms)} )"
 
 
 class ReshapeTransform(AbstractTransform):
@@ -416,12 +437,12 @@ class AppendChannelsTransform(AbstractTransform):
         inp = data_dict.get(self.input_key)
         outp = data_dict.get(self.output_key)
 
-        assert inp is not None, "input_key %s is not present in data_dict" % self.input_key
+        assert inp is not None, f"input_key {self.input_key} is not present in data_dict"
 
         selected_channels = inp[:, self.channel_indexes]
 
         if outp is None:
-            #warn("output key %s is not present in dict, it will be created" % self.output_key)
+            # warn("output key %s is not present in dict, it will be created" % self.output_key)
             outp = selected_channels
             data_dict[self.output_key] = outp
         else:
@@ -449,13 +470,13 @@ class ConvertToChannelLastTransform(AbstractTransform):
             if data is None:
                 print("WARNING in ConvertToChannelLastTransform: data_dict has no key named", k)
             else:
-                if len(data.shape) == 4:
+                if data.ndim == 4:
                     new_ordering = (0, 2, 3, 1)
-                elif len(data.shape) == 5:
+                elif data.ndim == 5:
                     new_ordering = (0, 2, 3, 4, 1)
                 else:
                     raise RuntimeError("unsupported dimensionality for ConvertToChannelLastTransform:",
-                                       len(data.shape),
+                                       data.ndim,
                                        ". Only 2d (b, c, x, y) and 3d (b, c, x, y, z) are supported for now.")
                 assert isinstance(data, np.ndarray), "data_dict[k] must be a numpy array"
                 data = data.transpose(new_ordering)
@@ -498,7 +519,7 @@ class OneOfTransformPerSample(AbstractTransform):
         # expected to have the same length
         some_value = data_dict.get(self.relevant_keys[0])
         for b in range(len(some_value)):
-            new_dict = {i: data_dict[i][b:b+1] for i in self.relevant_keys}
+            new_dict = {i: data_dict[i][b:b + 1] for i in self.relevant_keys}
             random_transform = np.random.choice(len(self.list_of_transforms), p=self.p)
             ret = self.list_of_transforms[random_transform](**new_dict)
             for i in self.relevant_keys:

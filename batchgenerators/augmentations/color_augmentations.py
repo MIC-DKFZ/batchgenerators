@@ -13,64 +13,66 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from builtins import range
-from typing import Tuple, Union, Callable
+from typing import Tuple, Callable, Union
 
 import numpy as np
-from batchgenerators.augmentations.utils import general_cc_var_num_channels, illumination_jitter
+
+from batchgenerators.augmentations.utils import general_cc_var_num_channels, illumination_jitter, get_broadcast_axes, \
+    reverse_broadcast
+
+
+def get_augment_contrast_factor(contrast_range: Union[Tuple[float, float], Callable[[], float]],
+                                per_channel: bool,
+                                size: int,
+                                broadcast_size: int):
+    if per_channel:
+        factor = []
+        for _ in range(size):
+            if callable(contrast_range):
+                factor.append(contrast_range())
+            elif contrast_range[0] < 1 and np.random.random() < 0.5:
+                factor.append(np.random.uniform(contrast_range[0], 1))
+            else:
+                factor.append(np.random.uniform(max(contrast_range[0], 1), contrast_range[1]))
+
+        factor = reverse_broadcast(np.array(factor), get_broadcast_axes(broadcast_size))
+    else:
+        if callable(contrast_range):
+            factor = contrast_range()
+        elif contrast_range[0] < 1 and np.random.random() < 0.5:
+            factor = np.random.uniform(contrast_range[0], 1)
+        else:
+            factor = np.random.uniform(max(contrast_range[0], 1), contrast_range[1])
+
+    return factor
 
 
 def augment_contrast(data_sample: np.ndarray,
                      contrast_range: Union[Tuple[float, float], Callable[[], float]] = (0.75, 1.25),
                      preserve_range: bool = True,
                      per_channel: bool = True,
-                     p_per_channel: float = 1) -> np.ndarray:
-    if not per_channel:
-        if callable(contrast_range):
-            factor = contrast_range()
-        else:
-            if np.random.random() < 0.5 and contrast_range[0] < 1:
-                factor = np.random.uniform(contrast_range[0], 1)
-            else:
-                factor = np.random.uniform(max(contrast_range[0], 1), contrast_range[1])
+                     p_per_channel: float = 1,
+                     batched=False) -> np.ndarray:
+    mask = np.random.uniform(size=data_sample.shape[:2] if batched else data_sample.shape[0]) < p_per_channel
+    if np.any(mask):
+        workon = data_sample[mask]
+        factor = get_augment_contrast_factor(contrast_range, per_channel, len(workon), workon.ndim)
+        axes = tuple(range(1, workon.ndim))
+        mean = workon.mean(axis=axes, keepdims=True)
+        if preserve_range:
+            minm = workon.min(axis=axes, keepdims=True)
+            maxm = workon.max(axis=axes, keepdims=True)
 
-        for c in range(data_sample.shape[0]):
-            if np.random.uniform() < p_per_channel:
-                mn = data_sample[c].mean()
-                if preserve_range:
-                    minm = data_sample[c].min()
-                    maxm = data_sample[c].max()
+        data_sample[mask] = workon * factor + mean * (1 - factor)  # writing directly in data_sample
 
-                data_sample[c] = (data_sample[c] - mn) * factor + mn
+        if preserve_range:
+            np.clip(data_sample[mask], minm, maxm, out=data_sample[mask])
 
-                if preserve_range:
-                    data_sample[c][data_sample[c] < minm] = minm
-                    data_sample[c][data_sample[c] > maxm] = maxm
-    else:
-        for c in range(data_sample.shape[0]):
-            if np.random.uniform() < p_per_channel:
-                if callable(contrast_range):
-                    factor = contrast_range()
-                else:
-                    if np.random.random() < 0.5 and contrast_range[0] < 1:
-                        factor = np.random.uniform(contrast_range[0], 1)
-                    else:
-                        factor = np.random.uniform(max(contrast_range[0], 1), contrast_range[1])
-
-                mn = data_sample[c].mean()
-                if preserve_range:
-                    minm = data_sample[c].min()
-                    maxm = data_sample[c].max()
-
-                data_sample[c] = (data_sample[c] - mn) * factor + mn
-
-                if preserve_range:
-                    data_sample[c][data_sample[c] < minm] = minm
-                    data_sample[c][data_sample[c] > maxm] = maxm
     return data_sample
 
 
-def augment_brightness_additive(data_sample, mu:float, sigma:float , per_channel:bool=True, p_per_channel:float=1.):
+def augment_brightness_additive(data_sample, mu: float, sigma: float, per_channel: bool = True,
+                                p_per_channel: float = 1.):
     """
     data_sample must have shape (c, x, y(, z)))
     :param data_sample: 
@@ -80,27 +82,29 @@ def augment_brightness_additive(data_sample, mu:float, sigma:float , per_channel
     :param p_per_channel: 
     :return: 
     """
-    if not per_channel:
-        rnd_nb = np.random.normal(mu, sigma)
-        for c in range(data_sample.shape[0]):
-            if np.random.uniform() <= p_per_channel:
-                data_sample[c] += rnd_nb
+    size = data_sample.shape[0]
+    if per_channel:
+        rnd_nb = np.random.normal(mu, sigma, size=size)
     else:
-        for c in range(data_sample.shape[0]):
-            if np.random.uniform() <= p_per_channel:
-                rnd_nb = np.random.normal(mu, sigma)
-                data_sample[c] += rnd_nb
+        rnd_nb = np.repeat(np.random.normal(mu, sigma), size)
+    rnd_nb[np.random.uniform(size=size) > p_per_channel] = 0.0
+    data_sample += reverse_broadcast(rnd_nb, get_broadcast_axes(data_sample.ndim))
     return data_sample
 
 
-def augment_brightness_multiplicative(data_sample, multiplier_range=(0.5, 2), per_channel=True):
-    multiplier = np.random.uniform(multiplier_range[0], multiplier_range[1])
-    if not per_channel:
-        data_sample *= multiplier
-    else:
-        for c in range(data_sample.shape[0]):
-            multiplier = np.random.uniform(multiplier_range[0], multiplier_range[1])
-            data_sample[c] *= multiplier
+def setup_augment_brightness_multiplicative(per_channel: bool, batched: bool, shape: Tuple[int, ...]):
+    if per_channel:
+        if batched:
+            return shape[:2] + (1,) * (len(shape) - 2)
+        return (shape[0],) + (1,) * (len(shape) - 1)
+    if batched:
+        return (shape[0],) + (1,) * (len(shape) - 1)
+    return (1,) * len(shape)
+
+
+def augment_brightness_multiplicative(data_sample, multiplier_range=(0.5, 2), per_channel=True, batched=False):
+    size = setup_augment_brightness_multiplicative(per_channel, batched, data_sample.shape)
+    data_sample *= np.random.uniform(multiplier_range[0], multiplier_range[1], size=size)
     return data_sample
 
 
@@ -110,38 +114,55 @@ def augment_gamma(data_sample, gamma_range=(0.5, 2), invert_image=False, epsilon
         data_sample = - data_sample
 
     if not per_channel:
-        retain_stats_here = retain_stats() if callable(retain_stats) else retain_stats
-        if retain_stats_here:
+        retain_stats = retain_stats() if callable(retain_stats) else retain_stats
+        if retain_stats:
             mn = data_sample.mean()
             sd = data_sample.std()
-        if np.random.random() < 0.5 and gamma_range[0] < 1:
+        if gamma_range[0] < 1 and np.random.random() < 0.5:
             gamma = np.random.uniform(gamma_range[0], 1)
         else:
             gamma = np.random.uniform(max(gamma_range[0], 1), gamma_range[1])
         minm = data_sample.min()
         rnge = data_sample.max() - minm
         data_sample = np.power(((data_sample - minm) / float(rnge + epsilon)), gamma) * rnge + minm
-        if retain_stats_here:
-            data_sample = data_sample - data_sample.mean()
-            data_sample = data_sample / (data_sample.std() + 1e-8) * sd
-            data_sample = data_sample + mn
+        if retain_stats:
+            data_sample -= data_sample.mean()
+            data_sample *= sd / (data_sample.std() + 1e-8)
+            data_sample += mn
     else:
-        for c in range(data_sample.shape[0]):
-            retain_stats_here = retain_stats() if callable(retain_stats) else retain_stats
-            if retain_stats_here:
-                mn = data_sample[c].mean()
-                sd = data_sample[c].std()
-            if np.random.random() < 0.5 and gamma_range[0] < 1:
-                gamma = np.random.uniform(gamma_range[0], 1)
+        shape_0 = data_sample.shape[0]
+        gamma = []
+        gamma_l = max(gamma_range[0], 1)
+        for i in range(shape_0):
+            if gamma_range[0] < 1 and np.random.random() < 0.5:
+                gamma.append(np.random.uniform(gamma_range[0], 1))
             else:
-                gamma = np.random.uniform(max(gamma_range[0], 1), gamma_range[1])
-            minm = data_sample[c].min()
-            rnge = data_sample[c].max() - minm
-            data_sample[c] = np.power(((data_sample[c] - minm) / float(rnge + epsilon)), gamma) * float(rnge + epsilon) + minm
-            if retain_stats_here:
-                data_sample[c] = data_sample[c] - data_sample[c].mean()
-                data_sample[c] = data_sample[c] / (data_sample[c].std() + 1e-8) * sd
-                data_sample[c] = data_sample[c] + mn
+                gamma.append(np.random.uniform(gamma_l, gamma_range[1]))
+        gamma = np.array(gamma)
+
+        axes = tuple(range(1, data_sample.ndim))
+
+        if callable(retain_stats):
+            retain_stats = [retain_stats() for _ in range(shape_0)]
+        else:
+            retain_stats = [retain_stats] * shape_0
+        retain_stats_here = any(retain_stats)
+        if retain_stats_here:
+            mn = data_sample[retain_stats].mean(axis=axes, keepdims=True)
+            sd = data_sample[retain_stats].mean(axis=axes, keepdims=True)
+
+        minm = data_sample.min(axis=axes, keepdims=True)
+        rnge = data_sample.max(axis=axes, keepdims=True) - minm + epsilon
+
+        broadcast_axes = get_broadcast_axes(data_sample.ndim)
+        gamma = reverse_broadcast(gamma, broadcast_axes)
+        data_sample = np.power((data_sample - minm) / rnge, gamma) * rnge + minm
+
+        if retain_stats_here:
+            data_sample[retain_stats] -= data_sample[retain_stats].mean(axis=axes, keepdims=True)
+            data_sample[retain_stats] *= sd / (data_sample[retain_stats].std(axis=axes, keepdims=True) + 1e-8)
+            data_sample[retain_stats] += mn
+
     if invert_image:
         data_sample = - data_sample
     return data_sample

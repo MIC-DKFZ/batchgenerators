@@ -13,13 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from batchgenerators.transforms.abstract_transforms import AbstractTransform
-from batchgenerators.augmentations.spatial_transformations import augment_spatial, augment_spatial_2, \
-    augment_channel_translation, \
-    augment_mirroring, augment_transpose_axes, augment_zoom, augment_resize, augment_rot90, \
-    augment_anatomy_informed, augment_misalign
 import numpy as np
-from batchgenerators.augmentations.utils import get_organ_gradient_field
+
+from batchgenerators.augmentations.spatial_transformations import augment_spatial, augment_spatial_2, \
+    augment_channel_translation, augment_mirroring_batched, augment_transpose_axes, augment_zoom, augment_resize, \
+    augment_rot90, augment_anatomy_informed, augment_misalign
+from batchgenerators.transforms.abstract_transforms import AbstractTransform
 
 
 class Rot90Transform(AbstractTransform):
@@ -202,22 +201,17 @@ class MirrorTransform(AbstractTransform):
                              "is now axes=(0, 1, 2). Please adapt your scripts accordingly.")
 
     def __call__(self, **data_dict):
-        data = data_dict.get(self.data_key)
+        data = data_dict[self.data_key]
         seg = data_dict.get(self.label_key)
 
-        for b in range(len(data)):
-            if np.random.uniform() < self.p_per_sample:
-                sample_seg = None
-                if seg is not None:
-                    sample_seg = seg[b]
-                ret_val = augment_mirroring(data[b], sample_seg, axes=self.axes)
-                data[b] = ret_val[0]
-                if seg is not None:
-                    seg[b] = ret_val[1]
-
-        data_dict[self.data_key] = data
-        if seg is not None:
-            data_dict[self.label_key] = seg
+        mask = np.random.uniform(size=len(data)) < self.p_per_sample
+        if np.any(mask):
+            if seg is None:
+                data[mask], _ = augment_mirroring_batched(data[mask], None, self.axes)
+            else:
+                data[mask], seg[mask] = augment_mirroring_batched(data[mask], seg[mask], self.axes)
+                data_dict[self.label_key] = seg
+            data_dict[self.data_key] = data
 
         return data_dict
 
@@ -303,14 +297,15 @@ class SpatialTransform(AbstractTransform):
                  do_scale=True, scale=(0.75, 1.25), border_mode_data='nearest', border_cval_data=0, order_data=3,
                  border_mode_seg='constant', border_cval_seg=0, order_seg=0, random_crop=True, data_key="data",
                  label_key="seg", p_el_per_sample=1, p_scale_per_sample=1, p_rot_per_sample=1,
-                 independent_scale_for_each_axis=False, p_rot_per_axis:float=1, p_independent_scale_per_axis: int=1):
+                 independent_scale_for_each_axis=False, p_rot_per_axis: float = 1,
+                 p_independent_scale_per_axis: int = 1):
         self.independent_scale_for_each_axis = independent_scale_for_each_axis
         self.p_rot_per_sample = p_rot_per_sample
         self.p_scale_per_sample = p_scale_per_sample
         self.p_el_per_sample = p_el_per_sample
         self.data_key = data_key
         self.label_key = label_key
-        self.patch_size = patch_size
+        self.patch_size = tuple(patch_size)
         self.patch_center_dist_from_border = patch_center_dist_from_border
         self.do_elastic_deform = do_elastic_deform
         self.alpha = alpha
@@ -332,14 +327,14 @@ class SpatialTransform(AbstractTransform):
         self.p_independent_scale_per_axis = p_independent_scale_per_axis
 
     def __call__(self, **data_dict):
-        data = data_dict.get(self.data_key)
+        data = data_dict[self.data_key]
         seg = data_dict.get(self.label_key)
 
         if self.patch_size is None:
-            if len(data.shape) == 4:
-                patch_size = (data.shape[2], data.shape[3])
-            elif len(data.shape) == 5:
-                patch_size = (data.shape[2], data.shape[3], data.shape[4])
+            if data.ndim == 4:
+                patch_size = data.shape[2:4]
+            elif data.ndim == 5:
+                patch_size = data.shape[2:5]
             else:
                 raise ValueError("only support 2D/3D batch data.")
         else:
@@ -357,7 +352,7 @@ class SpatialTransform(AbstractTransform):
                                   p_el_per_sample=self.p_el_per_sample, p_scale_per_sample=self.p_scale_per_sample,
                                   p_rot_per_sample=self.p_rot_per_sample,
                                   independent_scale_for_each_axis=self.independent_scale_for_each_axis,
-                                  p_rot_per_axis=self.p_rot_per_axis, 
+                                  p_rot_per_axis=self.p_rot_per_axis,
                                   p_independent_scale_per_axis=self.p_independent_scale_per_axis)
         data_dict[self.data_key] = ret_val[0]
         if seg is not None:
@@ -419,7 +414,8 @@ class SpatialTransform_2(AbstractTransform):
                  do_scale=True, scale=(0.75, 1.25), border_mode_data='nearest', border_cval_data=0, order_data=3,
                  border_mode_seg='constant', border_cval_seg=0, order_seg=0, random_crop=True, data_key="data",
                  label_key="seg", p_el_per_sample=1, p_scale_per_sample=1, p_rot_per_sample=1,
-                 independent_scale_for_each_axis=False, p_rot_per_axis:float=1, p_independent_scale_per_axis: float=1):
+                 independent_scale_for_each_axis=False, p_rot_per_axis: float = 1,
+                 p_independent_scale_per_axis: float = 1):
         self.p_rot_per_sample = p_rot_per_sample
         self.p_scale_per_sample = p_scale_per_sample
         self.p_el_per_sample = p_el_per_sample
@@ -451,9 +447,9 @@ class SpatialTransform_2(AbstractTransform):
         seg = data_dict.get(self.label_key)
 
         if self.patch_size is None:
-            if len(data.shape) == 4:
+            if data.ndim == 4:
                 patch_size = (data.shape[2], data.shape[3])
-            elif len(data.shape) == 5:
+            elif data.ndim == 5:
                 patch_size = (data.shape[2], data.shape[3], data.shape[4])
             else:
                 raise ValueError("only support 2D/3D batch data.")
@@ -471,9 +467,9 @@ class SpatialTransform_2(AbstractTransform):
                                     order_seg=self.order_seg, random_crop=self.random_crop,
                                     p_el_per_sample=self.p_el_per_sample, p_scale_per_sample=self.p_scale_per_sample,
                                     p_rot_per_sample=self.p_rot_per_sample,
-                                  independent_scale_for_each_axis=self.independent_scale_for_each_axis,
-                                  p_rot_per_axis=self.p_rot_per_axis,
-                                  p_independent_scale_per_axis=self.p_independent_scale_per_axis)
+                                    independent_scale_for_each_axis=self.independent_scale_for_each_axis,
+                                    p_rot_per_axis=self.p_rot_per_axis,
+                                    p_independent_scale_per_axis=self.p_independent_scale_per_axis)
 
         data_dict[self.data_key] = ret_val[0]
         if seg is not None:
@@ -526,6 +522,7 @@ class TransposeAxesTransform(AbstractTransform):
             data_dict[self.label_key] = seg
         return data_dict
 
+
 class AnatomyInformedTransform(AbstractTransform):
     """
     The data augmentation is presented at MICCAI 2023 in the proceedings of 'Anatomy-informed Data Augmentation for enhanced Prostate Cancer Detection'.
@@ -545,8 +542,9 @@ class AnatomyInformedTransform(AbstractTransform):
         `max_annotation_value`: the value that should be still relevant for the main task
         `replace_value`: segmentation values larger than the `max_annotation_value` will be replaced with
     """
+
     def __init__(self, dil_ranges, modalities, directions_of_trans, p_per_sample,
-                 spacing_ratio=0.3125/3.0, blur=32, anisotropy_safety= True,
+                 spacing_ratio=0.3125 / 3.0, blur=32, anisotropy_safety=True,
                  max_annotation_value=1, replace_value=0):
         self.dil_ranges = dil_ranges
         self.modalities = modalities
@@ -569,6 +567,7 @@ class AnatomyInformedTransform(AbstractTransform):
             self.dim = 3
 
         active_organs = []
+        # TODO: Optimize this
         for prob in self.p_per_sample:
             if np.random.uniform() < prob:
                 active_organs.append(1)
@@ -576,17 +575,18 @@ class AnatomyInformedTransform(AbstractTransform):
                 active_organs.append(0)
 
         for b in range(data_shape[0]):
-            data_dict['data'][b, :, :, :, :], data_dict['seg'][b, 0, :, :, :] = augment_anatomy_informed(data=data_dict['data'][b, :, :, :, :],
-                                                                                                         seg=data_dict['seg'][b, 0, :, :, :],
-                                                                                                         active_organs=active_organs,
-                                                                                                         dilation_ranges=self.dil_ranges,
-                                                                                                         directions_of_trans=self.directions_of_trans,
-                                                                                                         modalities=self.modalities,
-                                                                                                         spacing_ratio=self.spacing_ratio,
-                                                                                                         blur=self.blur,
-                                                                                                         anisotropy_safety=self.anisotropy_safety,
-                                                                                                         max_annotation_value=self.max_annotation_value,
-                                                                                                         replace_value=self.replace_value)
+            data_dict['data'][b, :, :, :, :], data_dict['seg'][b, 0, :, :, :] = augment_anatomy_informed(
+                data=data_dict['data'][b, :, :, :, :],
+                seg=data_dict['seg'][b, 0, :, :, :],
+                active_organs=active_organs,
+                dilation_ranges=self.dil_ranges,
+                directions_of_trans=self.directions_of_trans,
+                modalities=self.modalities,
+                spacing_ratio=self.spacing_ratio,
+                blur=self.blur,
+                anisotropy_safety=self.anisotropy_safety,
+                max_annotation_value=self.max_annotation_value,
+                replace_value=self.replace_value)
         return data_dict
 
 
@@ -670,9 +670,10 @@ class MisalignTransform(AbstractTransform):
         self.border_cval_seg = border_cval_seg
 
     def __call__(self, **data_dict):
-        data = data_dict.get(self.data_key)
+        data = data_dict[self.data_key]
         seg = data_dict.get(self.label_key)
 
+        # TODO
         if data.shape[1] < 2:
             raise ValueError("only support multi-modal images")
         else:

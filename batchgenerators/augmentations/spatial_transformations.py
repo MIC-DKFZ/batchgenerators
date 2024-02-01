@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from builtins import range
-
 import numpy as np
 from scipy.ndimage import map_coordinates
 from batchgenerators.augmentations.utils import create_zero_centered_coordinate_mesh, elastic_deform_coordinates, \
@@ -38,7 +36,7 @@ def augment_rot90(sample_data, sample_seg, num_rot=(1, 2, 3), axes=(0, 1, 2)):
     num_rot = np.random.choice(num_rot)
     axes = np.random.choice(axes, size=2, replace=False)
     axes.sort()
-    axes = [i + 1 for i in axes]
+    axes += 1
     sample_data = np.rot90(sample_data, num_rot, axes)
     if sample_seg is not None:
         sample_seg = np.rot90(sample_seg, num_rot, axes)
@@ -58,18 +56,18 @@ def augment_resize(sample_data, sample_seg, target_size, order=3, order_seg=1):
     np.ndarray (just like data). Must also be (c, x, y(, z))
     :return:
     """
-    dimensionality = len(sample_data.shape) - 1
+    dimensionality = sample_data.ndim - 1
     if not isinstance(target_size, (list, tuple)):
-        target_size_here = [target_size] * dimensionality
+        target_size_here = (target_size,) * dimensionality
     else:
         assert len(target_size) == dimensionality, "If you give a tuple/list as target size, make sure it has " \
                                                    "the same dimensionality as data!"
-        target_size_here = list(target_size)
+        target_size_here = tuple(target_size)
 
     sample_data = resize_multichannel_image(sample_data, target_size_here, order)
 
     if sample_seg is not None:
-        target_seg = np.ones([sample_seg.shape[0]] + target_size_here)
+        target_seg = np.ones((sample_seg.shape[0],) + target_size_here)
         for c in range(sample_seg.shape[0]):
             target_seg[c] = resize_segmentation(sample_seg[c], target_size_here, order_seg)
     else:
@@ -92,7 +90,7 @@ def augment_zoom(sample_data, sample_seg, zoom_factors, order=3, order_seg=1):
     :return:
     """
 
-    dimensionality = len(sample_data.shape) - 1
+    dimensionality = sample_data.ndim - 1
     shape = np.array(sample_data.shape[1:])
     if not isinstance(zoom_factors, (list, tuple)):
         zoom_factors_here = np.array([zoom_factors] * dimensionality)
@@ -100,25 +98,48 @@ def augment_zoom(sample_data, sample_seg, zoom_factors, order=3, order_seg=1):
         assert len(zoom_factors) == dimensionality, "If you give a tuple/list as target size, make sure it has " \
                                                     "the same dimensionality as data!"
         zoom_factors_here = np.array(zoom_factors)
-    target_shape_here = list(np.round(shape * zoom_factors_here).astype(int))
+    target_shape_here = tuple(np.rint(shape * zoom_factors_here).astype(int, copy=False))
 
     sample_data = resize_multichannel_image(sample_data, target_shape_here, order)
 
     if sample_seg is not None:
-        target_seg = np.ones([sample_seg.shape[0]] + target_shape_here)
-        for c in range(sample_seg.shape[0]):
-            target_seg[c] = resize_segmentation(sample_seg[c], target_shape_here, order_seg)
+        target_seg = np.array([
+            resize_segmentation(sample_seg[c], target_shape_here, order_seg) for c in range(sample_seg.shape[0])])
     else:
         target_seg = None
 
     return sample_data, target_seg
 
 
+def augment_mirroring_batched(sample_data, sample_seg=None, axes=(0, 1, 2)):
+    assert sample_data.ndim == 5 or sample_data.ndim == 4, \
+        "Invalid dimension for sample_data and sample_seg. sample_data and sample_seg should be either " \
+        "[batch, channels, x, y] or [batch, channels, x, y, z]"
+    size = len(sample_data)
+    has_sample_seg = sample_seg is not None
+    if 0 in axes:
+        mask = np.random.uniform(size=size) < 0.5
+        sample_data[mask] = np.flip(sample_data[mask], 2)
+        if has_sample_seg:
+            sample_seg[mask] = np.flip(sample_seg[mask], 2)
+    if 1 in axes:
+        mask = np.random.uniform(size=size) < 0.5
+        sample_data[mask] = np.flip(sample_data[mask], 3)
+        if has_sample_seg:
+            sample_seg[mask] = np.flip(sample_seg[mask], 3)
+    if 2 in axes and sample_data.ndim == 5:
+        mask = np.random.uniform(size=size) < 0.5
+        sample_data[mask] = np.flip(sample_data[mask], 4)
+        if has_sample_seg:
+            sample_seg[mask] = np.flip(sample_seg[mask], 4)
+    return sample_data, sample_seg
+
+
 def augment_mirroring(sample_data, sample_seg=None, axes=(0, 1, 2)):
-    if (len(sample_data.shape) != 3) and (len(sample_data.shape) != 4):
-        raise Exception(
-            "Invalid dimension for sample_data and sample_seg. sample_data and sample_seg should be either "
-            "[channels, x, y] or [channels, x, y, z]")
+    sample_data = np.expand_dims(sample_data, 0)
+    if sample_seg is not None:
+        sample_seg = np.expand_dims(sample_seg, 0)
+    return augment_mirroring_batched(sample_data, sample_seg, axes)
     if 0 in axes and np.random.uniform() < 0.5:
         sample_data[:, :] = sample_data[:, ::-1]
         if sample_seg is not None:
@@ -127,7 +148,7 @@ def augment_mirroring(sample_data, sample_seg=None, axes=(0, 1, 2)):
         sample_data[:, :, :] = sample_data[:, :, ::-1]
         if sample_seg is not None:
             sample_seg[:, :, :] = sample_seg[:, :, ::-1]
-    if 2 in axes and len(sample_data.shape) == 4:
+    if 2 in axes and sample_data.ndim == 4:
         if np.random.uniform() < 0.5:
             sample_data[:, :, :, :] = sample_data[:, :, :, ::-1]
             if sample_seg is not None:
@@ -196,20 +217,13 @@ def augment_spatial(data, seg, patch_size, patch_center_dist_from_border=30,
     dim = len(patch_size)
     seg_result = None
     if seg is not None:
-        if dim == 2:
-            seg_result = np.zeros((seg.shape[0], seg.shape[1], patch_size[0], patch_size[1]), dtype=np.float32)
-        else:
-            seg_result = np.zeros((seg.shape[0], seg.shape[1], patch_size[0], patch_size[1], patch_size[2]),
-                                  dtype=np.float32)
+        seg_result = np.zeros((seg.shape[0], seg.shape[1], *patch_size), dtype=np.float32)
 
-    if dim == 2:
-        data_result = np.zeros((data.shape[0], data.shape[1], patch_size[0], patch_size[1]), dtype=np.float32)
-    else:
-        data_result = np.zeros((data.shape[0], data.shape[1], patch_size[0], patch_size[1], patch_size[2]),
-                               dtype=np.float32)
+    data_result = np.zeros((data.shape[0], data.shape[1], *patch_size), dtype=np.float32)
 
     if not isinstance(patch_center_dist_from_border, (list, tuple, np.ndarray)):
-        patch_center_dist_from_border = dim * [patch_center_dist_from_border]
+        patch_center_dist_from_border = (patch_center_dist_from_border,) * dim
+    patch_center_dist_from_border = np.asarray(patch_center_dist_from_border)
 
     for sample_id in range(data.shape[0]):
         coords = create_zero_centered_coordinate_mesh(patch_size)
@@ -247,13 +261,14 @@ def augment_spatial(data, seg, patch_size, patch_center_dist_from_border=30,
         if do_scale and np.random.uniform() < p_scale_per_sample:
             if independent_scale_for_each_axis and np.random.uniform() < p_independent_scale_per_axis:
                 sc = []
+                scale_l = max(scale[0], 1)
                 for _ in range(dim):
-                    if np.random.random() < 0.5 and scale[0] < 1:
+                    if scale[0] < 1 and np.random.random() < 0.5:
                         sc.append(np.random.uniform(scale[0], 1))
                     else:
-                        sc.append(np.random.uniform(max(scale[0], 1), scale[1]))
+                        sc.append(np.random.uniform(scale_l, scale[1]))
             else:
-                if np.random.random() < 0.5 and scale[0] < 1:
+                if scale[0] < 1 and np.random.random() < 0.5:
                     sc = np.random.uniform(scale[0], 1)
                 else:
                     sc = np.random.uniform(max(scale[0], 1), scale[1])
@@ -263,13 +278,17 @@ def augment_spatial(data, seg, patch_size, patch_center_dist_from_border=30,
 
         # now find a nice center location 
         if modified_coords:
+            data_shape_here = np.array(data.shape[2:])
+            if random_crop:
+                ctr = np.random.uniform(patch_center_dist_from_border, data_shape_here - patch_center_dist_from_border)
+            else:
+                ctr = data_shape_here / 2. - 0.5
+
             for d in range(dim):
-                if random_crop:
-                    ctr = np.random.uniform(patch_center_dist_from_border[d],
-                                            data.shape[d + 2] - patch_center_dist_from_border[d])
-                else:
-                    ctr = data.shape[d + 2] / 2. - 0.5
-                coords[d] += ctr
+                coords[d] += ctr[d]
+            # vectorized version, seems a bit slower
+            # coords += reverse_broadcast(ctr, get_broadcast_axes(coords.ndim))
+
             for channel_id in range(data.shape[1]):
                 data_result[sample_id, channel_id] = interpolate_img(data[sample_id, channel_id], coords, order_data,
                                                                      border_mode_data, cval=border_cval_data)
@@ -284,7 +303,7 @@ def augment_spatial(data, seg, patch_size, patch_center_dist_from_border=30,
             else:
                 s = seg[sample_id:sample_id + 1]
             if random_crop:
-                margin = [patch_center_dist_from_border[d] - patch_size[d] // 2 for d in range(dim)]
+                margin = patch_center_dist_from_border - np.asarray(patch_size) // 2
                 d, s = random_crop_aug(data[sample_id:sample_id + 1], s, patch_size, margin)
             else:
                 d, s = center_crop_aug(data[sample_id:sample_id + 1], patch_size, s)
@@ -362,7 +381,7 @@ def augment_spatial_2(data, seg, patch_size, patch_center_dist_from_border=30,
             # one scale per case, scale is in percent of patch_size
             def_scale = np.random.uniform(deformation_scale[0], deformation_scale[1])
 
-            for d in range(len(data[sample_id].shape) - 1):
+            for d in range(data[sample_id].ndim - 1):
                 # transform relative def_scale in pixels
                 sigmas.append(def_scale * patch_size[d])
 
@@ -427,7 +446,7 @@ def augment_spatial_2(data, seg, patch_size, patch_center_dist_from_border=30,
         # now find a nice center location
         if modified_coords:
             # recenter coordinates
-            coords_mean = coords.mean(axis=tuple(range(1, len(coords.shape))), keepdims=True)
+            coords_mean = coords.mean(axis=tuple(range(1, coords.ndim)), keepdims=True)
             coords -= coords_mean
 
             for d in range(dim):
@@ -471,8 +490,8 @@ def augment_transpose_axes(data_sample, seg_sample, axes=(0, 1, 2)):
     """
     axes = list(np.array(axes) + 1)  # need list to allow shuffle; +1 to accomodate for color channel
 
-    assert np.max(axes) <= len(data_sample.shape), "axes must only contain valid axis ids"
-    static_axes = list(range(len(data_sample.shape)))
+    assert np.max(axes) <= data_sample.ndim, "axes must only contain valid axis ids"
+    static_axes = list(range(data_sample.ndim))
     for i in axes: static_axes[i] = -1
     np.random.shuffle(axes)
 
@@ -502,7 +521,7 @@ def augment_anatomy_informed(data, seg,
                 t, u, v = get_organ_gradient_field(seg == organ_idx + 2,
                                                    spacing_ratio=spacing_ratio,
                                                    blur=blur)
-
+                # TODO:
                 if directions_of_trans[organ_idx][0]:
                     coords[0, :, :, :] = coords[0, :, :, :] + t * dil_magnitude * spacing_ratio
                 if directions_of_trans[organ_idx][1]:

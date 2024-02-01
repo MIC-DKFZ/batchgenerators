@@ -57,6 +57,9 @@ class SimulateLowResolutionTransform(AbstractTransform):
         self.p_per_channel = p_per_channel
         self.p_per_sample = p_per_sample
         self.data_key = data_key
+        assert isinstance(zoom_range, (tuple, list, np.ndarray))
+        assert (len(zoom_range) == 2 or isinstance(zoom_range[0], (tuple, list, np.ndarray)) and
+                all(len(zoom) == 2 for zoom in zoom_range))
         self.zoom_range = zoom_range
         self.ignore_axes = ignore_axes
 

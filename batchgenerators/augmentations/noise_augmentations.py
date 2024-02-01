@@ -17,8 +17,7 @@ import random
 from typing import Tuple
 
 import numpy as np
-from batchgenerators.augmentations.utils import get_range_val, mask_random_squares
-from builtins import range
+from batchgenerators.augmentations.utils import mask_random_squares, uniform
 from scipy.ndimage import gaussian_filter
 
 
@@ -30,43 +29,55 @@ def augment_rician_noise(data_sample, noise_variance=(0, 0.1)):
     return data_sample
 
 
-def augment_gaussian_noise(data_sample: np.ndarray, noise_variance: Tuple[float, float] = (0, 0.1),
-                           p_per_channel: float = 1, per_channel: bool = False) -> np.ndarray:
+def setup_augment_gaussian_noise(noise_variance: Tuple[float, float], per_channel: bool, size: int):
     if not per_channel:
         variance = noise_variance[0] if noise_variance[0] == noise_variance[1] else \
             random.uniform(noise_variance[0], noise_variance[1])
+        variance = np.array((variance,) * size)
     else:
-        variance = None
-    for c in range(data_sample.shape[0]):
-        if np.random.uniform() < p_per_channel:
-            # lol good luck reading this
-            variance_here = variance if variance is not None else \
-                noise_variance[0] if noise_variance[0] == noise_variance[1] else \
-                    random.uniform(noise_variance[0], noise_variance[1])
-            # bug fixed: https://github.com/MIC-DKFZ/batchgenerators/issues/86
-            data_sample[c] = data_sample[c] + np.random.normal(0.0, variance_here, size=data_sample[c].shape)
+        variance = np.array((noise_variance[0],) * size) if noise_variance[0] == noise_variance[1] else \
+            np.random.uniform(noise_variance[0], noise_variance[1], size=size)
+    return variance
+
+
+def augment_gaussian_noise(data_sample: np.ndarray, noise_variance: Tuple[float, float] = (0, 0.1),
+                           p_per_channel: float = 1, per_channel: bool = False, batched: bool = False) -> np.ndarray:
+    mask = np.random.uniform(size=data_sample.shape[:2] if batched else data_sample.shape[0]) < p_per_channel
+    size = np.count_nonzero(mask)
+    if size:
+        variance = setup_augment_gaussian_noise(noise_variance, per_channel, size)
+        data_sample[mask] += np.random.normal(0.0, variance, data_sample[mask].T.shape).T
+
     return data_sample
 
 
 def augment_gaussian_blur(data_sample: np.ndarray, sigma_range: Tuple[float, float], per_channel: bool = True,
                           p_per_channel: float = 1, different_sigma_per_axis: bool = False,
                           p_isotropic: float = 0) -> np.ndarray:
+    # TODO: Vectorize per channel (gaussian_filter accepts axes)
     if not per_channel:
         # Godzilla Had a Stroke Trying to Read This and F***ing Died
         # https://i.kym-cdn.com/entries/icons/original/000/034/623/Untitled-3.png
-        sigma = get_range_val(sigma_range) if ((not different_sigma_per_axis) or
-                                               ((np.random.uniform() < p_isotropic) and
-                                                different_sigma_per_axis)) \
-            else [get_range_val(sigma_range) for _ in data_sample.shape[1:]]
+        # sigma = get_range_val(sigma_range) if ((not different_sigma_per_axis) or
+        #                                        ((np.random.uniform() < p_isotropic) and
+        #                                         different_sigma_per_axis)) \
+        #     else [get_range_val(sigma_range) for _ in data_sample.shape[1:]]
+
+        # Godzilla revived
+        if not different_sigma_per_axis or np.random.uniform() < p_isotropic:
+            sigma = uniform(sigma_range[0], sigma_range[1])
+        else:
+            sigma = [uniform(sigma_range[0], sigma_range[1]) for _ in data_sample.shape[1:]]
     else:
         sigma = None
     for c in range(data_sample.shape[0]):
         if np.random.uniform() <= p_per_channel:
             if per_channel:
-                sigma = get_range_val(sigma_range) if ((not different_sigma_per_axis) or
-                                                       ((np.random.uniform() < p_isotropic) and
-                                                        different_sigma_per_axis)) \
-                    else [get_range_val(sigma_range) for _ in data_sample.shape[1:]]
+                if not different_sigma_per_axis or np.random.uniform() < p_isotropic:
+                    sigma = uniform(sigma_range[0], sigma_range[1])
+                else:
+                    sigma = [uniform(sigma_range[0], sigma_range[1]) for _ in data_sample.shape[1:]]
+
             data_sample[c] = gaussian_filter(data_sample[c], sigma, order=0)
     return data_sample
 
@@ -74,8 +85,8 @@ def augment_gaussian_blur(data_sample: np.ndarray, sigma_range: Tuple[float, flo
 def augment_blank_square_noise(data_sample, square_size, n_squares, noise_val=(0, 0), channel_wise_n_val=False,
                                square_pos=None):
     # rnd_n_val = get_range_val(noise_val)
-    rnd_square_size = get_range_val(square_size)
-    rnd_n_squares = get_range_val(n_squares)
+    rnd_square_size = uniform(square_size[0], square_size[1])
+    rnd_n_squares = uniform(n_squares[0], n_squares[1])
 
     data_sample = mask_random_squares(data_sample, square_size=rnd_square_size, n_squares=rnd_n_squares,
                                       n_val=noise_val, channel_wise_n_val=channel_wise_n_val,
