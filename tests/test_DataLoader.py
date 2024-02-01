@@ -203,6 +203,7 @@ class TestDataLoader(unittest.TestCase):
         really_test_this = False
         if not really_test_this:
             print("This test takes too much time. Run me if you really want to test me.")
+            return
         data_list = [list(range(123)),
             list(range(1243)),
             list(range(1)),
