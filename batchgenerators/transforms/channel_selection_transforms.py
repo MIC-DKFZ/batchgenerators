@@ -15,6 +15,9 @@
 
 import numpy as np
 from warnings import warn
+
+import pandas as pd
+
 from batchgenerators.transforms.abstract_transforms import AbstractTransform
 
 
@@ -118,7 +121,7 @@ class SegChannelRandomSwapTransform(AbstractTransform):
             random_number = np.random.rand()
             if random_number < self.swap_probability:
                 seg[:, [self.axis1, self.axis2]] = seg[:, [self.axis2, self.axis1]]
-            data_dict[self.label_key] = seg
+                data_dict[self.label_key] = seg
         return data_dict
 
 
@@ -167,6 +170,7 @@ class SegLabelSelectionBinarizeTransform(AbstractTransform):
             self.label = [label]
         else:
             self.label = sorted(label)
+        self.label = set(self.label)
 
     def __call__(self, **data_dict):
         seg = data_dict.get(self.label_key)
@@ -175,7 +179,8 @@ class SegLabelSelectionBinarizeTransform(AbstractTransform):
             warn("You used SegLabelSelectionBinarizeTransform but there is no 'seg' key in your data_dict, returning "
                  "data_dict unmodified", Warning)
         else:
-            discard_labels = set(np.unique(seg)) - set(self.label) - set([0])
+
+            discard_labels = set(pd.unique(seg.reshape(-1))) - self.label - {0}
             for label in discard_labels:
                 seg[seg == label] = 0
             for label in self.label:

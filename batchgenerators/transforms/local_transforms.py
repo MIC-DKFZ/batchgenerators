@@ -61,8 +61,8 @@ class LocalTransform(ABC):
             kernel_image = kernel_2d
 
         # normalize to [0, 1]
-        kernel_image = kernel_image - kernel_image.min()
-        kernel_image = kernel_image / max(1e-8, kernel_image.max())
+        kernel_image -= kernel_image.min()
+        kernel_image /= max(1e-8, kernel_image.max())
         return kernel_image
 
     def _generate_multiple_kernel_image(self, img_shp: Tuple[int, ...], num_kernels: int) -> np.ndarray:
@@ -150,7 +150,7 @@ class BrightnessGradientAdditiveTransform(LocalTransform):
 
     def __call__(self, **data_dict):
         data = data_dict.get(self.data_key)
-        assert data is not None, "Could not find data key '%s'" % self.data_key
+        assert data is not None, f"Could not find data key '{self.data_key}'"
         b, c, *img_shape = data.shape
         for bi in range(b):
             if np.random.uniform() < self.p_per_sample:
@@ -167,7 +167,7 @@ class BrightnessGradientAdditiveTransform(LocalTransform):
                             # now rescale so that the maximum value of the kernel is max_strength
                             strength = sample_scalar(self.max_strength, data[bi, ci], kernel) if callable(
                                 self.max_strength) else strength
-                            kernel_scaled = np.copy(kernel) / mx * strength
+                            kernel_scaled = kernel / mx * strength
                             data[bi, ci] += kernel_scaled
                 else:
                     for ci in range(c):
@@ -177,7 +177,7 @@ class BrightnessGradientAdditiveTransform(LocalTransform):
                                 kernel -= kernel.mean()
                             mx = max(np.max(np.abs(kernel)), 1e-8)
                             strength = sample_scalar(self.max_strength, data[bi, ci], kernel)
-                            kernel = kernel / mx * strength
+                            kernel *= strength / mx
                             data[bi, ci] += kernel
         return data_dict
 
@@ -235,7 +235,7 @@ class LocalGammaTransform(LocalTransform):
 
     def __call__(self, **data_dict):
         data = data_dict.get(self.data_key)
-        assert data is not None, "Could not find data key '%s'" % self.data_key
+        assert data is not None, f"Could not find data key '{self.data_key}'"
         b, c, *img_shape = data.shape
         for bi in range(b):
             if np.random.uniform() < self.p_per_sample:
@@ -255,14 +255,15 @@ class LocalGammaTransform(LocalTransform):
     def _apply_gamma_gradient(self, img: np.ndarray, kernel: np.ndarray) -> np.ndarray:
         # store keep original image range
         mn, mx = img.min(), img.max()
+        rng = mx - mn
 
         # rescale tp [0, 1]
-        img = (img - mn) / (max(mx - mn, 1e-8))
+        img = (img - mn) / (max(rng, 1e-8))
 
         gamma = sample_scalar(self.gamma)
         img_modified = np.power(img, gamma)
 
-        return self.run_interpolation(img, img_modified, kernel) * (mx - mn) + mn
+        return self.run_interpolation(img, img_modified, kernel) * rng + mn
 
 
 class LocalSmoothingTransform(LocalTransform):
@@ -301,7 +302,7 @@ class LocalSmoothingTransform(LocalTransform):
 
     def __call__(self, **data_dict):
         data = data_dict.get(self.data_key)
-        assert data is not None, "Could not find data key '%s'" % self.data_key
+        assert data is not None, f"Could not find data key '{self.data_key}'"
         b, c, *img_shape = data.shape
         for bi in range(b):
             if np.random.uniform() < self.p_per_sample:
@@ -323,7 +324,7 @@ class LocalSmoothingTransform(LocalTransform):
         kernel = np.copy(kernel)
 
         smoothing = sample_scalar(self.smoothing_strength)
-        assert 0 <= smoothing <= 1, 'smoothing_strength must be between 0 and 1, is %f' % smoothing
+        assert 0 <= smoothing <= 1, f'smoothing_strength must be between 0 and 1, is {smoothing}'
 
         # prepare kernel by rescaling it to gamma_range
         # kernel is already [0, 1]
@@ -353,7 +354,7 @@ class LocalContrastTransform(LocalTransform):
 
     def __call__(self, **data_dict):
         data = data_dict.get(self.data_key)
-        assert data is not None, "Could not find data key '%s'" % self.data_key
+        assert data is not None, f"Could not find data key '{self.data_key}'"
         b, c, *img_shape = data.shape
         for bi in range(b):
             if np.random.uniform() < self.p_per_sample:

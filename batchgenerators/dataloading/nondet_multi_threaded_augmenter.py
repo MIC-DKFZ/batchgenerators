@@ -17,7 +17,6 @@ import traceback
 from copy import deepcopy
 from typing import List, Union
 import threading
-from builtins import range
 from multiprocessing import Process
 from multiprocessing import Queue
 from queue import Queue as thrQueue
@@ -68,7 +67,7 @@ def producer(queue: Queue, data_loader, transform, thread_id: int, seed,
             return
 
         except Exception as e:
-            print("Exception in background worker %d:\n" % thread_id, e)
+            print(f"Exception in background worker {thread_id}:\n", e)
             traceback.print_exc()
             abort_event.set()
             return

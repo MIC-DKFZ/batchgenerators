@@ -17,7 +17,7 @@ import unittest
 
 import numpy as np
 from batchgenerators.augmentations.normalizations import range_normalization, zero_mean_unit_variance_normalization, \
-    cut_off_outliers
+    cut_off_outliers, mean_std_normalization
 
 
 class TestNormalization(unittest.TestCase):
@@ -229,6 +229,33 @@ class TestNormalization(unittest.TestCase):
             self.assertAlmostEqual(data_normalized[b].max(), 1.0, msg="Upper outlier not removed.")
 
         print('Test test_cut_off_outliers_whole_image. [START]')
+
+    def test_mean_std_normalization_per_channel(self):
+        print('Test test_mean_std_normalization_per_channel. [START]')
+        data = np.random.random((32, 4, 64, 56, 48))
+
+        mean = [np.mean(data[:, i]) for i in range(4)]
+        std = [np.std(data[:, i]) for i in range(4)]
+        data_normalized = mean_std_normalization(data, mean, std, per_channel=True)
+
+        for i in range(4):
+            self.assertAlmostEqual(data_normalized[:, i].mean(), 0.0)
+            self.assertAlmostEqual(data_normalized[:, i].std(), 1.0)
+
+        print('Test test_mean_std_normalization_per_channel. [DONE]')
+
+    def test_mean_std_normalization_whole_image(self):
+        print('Test test_mean_std_normalization_whole_image. [START]')
+        data = np.random.random((32, 4, 64, 56, 48))
+
+        mean = np.mean(data)
+        std = np.std(data)
+        data_normalized = mean_std_normalization(data, mean, std, per_channel=False)
+
+        self.assertAlmostEqual(data_normalized.mean(), 0.0)
+        self.assertAlmostEqual(data_normalized.std(), 1.0)
+
+        print('Test test_mean_std_normalization_whole_image. [DONE]')
 
 
 if __name__ == '__main__':

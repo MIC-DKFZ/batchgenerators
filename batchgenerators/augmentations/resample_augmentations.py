@@ -13,9 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from builtins import range
 import numpy as np
-import random
 from skimage.transform import resize
 from batchgenerators.augmentations.utils import uniform
 
@@ -50,9 +48,6 @@ def augment_linear_downsampling_scipy(data_sample, zoom_range=(0.5, 1), per_chan
         ignore_axes: tuple/list
 
     '''
-    if not isinstance(zoom_range, (list, tuple, np.ndarray)):
-        zoom_range = [zoom_range]
-
     shp = np.array(data_sample.shape[1:])
     dim = len(shp)
 
@@ -63,14 +58,14 @@ def augment_linear_downsampling_scipy(data_sample, zoom_range=(0.5, 1), per_chan
         else:
             zoom = uniform(zoom_range[0], zoom_range[1])
 
-        target_shape = np.round(shp * zoom).astype(int)
+        target_shape = np.rint(shp * zoom).astype(int)
 
         if ignore_axes is not None:
             for i in ignore_axes:
                 target_shape[i] = shp[i]
 
     if channels is None:
-        channels = list(range(data_sample.shape[0]))
+        channels = range(data_sample.shape[0])
 
     for c in channels:
         if np.random.uniform() < p_per_channel:
@@ -81,15 +76,14 @@ def augment_linear_downsampling_scipy(data_sample, zoom_range=(0.5, 1), per_chan
                 else:
                     zoom = uniform(zoom_range[0], zoom_range[1])
 
-                target_shape = np.round(shp * zoom).astype(int)
+                target_shape = np.rint(shp * zoom).astype(int)
                 if ignore_axes is not None:
                     for i in ignore_axes:
                         target_shape[i] = shp[i]
 
-            downsampled = resize(data_sample[c].astype(float), target_shape, order=order_downsample, mode='edge',
-                                 anti_aliasing=False)
-            data_sample[c] = resize(downsampled, shp, order=order_upsample, mode='edge',
-                                    anti_aliasing=False)
+            downsampled = resize(data_sample[c].astype(float, copy=False), target_shape, order=order_downsample,
+                                 mode='edge', anti_aliasing=False)
+            data_sample[c] = resize(downsampled, shp, order=order_upsample, mode='edge', anti_aliasing=False)
 
     return data_sample
 

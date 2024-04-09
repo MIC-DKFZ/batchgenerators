@@ -128,7 +128,7 @@ class PadTransform(AbstractTransform):
         data = data_dict.get(self.data_key)
         seg = data_dict.get(self.label_key)
 
-        assert len(self.new_size) + 2 == len(data.shape), "new size must be a tuple/list/np.ndarray with shape " \
+        assert len(self.new_size) + 2 == data.ndim, "new size must be a tuple/list/np.ndarray with shape " \
                                                     "(x, y(, z))"
         data, seg = pad_nd_image_and_seg(data, seg, self.new_size, None,
                                          np_pad_kwargs_data=self.np_pad_kwargs_data,
@@ -180,8 +180,8 @@ class RandomShiftTransform(AbstractTransform):
                     for c in range(workon.shape[1]):
                         if np.random.uniform(0, 1) < self.p_per_channel:
                             shift_here = []
-                            for d in range(len(workon.shape) - 2):
-                                shift_here.append(int(np.round(np.random.normal(
+                            for d in range(workon.ndim - 2):
+                                shift_here.append(int(np.rint(np.random.normal(
                                     self.shift_mu[d] if isinstance(self.shift_mu, (list, tuple)) else self.shift_mu,
                                     self.shift_sigma[d] if isinstance(self.shift_sigma,
                                                                       (list, tuple)) else self.shift_sigma,

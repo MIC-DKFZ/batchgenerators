@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Union, Tuple, Callable
+from typing import Tuple
 
 import numpy as np
 
@@ -24,7 +24,7 @@ from batchgenerators.transforms.abstract_transforms import AbstractTransform
 
 class ContrastAugmentationTransform(AbstractTransform):
     def __init__(self,
-                 contrast_range: Union[Tuple[float, float], Callable[[], float]] = (0.75, 1.25),
+                 contrast_range: Tuple[float, float] = (0.75, 1.25),
                  preserve_range: bool = True,
                  per_channel: bool = True,
                  data_key: str = "data",
@@ -36,7 +36,6 @@ class ContrastAugmentationTransform(AbstractTransform):
             (float, float): range from which to sample a random contrast that is applied to the data. If
                             one value is smaller and one is larger than 1, half of the contrast modifiers will be >1
                             and the other half <1 (in the inverval that was specified)
-            callable      : must be contrast_range() -> float
         :param preserve_range: if True then the intensity values after contrast augmentation will be cropped to min and
         max values of the data before augmentation.
         :param per_channel: whether to use the same contrast modifier for all color channels or a separate one for each
@@ -52,13 +51,14 @@ class ContrastAugmentationTransform(AbstractTransform):
         self.p_per_channel = p_per_channel
 
     def __call__(self, **data_dict):
-        for b in range(len(data_dict[self.data_key])):
-            if np.random.uniform() < self.p_per_sample:
-                data_dict[self.data_key][b] = augment_contrast(data_dict[self.data_key][b],
-                                                               contrast_range=self.contrast_range,
-                                                               preserve_range=self.preserve_range,
-                                                               per_channel=self.per_channel,
-                                                               p_per_channel=self.p_per_channel)
+        mask = np.random.uniform(size=len(data_dict[self.data_key])) < self.p_per_sample
+        if np.any(mask):
+            data_dict[self.data_key][mask] = augment_contrast(data_dict[self.data_key][mask],
+                                                              contrast_range=self.contrast_range,
+                                                              preserve_range=self.preserve_range,
+                                                              per_channel=self.per_channel,
+                                                              p_per_channel=self.p_per_channel,
+                                                              batched=True)
         return data_dict
 
 
@@ -121,17 +121,19 @@ class BrightnessMultiplicativeTransform(AbstractTransform):
         self.per_channel = per_channel
 
     def __call__(self, **data_dict):
-        for b in range(len(data_dict[self.data_key])):
-            if np.random.uniform() < self.p_per_sample:
-                data_dict[self.data_key][b] = augment_brightness_multiplicative(data_dict[self.data_key][b],
-                                                                                self.multiplier_range,
-                                                                                self.per_channel)
+        data = data_dict[self.data_key]
+        mask = np.random.uniform(size=len(data)) < self.p_per_sample
+        if np.any(mask):
+            data_dict[self.data_key][mask] = augment_brightness_multiplicative(data[mask],
+                                                                               self.multiplier_range,
+                                                                               self.per_channel,
+                                                                               batched=True)
         return data_dict
 
 
 class GammaTransform(AbstractTransform):
     def __init__(self, gamma_range=(0.5, 2), invert_image=False, per_channel=False, data_key="data",
-                 retain_stats: Union[bool, Callable[[], bool]] = False, p_per_sample=1):
+                 retain_stats: bool = False, p_per_sample=1):
         """
         Augments by changing 'gamma' of the image (same as gamma correction in photos or computer monitors
 
@@ -143,8 +145,7 @@ class GammaTransform(AbstractTransform):
         :param per_channel:
         :param data_key:
         :param retain_stats: Gamma transformation will alter the mean and std of the data in the patch. If retain_stats=True,
-        the data will be transformed to match the mean and standard deviation before gamma augmentation. retain_stats
-        can also be callable (signature retain_stats() -> bool)
+        the data will be transformed to match the mean and standard deviation before gamma augmentation.
         :param p_per_sample:
         """
         self.p_per_sample = p_per_sample
@@ -155,6 +156,7 @@ class GammaTransform(AbstractTransform):
         self.invert_image = invert_image
 
     def __call__(self, **data_dict):
+        # TODO: augment_gamma can be vectorized twice (per channel and per sample)
         for b in range(len(data_dict[self.data_key])):
             if np.random.uniform() < self.p_per_sample:
                 data_dict[self.data_key][b] = augment_gamma(data_dict[self.data_key][b], self.gamma_range,
@@ -203,5 +205,5 @@ class ClipValueRange(AbstractTransform):
         self.max = max
 
     def __call__(self, **data_dict):
-        data_dict[self.data_key] = np.clip(data_dict[self.data_key], self.min, self.max)
+        np.clip(data_dict[self.data_key], self.min, self.max, out=data_dict[self.data_key])
         return data_dict

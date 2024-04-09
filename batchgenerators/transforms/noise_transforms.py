@@ -20,7 +20,6 @@ from batchgenerators.transforms.abstract_transforms import AbstractTransform
 import numpy as np
 from typing import Union, Tuple
 
-from scipy import ndimage
 from scipy.ndimage import median_filter
 from scipy.signal import convolve
 
@@ -71,10 +70,10 @@ class GaussianNoiseTransform(AbstractTransform):
         self.per_channel = per_channel
 
     def __call__(self, **data_dict):
-        for b in range(len(data_dict[self.data_key])):
-            if np.random.uniform() < self.p_per_sample:
-                data_dict[self.data_key][b] = augment_gaussian_noise(data_dict[self.data_key][b], self.noise_variance,
-                                                                     self.p_per_channel, self.per_channel)
+        mask = np.random.uniform(size=len(data_dict[self.data_key])) < self.p_per_sample
+        if np.any(mask):
+            data_dict[self.data_key][mask] = augment_gaussian_noise(data_dict[self.data_key][mask], self.noise_variance,
+                                                                    self.p_per_channel, self.per_channel, batched=True)
         return data_dict
 
 
@@ -102,6 +101,7 @@ class GaussianBlurTransform(AbstractTransform):
         self.p_isotropic = p_isotropic
 
     def __call__(self, **data_dict):
+        # TODO: Do batched gaussian blur
         for b in range(len(data_dict[self.data_key])):
             if np.random.uniform() < self.p_per_sample:
                 data_dict[self.data_key][b] = augment_gaussian_blur(data_dict[self.data_key][b], self.blur_sigma,
@@ -138,6 +138,7 @@ class ColorFunctionExtractor:
         self.rectangle_value = rectangle_value
 
     def __call__(self, x):
+        # TODO: Change this
         if np.isscalar(self.rectangle_value):
             return self.rectangle_value
         elif callable(self.rectangle_value):
@@ -146,6 +147,8 @@ class ColorFunctionExtractor:
             return np.random.uniform(*self.rectangle_value)
         else:
             raise RuntimeError("unrecognized format for rectangle_value")
+
+
 
 
 class BlankRectangleTransform(AbstractTransform):
@@ -319,7 +322,7 @@ class SharpeningTransform(AbstractTransform):
                     mn, mx = data[b].min(), data[b].max()
                     strength_here = self.strength if isinstance(self.strength, float) else np.random.uniform(
                         *self.strength)
-                    if len(data.shape) == 4:
+                    if data.ndim == 4:
                         filter_here = self.filter_2d * strength_here
                         filter_here[1, 1] += 1
                     else:
@@ -331,14 +334,14 @@ class SharpeningTransform(AbstractTransform):
                                                   filter_here,
                                                   mode='same'
                                                   )
-                            data[b, c] = np.clip(data[b, c], mn, mx)
+                            np.clip(data[b, c], mn, mx, out=data[b, c])
                 else:
                     for c in range(data.shape[1]):
                         if np.random.uniform() < self.p_per_channel:
                             mn, mx = data[b, c].min(), data[b, c].max()
                             strength_here = self.strength if isinstance(self.strength, float) else np.random.uniform(
                                 *self.strength)
-                            if len(data.shape) == 4:
+                            if data.ndim == 4:
                                 filter_here = self.filter_2d * strength_here
                                 filter_here[1, 1] += 1
                             else:
@@ -348,7 +351,7 @@ class SharpeningTransform(AbstractTransform):
                                                   filter_here,
                                                   mode='same'
                                                   )
-                            data[b, c] = np.clip(data[b, c], mn, mx)
+                            np.clip(data[b, c], mn, mx, out=data[b, c])
         return data_dict
 
 
