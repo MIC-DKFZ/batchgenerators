@@ -16,6 +16,7 @@ setup(name='batchgenerators',
             "scikit-image",
             "scikit-learn",
             "future",
+            "pandas",
             "unittest2",
             "threadpoolctl"
       ],

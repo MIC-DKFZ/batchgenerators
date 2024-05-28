@@ -21,6 +21,7 @@ from scipy.ndimage.filters import gaussian_filter, gaussian_gradient_magnitude
 from scipy.ndimage.morphology import grey_dilation
 from skimage.transform import resize
 from scipy.ndimage.measurements import label as lb
+import pandas as pd
 
 
 def generate_elastic_transform_coordinates(shape, alpha, sigma):
@@ -591,13 +592,13 @@ def resize_segmentation(segmentation, new_shape, order=3):
     :return:
     '''
     tpe = segmentation.dtype
-    unique_labels = np.unique(segmentation)
     assert len(segmentation.shape) == len(new_shape), "new shape must have same dimensionality as segmentation"
     if order == 0:
         return resize(segmentation.astype(float), new_shape, order, mode="edge", clip=True, anti_aliasing=False).astype(tpe)
     else:
         reshaped = np.zeros(new_shape, dtype=segmentation.dtype)
 
+        unique_labels = np.sort(pd.unique(segmentation.ravel()))
         for i, c in enumerate(unique_labels):
             mask = segmentation == c
             reshaped_multihot = resize(mask.astype(float), new_shape, order, mode="edge", clip=True, anti_aliasing=False)
