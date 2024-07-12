@@ -22,11 +22,12 @@ from multiprocessing import Process
 from multiprocessing import Queue
 from queue import Queue as thrQueue
 import numpy as np
-import logging
+from logging import DEBUG, INFO
 from multiprocessing import Event
 from time import sleep, time
 
 from batchgenerators.dataloading.data_loader import DataLoader
+from batchgenerators.utilities.logger import log
 from threadpoolctl import threadpool_limits
 
 try:
@@ -87,7 +88,7 @@ def results_loop(in_queue: Queue, out_queue: thrQueue, abort_event: Event,
     do_pin_memory = torch is not None and pin_memory and gpu is not None and torch.cuda.is_available()
 
     if do_pin_memory:
-        print('using pin_memory on device', gpu)
+        log(INFO, f'using pin_memory on device{gpu}')
         torch.cuda.set_device(gpu)
 
     item = None
@@ -204,7 +205,7 @@ class NonDetMultiThreadedAugmenter(object):
             self.results_loop_queue = thrQueue(self.num_cached)
             self.abort_event = Event()
 
-            logging.debug("starting workers")
+            log(DEBUG, "starting workers")
             if isinstance(self.generator, DataLoader):
                 self.generator.was_initialized = False
 
@@ -237,7 +238,7 @@ class NonDetMultiThreadedAugmenter(object):
 
             self.initialized = True
         else:
-            logging.debug("MultiThreadedGenerator Warning: start() has been called but workers are already running")
+            log(DEBUG, "MultiThreadedGenerator Warning: start() has been called but workers are already running")
 
     def _finish(self):
         if self.initialized:
@@ -255,7 +256,7 @@ class NonDetMultiThreadedAugmenter(object):
         self._start()
 
     def __del__(self):
-        logging.debug("MultiThreadedGenerator: destructor was called")
+        log(DEBUG, "MultiThreadedGenerator: destructor was called")
         self._finish()
 
 
