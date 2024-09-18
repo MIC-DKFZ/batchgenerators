@@ -23,6 +23,7 @@ from multiprocessing import Queue
 from queue import Queue as thrQueue
 import numpy as np
 import logging
+import signal
 from multiprocessing import Event
 from time import sleep, time
 
@@ -37,6 +38,9 @@ except ImportError:
 
 def producer(queue: Queue, data_loader, transform, thread_id: int, seed,
              abort_event: Event, wait_time: float = 0.02):
+    # Restore default SIGTERM handler to terminate the process
+    signal.signal(signal.SIGTERM, signal.SIG_DFL)
+
     # the producer will set the abort event if something happens
     with threadpool_limits(1, None):
         np.random.seed(seed)
