@@ -16,49 +16,68 @@
 import os
 import pickle
 import json
-from typing import List, Union
+from typing import List, Union, Optional
 
 
-def subdirs(folder: str, join: bool = True, prefix: Union[List[str], str] = None,
-            suffix: Union[List[str], str] = None, sort: bool = True) -> List[str]:
-    if join:
-        l = os.path.join
-    else:
-        l = lambda x, y: y
+def subdirs(folder: str, join: bool = True, prefix: Optional[str] = None, suffix: Optional[str] = None, sort: bool = True) -> List[str]:
+    """
+    Returns a list of subdirectories in a given folder, optionally filtering by prefix and suffix,
+    and optionally sorting the results. Uses os.scandir for efficient directory traversal.
 
-    if prefix is not None and isinstance(prefix, str):
-        prefix = [prefix]
-    if suffix is not None and isinstance(suffix, str):
-        suffix = [suffix]
+    Parameters:
+    - folder: Path to the folder to list subdirectories from.
+    - join: Whether to return full paths to subdirectories (if True) or just directory names (if False).
+    - prefix: Only include subdirectories that start with this prefix (if provided).
+    - suffix: Only include subdirectories that end with this suffix (if provided).
+    - sort: Whether to sort the list of subdirectories alphabetically.
 
-    res = [l(folder, i) for i in os.listdir(folder) if os.path.isdir(os.path.join(folder, i))
-           and (prefix is None or any([i.startswith(j) for j in prefix]))
-           and (suffix is None or any([i.endswith(j) for j in suffix]))]
-
-    if sort:
-        res.sort()
-    return res
-
-
-def subfiles(folder: str, join: bool = True, prefix: Union[List[str], str] = None,
-             suffix: Union[List[str], str] = None, sort: bool = True) -> List[str]:
-    if join:
-        l = os.path.join
-    else:
-        l = lambda x, y: y
-
-    if prefix is not None and isinstance(prefix, str):
-        prefix = [prefix]
-    if suffix is not None and isinstance(suffix, str):
-        suffix = [suffix]
-
-    res = [l(folder, i) for i in os.listdir(folder) if os.path.isfile(os.path.join(folder, i))
-           and (prefix is None or any([i.startswith(j) for j in prefix]))
-           and (suffix is None or any([i.endswith(j) for j in suffix]))]
+    Returns:
+    - List of subdirectory paths (or names) meeting the specified criteria.
+    """
+    subdirectories = []
+    with os.scandir(folder) as entries:
+        for entry in entries:
+            if entry.is_dir() and \
+               (prefix is None or entry.name.startswith(prefix)) and \
+               (suffix is None or entry.name.endswith(suffix)):
+                dir_path = entry.path if join else entry.name
+                subdirectories.append(dir_path)
 
     if sort:
-        res.sort()
-    return res
+        subdirectories.sort()
+
+    return subdirectories
+
+
+def subfiles(folder: str, join: bool = True, prefix: Optional[str] = None, suffix: Optional[str] = None, sort: bool = True) -> List[str]:
+    """
+    Returns a list of files in a given folder, optionally filtering by prefix and suffix,
+    and optionally sorting the results. Uses os.scandir for efficient directory traversal,
+    making it suitable for network drives.
+
+    Parameters:
+    - folder: Path to the folder to list files from.
+    - join: Whether to return full file paths (if True) or just file names (if False).
+    - prefix: Only include files that start with this prefix (if provided).
+    - suffix: Only include files that end with this suffix (if provided).
+    - sort: Whether to sort the list of files alphabetically.
+
+    Returns:
+    - List of file paths (or names) meeting the specified criteria.
+    """
+    files = []
+    with os.scandir(folder) as entries:
+        for entry in entries:
+            if entry.is_file() and \
+               (prefix is None or entry.name.startswith(prefix)) and \
+               (suffix is None or entry.name.endswith(suffix)):
+                file_path = entry.path if join else entry.name
+                files.append(file_path)
+
+    if sort:
+        files.sort()
+
+    return files
 
 
 def nifti_files(folder: str, join: bool = True, sort: bool = True) -> List[str]:
