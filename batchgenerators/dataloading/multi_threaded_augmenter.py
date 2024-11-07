@@ -20,10 +20,11 @@ from multiprocessing import Process, Queue
 from queue import Queue as thrQueue
 import numpy as np
 import sys
-import logging
+from logging import INFO, DEBUG
 from multiprocessing import Event
 from time import sleep, time
 from threadpoolctl import threadpool_limits
+from batchgenerators.utilities.logger import log
 
 try:
     import torch
@@ -72,7 +73,7 @@ def results_loop(in_queues: List[Queue], out_queue: thrQueue, abort_event: Event
     do_pin_memory = torch is not None and pin_memory and gpu is not None and torch.cuda.is_available()
 
     if do_pin_memory:
-        print('using pin_memory on device', gpu)
+        log(INFO, f'using pin_memory on device {gpu}')
         torch.cuda.set_device(gpu)
 
     item = None
@@ -208,7 +209,7 @@ class MultiThreadedAugmenter(object):
                 if self._end_ctr == self.num_processes:
                     self._end_ctr = 0
                     self._queue_ctr = 0
-                    logging.debug("MultiThreadedGenerator: finished data generation")
+                    log(DEBUG, "MultiThreadedGenerator: finished data generation")
                     raise StopIteration
 
                 item = self.__get_next_item()
@@ -216,7 +217,7 @@ class MultiThreadedAugmenter(object):
             return item
 
         except KeyboardInterrupt:
-            logging.error("MultiThreadedGenerator: caught exception: {}".format(sys.exc_info()))
+            log(DEBUG, "MultiThreadedGenerator: caught exception: {}".format(sys.exc_info()))
             self.abort_event.set()
             self._finish()
             raise KeyboardInterrupt
@@ -226,7 +227,7 @@ class MultiThreadedAugmenter(object):
             self._finish()
             self.abort_event.clear()
 
-            logging.debug("starting workers")
+            log(DEBUG, "starting workers")
             self._queue_ctr = 0
             self._end_ctr = 0
 
@@ -258,7 +259,7 @@ class MultiThreadedAugmenter(object):
 
             self.was_initialized = True
         else:
-            logging.debug("MultiThreadedGenerator Warning: start() has been called but it has already been "
+            log(DEBUG, "MultiThreadedGenerator Warning: start() has been called but it has already been "
                           "initialized previously")
 
     def _finish(self, timeout=10):
@@ -269,7 +270,7 @@ class MultiThreadedAugmenter(object):
             sleep(0.2)
 
         if len(self._processes) != 0:
-            logging.debug("MultiThreadedGenerator: shutting down workers...")
+            log(DEBUG, "MultiThreadedGenerator: shutting down workers...")
             [i.terminate() for i in self._processes]
 
             for i, p in enumerate(self._processes):
@@ -290,5 +291,5 @@ class MultiThreadedAugmenter(object):
         self._start()
 
     def __del__(self):
-        logging.debug("MultiThreadedGenerator: destructor was called")
+        log(DEBUG, "MultiThreadedGenerator: destructor was called")
         self._finish()
