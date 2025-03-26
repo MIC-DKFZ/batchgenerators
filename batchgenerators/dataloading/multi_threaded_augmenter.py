@@ -21,6 +21,7 @@ from queue import Queue as thrQueue
 import numpy as np
 import sys
 import logging
+import signal
 from multiprocessing import Event
 from time import sleep, time
 from threadpoolctl import threadpool_limits
@@ -32,6 +33,9 @@ except ImportError:
 
 
 def producer(queue, data_loader, transform, thread_id, seed, abort_event, wait_time: float = 0.02):
+    # Restore default SIGTERM handler to terminate the process
+    signal.signal(signal.SIGTERM, signal.SIG_DFL)
+    
     np.random.seed(seed)
     data_loader.set_thread_id(thread_id)
     item = None
