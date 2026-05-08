@@ -12,7 +12,7 @@ setup(name='batchgenerators',
       install_requires=[
             "pillow>=7.1.2",
             "numpy>=1.10.2",
-            "scipy",
+            "scipy>=1.0.0",
             "scikit-image",
             "scikit-learn",
             "future",
