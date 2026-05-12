@@ -25,8 +25,8 @@ class TestAugmentResample(unittest.TestCase):
         self.data_3D = np.random.random((2, 64, 56, 48))
         self.data_2D = np.random.random((2, 64, 56))
 
-        self.data_3D_unique = np.reshape(range(2 * 64 * 56 * 48), newshape=(2, 64, 56, 48))
-        self.data_2D_unique = np.reshape(range(2 * 64 * 56), newshape=(2, 64, 56))
+        self.data_3D_unique = np.reshape(range(2 * 64 * 56 * 48), shape=(2, 64, 56, 48))
+        self.data_2D_unique = np.reshape(range(2 * 64 * 56), shape=(2, 64, 56))
 
         self.d_3D = augment_linear_downsampling_scipy(np.copy(self.data_3D), zoom_range=[0.5, 1.5], per_channel=False)
         self.d_2D = augment_linear_downsampling_scipy(np.copy(self.data_2D), zoom_range=[0.5, 1.5], per_channel=False)

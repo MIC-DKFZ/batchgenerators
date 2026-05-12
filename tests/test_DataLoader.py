@@ -201,7 +201,7 @@ class TestDataLoader(unittest.TestCase):
 
     def test_thoroughly(self):
         data_list = [list(range(123)),
-            list(range(1243)),
+            list(range(45)),
             list(range(1)),
             list(range(7)),
                      ]

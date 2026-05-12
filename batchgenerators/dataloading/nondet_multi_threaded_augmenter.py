@@ -20,7 +20,7 @@ import threading
 from builtins import range
 from multiprocessing import Process
 from multiprocessing import Queue
-from queue import Queue as thrQueue
+from queue import Queue as thrQueue, Full
 import numpy as np
 import logging
 from multiprocessing import Event
@@ -36,7 +36,7 @@ except ImportError:
 
 
 def producer(queue: Queue, data_loader, transform, thread_id: int, seed,
-             abort_event: Event, wait_time: float = 0.02):
+             abort_event: Event, pause_event=None, wait_time: float = 0.02):
     if torch is not None:
         torch.set_num_threads(1)
         if seed is not None:
@@ -50,24 +50,26 @@ def producer(queue: Queue, data_loader, transform, thread_id: int, seed,
         item = None
 
         try:
-            while True:
+            while not abort_event.is_set():
+                # When paused, stop producing and stop putting. This is the
+                # handshake _finish() uses to drain queues safely.
+                if pause_event is not None and pause_event.is_set():
+                    sleep(wait_time)
+                    continue
+
+                if item is None:
+                    item = next(data_loader)
+                    if transform is not None:
+                        item = transform(**item)
 
                 if abort_event.is_set():
                     return
-                else:
-                    if item is None:
-                        item = next(data_loader)
-                        if transform is not None:
-                            item = transform(**item)
 
-                    if abort_event.is_set():
-                        return
-
-                    if not queue.full():
-                        queue.put(item)
-                        item = None
-                    else:
-                        sleep(wait_time)
+                try:
+                    queue.put(item, timeout=wait_time)
+                    item = None
+                except Full:
+                    pass  # loop; abort/pause re-checked at top
 
         except KeyboardInterrupt:
             abort_event.set()
@@ -103,8 +105,10 @@ def results_loop(in_queue: Queue, out_queue: thrQueue, abort_event: Event,
             if abort_event.is_set():
                 return
 
-            # check if all workers are still alive
-            if not all([i.is_alive() for i in worker_list]):
+            # Check workers, but skip the check once a graceful shutdown is in
+            # progress — workers exit cleanly then and would otherwise trip
+            # this RuntimeError.
+            if not abort_event.is_set() and not all([i.is_alive() for i in worker_list]):
                 abort_event.set()
                 raise RuntimeError("One or more background workers are no longer alive. Exiting. Please check the "
                                    "print statements above for the actual error message")
@@ -119,12 +123,11 @@ def results_loop(in_queue: Queue, out_queue: thrQueue, abort_event: Event,
                     continue
 
             # we only arrive here if item is not None. Now put item in to the out_queue
-            if not out_queue.full():
-                out_queue.put(item)
+            try:
+                out_queue.put(item, timeout=wait_time)
                 item = None
-            else:
-                sleep(wait_time)
-                continue
+            except Full:
+                continue  # abort_event is re-checked at top of loop
 
         except Exception as e:
             abort_event.set()
@@ -161,6 +164,7 @@ class NonDetMultiThreadedAugmenter(object):
         self.results_loop_thread = None
         self.results_loop_queue = None
         self.abort_event = None
+        self.pause_event = None
         self.initialized = False
 
         self.wait_time = wait_time
@@ -210,6 +214,7 @@ class NonDetMultiThreadedAugmenter(object):
             self._queue = Queue(self.num_cached)
             self.results_loop_queue = thrQueue(self.num_cached)
             self.abort_event = Event()
+            self.pause_event = Event()
 
             logging.debug("starting workers")
             if isinstance(self.generator, DataLoader):
@@ -218,7 +223,8 @@ class NonDetMultiThreadedAugmenter(object):
 
             for i in range(self.num_processes):
                 self._processes.append(Process(target=producer, args=(
-                    self._queue, self.generator, self.transform, i, self.seeds[i], self.abort_event, self.wait_time
+                    self._queue, self.generator, self.transform, i, self.seeds[i],
+                    self.abort_event, self.pause_event, self.wait_time
                 )))
                 self._processes[-1].daemon = True
             _ = [i.start() for i in self._processes]
@@ -241,14 +247,70 @@ class NonDetMultiThreadedAugmenter(object):
         else:
             logging.debug("MultiThreadedGenerator Warning: start() has been called but workers are already running")
 
-    def _finish(self):
-        if self.initialized:
-            self.abort_event.set()
-            sleep(self.wait_time)
-            [i.terminate() for i in self._processes if i.is_alive()]
+    def _finish(self, timeout=10, force=False):
+        """Graceful shutdown — same pause-drain-exit handshake as MTA.
 
-        del self._queue, self.results_loop_queue, self.results_loop_thread, self.abort_event, self._processes
-        self._queue, self.results_loop_queue, self.results_loop_thread, self.abort_event = None, None, None, None
+        Single shared in-queue (self._queue), so the drain logic is simpler
+        than the per-worker variant.
+        """
+        if not self.initialized and len(self._processes) == 0:
+            return
+
+        # 1. Pause producers so no new bytes hit the pipe.
+        if not force and self.pause_event is not None:
+            self.pause_event.set()
+
+        # 2. Tell everyone to exit.
+        if self.abort_event is not None:
+            self.abort_event.set()
+
+        # 3. Join results_loop_thread before draining its output queue.
+        if self.results_loop_thread is not None:
+            self.results_loop_thread.join(timeout=timeout)
+
+        # 4. Drain results_loop_queue (no writer now).
+        if self.results_loop_queue is not None:
+            while not self.results_loop_queue.empty():
+                try:
+                    self.results_loop_queue.get_nowait()
+                except Exception:
+                    break
+
+        # 5. Drain the shared mp.Queue while workers exit, so their feeder
+        #    threads can flush and the worker processes can terminate.
+        if len(self._processes) > 0 and self._queue is not None:
+            deadline = time() + timeout
+            drain_tick = max(self.wait_time, 0.01)
+            while time() < deadline and any(p.is_alive() for p in self._processes):
+                while not self._queue.empty():
+                    try:
+                        self._queue.get_nowait()
+                    except Exception:
+                        break
+                sleep(drain_tick)
+
+            # 6. Terminate stragglers.
+            for p in self._processes:
+                if p.is_alive():
+                    p.terminate()
+                p.join(timeout=1.0)
+
+            # 7. Final drain.
+            while not self._queue.empty():
+                try:
+                    self._queue.get_nowait()
+                except Exception:
+                    break
+
+            # 8. Close the queue.
+            self._queue.close()
+            self._queue.join_thread()
+
+        self._queue = None
+        self.results_loop_queue = None
+        self.results_loop_thread = None
+        self.abort_event = None
+        self.pause_event = None
         self._processes = []
         self.initialized = False
 
@@ -258,7 +320,7 @@ class NonDetMultiThreadedAugmenter(object):
 
     def __del__(self):
         logging.debug("MultiThreadedGenerator: destructor was called")
-        self._finish()
+        self._finish(timeout=2, force=True)
 
 
 if __name__ == '__main__':
