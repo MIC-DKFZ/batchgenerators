@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "batchgenerators"
+version = "0.25.1"
+description = "Data augmentation toolkit"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [
+    { name = "Division of Medical Image Computing, German Cancer Research Center AND Applied Computer Vision Lab, Helmholtz Imaging Platform", email = "f.isensee@dkfz-heidelberg.de" }
+]
+keywords = [
+    "data augmentation",
+    "deep learning",
+    "image segmentation",
+    "image classification",
+    "medical image analysis",
+    "medical image segmentation"
+]
+dependencies = [
+    "pillow>=7.1.2",
+    "numpy>=1.10.2",
+    "scipy",
+    "scikit-image",
+    "scikit-learn",
+    "future",
+    "pandas",
+    "unittest2",
+    "threadpoolctl"
+]
+
+[project.urls]
+Homepage = "https://github.com/MIC-DKFZ/batchgenerators"
+
+[tool.setuptools.packages.find]
+exclude = ["tests"]
