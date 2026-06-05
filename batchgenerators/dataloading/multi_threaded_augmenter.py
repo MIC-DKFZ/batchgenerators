@@ -24,6 +24,7 @@ import logging
 from multiprocessing import Event
 from time import sleep, time
 from threadpoolctl import threadpool_limits
+import random
 
 try:
     import torch
@@ -34,6 +35,8 @@ except ImportError:
 def producer(queue, data_loader, transform, thread_id, seed, abort_event,
              pause_event=None, wait_time: float = 0.02):
     np.random.seed(seed)
+    random.seed(seed) if seed is not None else None
+    torch.manual_seed(seed) if seed is not None else None
     data_loader.set_thread_id(thread_id)
     item = None
 
