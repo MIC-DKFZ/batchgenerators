@@ -17,13 +17,15 @@ import traceback
 from typing import List, Union
 import threading
 from multiprocessing import Process, Queue
-from queue import Queue as thrQueue, Full
+from queue import Queue as thrQueue, Full, Empty
 import numpy as np
 import sys
 import logging
 from multiprocessing import Event
 from time import sleep, time
 from threadpoolctl import threadpool_limits
+
+from batchgenerators.dataloading.nondet_multi_threaded_augmenter import pin_memory_of_all_eligible_items_in_dict
 
 try:
     import torch
@@ -96,30 +98,26 @@ def results_loop(in_queues: List[Queue], out_queue: thrQueue, abort_event: Event
                 raise RuntimeError("One or more background workers are no longer alive. Exiting. Please check the print"
                                    " statements above for the actual error message")
 
-            # if we don't have an item we need to fetch it first. If the queue we want to get it from it empty, try
-            # again later
+            # if we don't have an item we need to fetch it first. Round-robin across the worker queues to keep the
+            # batch ordering deterministic; block on the current queue for up to wait_time so we don't busy-wait.
             if item is None:
                 current_queue = in_queues[queue_ctr % len(in_queues)]
-                if not current_queue.empty():
-                    # get the item
-                    item = current_queue.get()
-                    # if we do pin memory, do it now, otherwise skip this
-                    if do_pin_memory:
-                        if isinstance(item, dict):
-                            for k in item.keys():
-                                if isinstance(item[k], torch.Tensor):
-                                    item[k] = item[k].pin_memory()
-                    queue_ctr += 1
+                try:
+                    item = current_queue.get(timeout=wait_time)
+                except Empty:
+                    continue  # retry the same queue; abort_event re-checked at top of loop
+                # if we do pin memory, do it now, otherwise skip this. The isinstance(dict) guard keeps the 'end'
+                # string sentinel from reaching the pinning logic.
+                if do_pin_memory:
+                    if isinstance(item, dict):
+                        item = pin_memory_of_all_eligible_items_in_dict(item)
+                queue_ctr += 1
 
-                    if isinstance(item, str) and item == 'end':
-                        end_ctr += 1
-                    if end_ctr == len(in_queues):
-                        end_ctr = 0
-                        queue_ctr = 0
-
-                else:
-                    sleep(wait_time)
-                    continue
+                if isinstance(item, str) and item == 'end':
+                    end_ctr += 1
+                if end_ctr == len(in_queues):
+                    end_ctr = 0
+                    queue_ctr = 0
 
             # we only arrive here if item is not None. Now put item in to the out_queue
             try:
@@ -185,20 +183,16 @@ class MultiThreadedAugmenter(object):
         return self.__next__()
 
     def __get_next_item(self):
-        item = None
-
-        while item is None:
+        while True:
             if self.abort_event.is_set():
                 self._finish()
                 raise RuntimeError("One or more background workers are no longer alive. Exiting. Please check the "
                                    "print statements above for the actual error message")
 
-            if not self.pin_memory_queue.empty():
-                item = self.pin_memory_queue.get()
-            else:
-                sleep(self.wait_time)
-
-        return item
+            try:
+                return self.pin_memory_queue.get(timeout=self.wait_time)
+            except Empty:
+                continue  # abort_event re-checked at top of loop
 
     def __next__(self):
         if not self.was_initialized:
