@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "batchgenerators"
-version = "0.25.2"
+version = "0.25.3"
 description = "Data augmentation toolkit"
 readme = "README.md"
 license = { file = "LICENSE" }
