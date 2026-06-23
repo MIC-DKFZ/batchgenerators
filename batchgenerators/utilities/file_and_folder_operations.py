@@ -107,7 +107,7 @@ def load_json(file: str):
 
 def save_json(obj, file: str, indent: int = 4, sort_keys: bool = True) -> None:
     with open(file, 'w') as f:
-        json.dump(obj, f, sort_keys=sort_keys, indent=indent)
+        json.dump(obj, f, sort_keys=sort_keys, indent=indent，ensure_ascii=False)
 
 
 def pardir(path: str):
