@@ -141,6 +141,26 @@ class TestResizeSegmentation(unittest.TestCase):
         with self.assertRaises(ValueError):
             resize_segmentation(seg, (4, 4), order=1, seg_tiebreak='bogus')
 
+    def test_empty_input_gives_zeros(self):
+        """
+        An empty segmentation came back as zeros of new_shape (the zero-initialized result) at orders >= 1. The
+        argmax broke that: it takes the nearest neighbour sample up front, which skimage cannot compute for an
+        empty array (scipy's zoom divides 0 by 0), and 'lowest'/'highest' indexed an empty label list. Order 0
+        failed the same way even before.
+        """
+        for order in (0, 1, 3):
+            for tiebreak in ('nearest', 'lowest', 'highest'):
+                for in_shape, out_shape in (((0, 4, 4), (0, 8, 8)), ((0, 4, 4), (2, 8, 8)), ((0, 5), (0, 10))):
+                    out = resize_segmentation(np.zeros(in_shape, dtype=np.int16), out_shape, order=order,
+                                              seg_tiebreak=tiebreak)
+                    msg = f'{in_shape} -> {out_shape}, order {order}, {tiebreak}'
+                    self.assertEqual(out.shape, out_shape, msg)
+                    self.assertEqual(out.dtype, np.int16, msg)
+                    self.assertFalse(out.any(), msg)
+                out = resize_segmentation(np.ones((4, 4, 4), dtype=np.int16), (0, 8, 8), order=order,
+                                          seg_tiebreak=tiebreak)
+                self.assertEqual(out.shape, (0, 8, 8))
+
 
 class TestInterpolateImg(unittest.TestCase):
     """interpolate_img is the same rule on the augment_spatial path, and had the same two problems."""
@@ -194,6 +214,21 @@ class TestInterpolateImg(unittest.TestCase):
             self.assertEqual(int(out[0]), int(np.array(-1.).astype(np.uint8)), f'order {order}')
         # padding modes with no 'outside' must be left alone
         self.assertTrue((interpolate_img(img, coords, order=1, mode='nearest', is_seg=True) == 2).all())
+
+    def test_empty_input_gives_the_outside_value(self):
+        """With no image to sample from every point is outside it: cval for 'constant', 0 otherwise."""
+        img = np.zeros((0, 4), dtype=np.uint8)
+        coords = self._coords([0.5, 1.5], [0.5, 2.5])
+        for order in (1, 3):
+            for tiebreak in ('nearest', 'lowest', 'highest'):
+                out = interpolate_img(img, coords, order=order, mode='nearest', is_seg=True, seg_tiebreak=tiebreak)
+                self.assertEqual(out.shape, (2, 2))
+                self.assertEqual(out.dtype, np.uint8)
+                self.assertFalse(out.any(), f'order {order}, {tiebreak}')
+                for cval in (0., 7.):
+                    out = interpolate_img(img, coords, order=order, mode='constant', cval=cval, is_seg=True,
+                                          seg_tiebreak=tiebreak)
+                    self.assertTrue((out == cval).all(), f'order {order}, {tiebreak}, cval {cval}')
 
     def test_order_zero_and_non_seg_are_untouched(self):
         img = np.arange(16, dtype=np.uint8).reshape(4, 4)

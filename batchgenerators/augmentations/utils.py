@@ -207,6 +207,10 @@ def _resample_seg_by_argmax(labels, score_fn, nearest_fn, out_shape, dtype, seg_
     if seg_tiebreak not in SEG_TIEBREAKS:
         raise ValueError('unknown seg_tiebreak: %s. Must be one of %s' % (seg_tiebreak, str(SEG_TIEBREAKS)))
     out_shape = tuple(out_shape)
+    if len(labels) == 0:
+        # an empty input: there is nothing to sample, so every output voxel is outside the image. Returning here
+        # also keeps the nearest neighbour sample below from being asked of an empty array, which fails.
+        return np.full(out_shape, 0 if empty_value is None else empty_value, dtype=dtype)
     if len(labels) == 1 and empty_value is None:
         # nothing to interpolate, and this also keeps the loop below from having to handle a missing `best`
         return np.full(out_shape, labels[0], dtype=dtype)
@@ -764,6 +768,10 @@ def resize_segmentation(segmentation, new_shape, order=3, *, seg_tiebreak='neare
     '''
     tpe = segmentation.dtype
     assert len(segmentation.shape) == len(new_shape), "new shape must have same dimensionality as segmentation"
+    if segmentation.size == 0:
+        # skimage cannot resize an empty array (scipy's zoom divides 0 by 0), at any order. Zeros of new_shape is
+        # what orders >= 1 returned before the argmax, from their zero-initialized result.
+        return np.zeros(new_shape, dtype=tpe)
     if order == 0:
         return resize(segmentation.astype(float), new_shape, order, mode="edge", clip=True, anti_aliasing=False).astype(tpe)
     else:
