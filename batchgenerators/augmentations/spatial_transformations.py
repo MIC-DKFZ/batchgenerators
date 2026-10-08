@@ -45,7 +45,7 @@ def augment_rot90(sample_data, sample_seg, num_rot=(1, 2, 3), axes=(0, 1, 2)):
     return sample_data, sample_seg
 
 
-def augment_resize(sample_data, sample_seg, target_size, order=3, order_seg=1):
+def augment_resize(sample_data, sample_seg, target_size, order=3, order_seg=1, *, seg_tiebreak='nearest'):
     """
     Reshapes data (and seg) to target_size
     :param sample_data: np.ndarray or list/tuple of np.ndarrays, must be (c, x, y(, z))) (if list/tuple then each entry
@@ -71,14 +71,15 @@ def augment_resize(sample_data, sample_seg, target_size, order=3, order_seg=1):
     if sample_seg is not None:
         target_seg = np.ones([sample_seg.shape[0]] + target_size_here)
         for c in range(sample_seg.shape[0]):
-            target_seg[c] = resize_segmentation(sample_seg[c], target_size_here, order_seg)
+            target_seg[c] = resize_segmentation(sample_seg[c], target_size_here, order_seg,
+                                                seg_tiebreak=seg_tiebreak)
     else:
         target_seg = None
 
     return sample_data, target_seg
 
 
-def augment_zoom(sample_data, sample_seg, zoom_factors, order=3, order_seg=1):
+def augment_zoom(sample_data, sample_seg, zoom_factors, order=3, order_seg=1, *, seg_tiebreak='nearest'):
     """
     zooms data (and seg) by factor zoom_factors
     :param sample_data: np.ndarray or list/tuple of np.ndarrays, must be (c, x, y(, z))) (if list/tuple then each entry
@@ -107,7 +108,8 @@ def augment_zoom(sample_data, sample_seg, zoom_factors, order=3, order_seg=1):
     if sample_seg is not None:
         target_seg = np.ones([sample_seg.shape[0]] + target_shape_here)
         for c in range(sample_seg.shape[0]):
-            target_seg[c] = resize_segmentation(sample_seg[c], target_shape_here, order_seg)
+            target_seg[c] = resize_segmentation(sample_seg[c], target_shape_here, order_seg,
+                                                seg_tiebreak=seg_tiebreak)
     else:
         target_seg = None
 
@@ -192,7 +194,8 @@ def augment_spatial(data, seg, patch_size, patch_center_dist_from_border=30,
                     do_scale=True, scale=(0.75, 1.25), border_mode_data='nearest', border_cval_data=0, order_data=3,
                     border_mode_seg='constant', border_cval_seg=0, order_seg=0, random_crop=True, p_el_per_sample=1,
                     p_scale_per_sample=1, p_rot_per_sample=1, independent_scale_for_each_axis=False,
-                    p_rot_per_axis: float = 1, p_independent_scale_per_axis: int = 1):
+                    p_rot_per_axis: float = 1, p_independent_scale_per_axis: int = 1,
+                    *, seg_tiebreak: str = 'nearest'):
     dim = len(patch_size)
     seg_result = None
     if seg is not None:
@@ -277,7 +280,7 @@ def augment_spatial(data, seg, patch_size, patch_center_dist_from_border=30,
                 for channel_id in range(seg.shape[1]):
                     seg_result[sample_id, channel_id] = interpolate_img(seg[sample_id, channel_id], coords, order_seg,
                                                                         border_mode_seg, cval=border_cval_seg,
-                                                                        is_seg=True)
+                                                                        is_seg=True, seg_tiebreak=seg_tiebreak)
         else:
             if seg is None:
                 s = None
@@ -300,7 +303,8 @@ def augment_spatial_2(data, seg, patch_size, patch_center_dist_from_border=30,
                       do_scale=True, scale=(0.75, 1.25), border_mode_data='nearest', border_cval_data=0, order_data=3,
                       border_mode_seg='constant', border_cval_seg=0, order_seg=0, random_crop=True, p_el_per_sample=1,
                       p_scale_per_sample=1, p_rot_per_sample=1, independent_scale_for_each_axis=False,
-                      p_rot_per_axis: float = 1, p_independent_scale_per_axis: float = 1):
+                      p_rot_per_axis: float = 1, p_independent_scale_per_axis: float = 1,
+                      *, seg_tiebreak: str = 'nearest'):
     """
 
     :param data:
@@ -444,7 +448,7 @@ def augment_spatial_2(data, seg, patch_size, patch_center_dist_from_border=30,
                 for channel_id in range(seg.shape[1]):
                     seg_result[sample_id, channel_id] = interpolate_img(seg[sample_id, channel_id], coords, order_seg,
                                                                         border_mode_seg, cval=border_cval_seg,
-                                                                        is_seg=True)
+                                                                        is_seg=True, seg_tiebreak=seg_tiebreak)
         else:
             if seg is None:
                 s = None
@@ -549,7 +553,7 @@ def augment_misalign(data, seg, data_size,
                      do_transl=False,
                      border_mode_data='constant', border_cval_data=0,
                      border_mode_seg='constant', border_cval_seg=0,
-                     order_data=3, order_seg=0):
+                     order_data=3, order_seg=0, *, seg_tiebreak='nearest'):
 
     dim = len(data_size)
 
@@ -587,7 +591,7 @@ def augment_misalign(data, seg, data_size,
                     if channel_id in im_channels_2_misalign:
                         seg[sample_id, channel_id] = interpolate_img(seg[sample_id, channel_id], coords, order_seg,
                                                                      border_mode_seg, cval=border_cval_seg,
-                                                                     is_seg=True)
+                                                                     is_seg=True, seg_tiebreak=seg_tiebreak)
 
         if do_rotation and np.random.uniform() < p_rot_per_sample:
             coords = create_zero_centered_coordinate_mesh(data_size)
@@ -620,7 +624,7 @@ def augment_misalign(data, seg, data_size,
                     if channel_id in im_channels_2_misalign:
                         seg[sample_id, channel_id] = interpolate_img(seg[sample_id, channel_id], coords, order_seg,
                                                                      border_mode_seg, cval=border_cval_seg,
-                                                                     is_seg=True)
+                                                                     is_seg=True, seg_tiebreak=seg_tiebreak)
 
         if do_transl and np.random.uniform() < p_transl_per_sample:
             coords = create_zero_centered_coordinate_mesh(data_size)
@@ -654,5 +658,5 @@ def augment_misalign(data, seg, data_size,
                     if channel_id in label_channels_2_misalign:
                         seg[sample_id, channel_id] = interpolate_img(seg[sample_id, channel_id], coords, order_seg,
                                                                      border_mode_seg, cval=border_cval_seg,
-                                                                     is_seg=True)
+                                                                     is_seg=True, seg_tiebreak=seg_tiebreak)
     return data, seg

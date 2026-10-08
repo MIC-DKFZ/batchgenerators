@@ -47,6 +47,24 @@ def create_zero_centered_coordinate_mesh(shape):
     return coords
 
 
+def unique_labels(arr: np.ndarray) -> np.ndarray:
+    """
+    np.unique(arr): the distinct values, ascending.
+
+    Which implementation is cheaper depends on the dtype. pd.unique hashes where np.unique sorts, and
+    on a label map hashing wins for integers (1.3x at int8) but loses for floats (4.5x slower at
+    float32, 2.9x at float64). Segmentations travel through this library as float32 (augment_spatial
+    allocates seg_result as float32), so the float branch is the common one. Either way this is
+    milliseconds against one map_coordinates per label - consistency, not a speedup.
+
+    Order matters to the callers: it fixes the channel order of a one hot encoding, and
+    _resample_seg_by_argmax resolves a strict `>` chain to the first label attaining the maximum.
+    """
+    if arr.dtype.kind in 'iub':
+        return np.sort(pd.unique(arr.ravel()))
+    return np.unique(arr)
+
+
 def convert_seg_image_to_one_hot_encoding(image, classes=None):
     '''
     image must be either (x, y, z) or (x, y)
@@ -54,7 +72,7 @@ def convert_seg_image_to_one_hot_encoding(image, classes=None):
     Example (3D): if input is of shape (x, y, z), the output will ne of shape (n_classes, x, y, z)
     '''
     if classes is None:
-        classes = np.unique(image)
+        classes = unique_labels(image)
     out_image = np.zeros([len(classes)]+list(image.shape), dtype=image.dtype)
     for i, c in enumerate(classes):
         out_image[i][image == c] = 1
@@ -66,7 +84,7 @@ def convert_seg_image_to_one_hot_encoding_batched(image, classes=None):
     same as convert_seg_image_to_one_hot_encoding, but expects image to be (b, x, y, z) or (b, x, y)
     '''
     if classes is None:
-        classes = np.unique(image)
+        classes = unique_labels(image)
     output_shape = [image.shape[0]] + [len(classes)] + list(image.shape[1:])
     out_image = np.zeros(output_shape, dtype=image.dtype)
     for b in range(image.shape[0]):
@@ -146,14 +164,161 @@ def uncenter_coords(coords):
     return coords
 
 
-def interpolate_img(img, coords, order=3, mode='nearest', cval=0.0, is_seg=False):
+SEG_TIEBREAKS = ('nearest', 'lowest', 'highest')
+
+
+def _resample_seg_by_argmax(labels, score_fn, nearest_fn, out_shape, dtype, seg_tiebreak,
+                            empty_value=None):
+    """
+    Resample a segmentation by interpolating each label's indicator and taking the per-voxel argmax over
+    labels. The argmax is accumulated incrementally, so the (n_labels, *out_shape) score stack is never
+    materialized.
+
+    This replaces the `interpolated >= 0.5` assignment these functions used to do, which had two problems:
+
+      * it can leave a voxel unwritten. Where more than two labels meet, no single indicator has to reach
+        0.5 (four labels meeting at a sample point give 0.25 each), and for spline orders >= 2 skimage's
+        clip=True destroys the sum-to-one property outright - on random four-label 2d data at order=3,
+        6.2 % of output voxels had no label at 0.5 or above. Those voxels kept whatever the result array
+        was initialized with (0), which need not be a label that occurs in the input at all.
+      * where several labels do pass 0.5 it assigned in ascending label order, so the largest label won by
+        being written last. That is a decision about label values, not about geometry.
+
+    seg_tiebreak decides the voxels where the top score is shared. That is not a rare case: whenever a
+    sample point falls exactly between two labels - which an even integer resize factor does at every
+    boundary voxel - the two indicators are exactly 0.5.
+
+      'nearest'  take the nearest neighbour label, if it is one of the tied labels. Symmetric in the labels,
+                 and the only option that is a function of the geometry rather than of the label values.
+                 Where three or more labels meet the nearest neighbour can be a label that lost; such a
+                 voxel keeps the smallest of the tied labels, as with 'lowest'. Matches nnU-Net's
+                 resample_torch seg_tiebreak='nearest'.
+      'lowest'   keep the smallest label, i.e. plain argmax semantics.
+      'highest'  keep the largest label. This is the direction the old code leaned, but it is NOT
+                 bit-identical to it: the old code compared each label against 0.5, not against the other
+                 labels, so at orders >= 2 the two disagree wherever clipping broke sum-to-one.
+
+    Only exact ties are resolved by seg_tiebreak; near ties go to the larger score, as they should.
+
+    empty_value, if given, is written where every label scores zero. That happens only outside the image,
+    and only for padding modes that put something constant there, so this is how the caller's cval keeps
+    reaching those voxels now that the result is no longer zero-initialized.
+    """
+    if seg_tiebreak not in SEG_TIEBREAKS:
+        raise ValueError('unknown seg_tiebreak: %s. Must be one of %s' % (seg_tiebreak, str(SEG_TIEBREAKS)))
+    out_shape = tuple(out_shape)
+    if len(labels) == 1 and empty_value is None:
+        # nothing to interpolate, and this also keeps the loop below from having to handle a missing `best`
+        return np.full(out_shape, labels[0], dtype=dtype)
+
+    # Memory: the scores are float64 (that is what the interpolators return, and ties are decided by exact
+    # equality on them), so `best` and the current `score` are the two large buffers and everything else is
+    # kept small. The running winner and the nearest neighbour are held as int8/int16 indices into `labels`
+    # and mapped to label values once at the end, the per-label masks are three reused bool buffers, and the
+    # previous score is released before the next one is allocated. Without that, peak memory was about twice
+    # the bytes per output voxel.
+    idx_dtype = _label_index_dtype(len(labels))
+    win = np.zeros(out_shape, dtype=idx_dtype)
+    best = None
+    better = np.empty(out_shape, dtype=bool)
+    # 'nearest': the nearest neighbour label settles a tie only if it is one of the tied labels. Where three
+    # or more labels meet it need not be - a 2x2x2 block [3,1,1,1,2,2,2,3] sampled at its centre scores
+    # 1 and 2 at 0.375 each and 3 at 0.25, and its nearest neighbour is a 3. So instead of marking tied
+    # voxels, track whether the nearest neighbour's label currently has the top score: a label that takes
+    # the lead strictly decides that afresh, one that draws level can only add to it. Where it holds at the
+    # end the nearest neighbour is the answer (it changes nothing where its label won outright), and where
+    # it does not the argmax winner stands.
+    nearest = seg_tiebreak == 'nearest'
+    if nearest:
+        nn_idx = _nearest_label_index(labels, nearest_fn(), idx_dtype)
+        nn_top = np.empty(out_shape, dtype=bool)
+        is_nn = np.empty(out_shape, dtype=bool)
+        level = np.empty(out_shape, dtype=bool)
+    for i, c in enumerate(labels):
+        score = score_fn(c)
+        if best is None:
+            # the first label is the running winner everywhere until something beats it. Inside the image the
+            # indicators sum to ~1, so this is only ever a starting point; outside it every label scores zero
+            # and empty_value (if the caller gave one) has the final say below.
+            best = score
+            if nearest:
+                np.equal(nn_idx, 0, out=nn_top)
+                np.greater(score, 0, out=level)
+                nn_top &= level
+            del score
+            continue
+        if nearest:
+            np.equal(nn_idx, i, out=is_nn)
+            # `score > 0` guard: two labels that both score zero at a voxel are not tied for the win there,
+            # they are simply both absent, and some other label will claim it. `better` is free until it is
+            # computed below, so it holds that guard meanwhile.
+            np.equal(score, best, out=level)
+            np.greater(score, 0, out=better)
+            level &= better
+            level &= is_nn
+            nn_top |= level
+        # '>=' lets the later (larger) label take ties, '>' leaves them with the earlier (smaller) one
+        (np.greater_equal if seg_tiebreak == 'highest' else np.greater)(score, best, out=better)
+        if nearest:
+            np.copyto(nn_top, is_nn, where=better)
+        np.copyto(win, i, where=better)
+        np.maximum(best, score, out=best)
+        del score
+
+    if nearest:
+        # copyto rather than win[nn_top] = nn_idx[nn_top]: nn_top holds nearly everywhere (also wherever the
+        # nearest neighbour's label won outright), and the indexed form copies all of those out first
+        np.copyto(win, nn_idx, where=nn_top)
+        del nn_idx, nn_top, is_nn, level
+    del better
+    empty = best <= 0 if empty_value is not None else None
+    del best
+    result = labels.astype(dtype, copy=False)[win]
+    if empty is not None:
+        result[empty] = empty_value
+    return result
+
+
+def _label_index_dtype(n_labels):
+    # signed, so that -1 can mean 'not a label'
+    for t in (np.int8, np.int16, np.int32):
+        if n_labels <= np.iinfo(t).max:
+            return t
+    return np.int64
+
+
+def _nearest_label_index(labels, nn, idx_dtype, chunk=1 << 22):
+    """
+    The index into `labels` of each voxel of the nearest neighbour sample `nn` (float64), or -1 where it is not
+    a label (cval outside the image). `labels` is sorted, so this is a searchsorted, verified with the same
+    `==` that compared `nn` with each label before. Chunked, so that its int64 temporaries stay small.
+    """
+    out = np.empty(nn.shape, dtype=idx_dtype)
+    flat_nn, flat_out = nn.reshape(-1), out.reshape(-1)
+    last = len(labels) - 1
+    for s in range(0, flat_nn.size, chunk):
+        v = flat_nn[s:s + chunk]
+        idx = np.minimum(np.searchsorted(labels, v), last)
+        idx[labels[idx] != v] = -1
+        flat_out[s:s + chunk] = idx
+    return out
+
+
+def interpolate_img(img, coords, order=3, mode='nearest', cval=0.0, is_seg=False, *, seg_tiebreak='nearest'):
     if is_seg and order != 0:
-        unique_labels = np.unique(img)
-        result = np.zeros(coords.shape[1:], img.dtype)
-        for i, c in enumerate(unique_labels):
-            res_new = map_coordinates((img == c).astype(float), coords, order=order, mode=mode, cval=cval)
-            result[res_new >= 0.5] = c
-        return result
+        return _resample_seg_by_argmax(
+            unique_labels(img),
+            # the indicators are padded with 0, not cval: outside the image no label is present. Padding them
+            # with cval raised every label's score by the same amount there, so for cval > 0 a voxel entirely
+            # outside was a tie among all labels rather than empty, and empty_value never reached it.
+            lambda c: map_coordinates((img == c).astype(float), coords, order=order, mode=mode, cval=0.0),
+            lambda: map_coordinates(img.astype(float), coords, order=0, mode=mode, cval=cval),
+            coords.shape[1:], img.dtype, seg_tiebreak,
+            # outside the image the caller asked for cval, and with the old zero-initialized result that is
+            # what those voxels happened to get whenever cval was 0. Keep it, explicitly and for any cval.
+            # Converted the way order 0 converts it, so a cval the dtype cannot hold (-1 in uint8) comes out
+            # the same at every order instead of raising here.
+            empty_value=np.array(cval, dtype=float).astype(img.dtype) if mode == 'constant' else None)
     else:
         return map_coordinates(img.astype(float), coords, order=order, mode=mode, cval=cval).astype(img.dtype)
 
@@ -585,14 +750,16 @@ def transpose_channels(batch):
         raise ValueError("wrong dimensions in transpose_channel generator!")
 
 
-def resize_segmentation(segmentation, new_shape, order=3):
+def resize_segmentation(segmentation, new_shape, order=3, *, seg_tiebreak='nearest'):
     '''
-    Resizes a segmentation map. Supports all orders (see skimage documentation). Will transform segmentation map to one
-    hot encoding which is resized and transformed back to a segmentation map.
-    This prevents interpolation artifacts ([0, 0, 2] -> [0, 1, 2])
+    Resizes a segmentation map. Supports all orders (see skimage documentation). Each label's indicator is
+    resized on its own and the per-voxel winner is the label with the largest interpolated indicator, so no
+    intermediate label value can be produced ([0, 0, 2] -> [0, 1, 2]).
     :param segmentation:
     :param new_shape:
     :param order:
+    :param seg_tiebreak: how to settle voxels where two labels share the top score ('nearest', 'lowest' or
+    'highest'). See _resample_seg_by_argmax. 'nearest' is the only geometric choice and is the default.
     :return:
     '''
     tpe = segmentation.dtype
@@ -600,14 +767,13 @@ def resize_segmentation(segmentation, new_shape, order=3):
     if order == 0:
         return resize(segmentation.astype(float), new_shape, order, mode="edge", clip=True, anti_aliasing=False).astype(tpe)
     else:
-        reshaped = np.zeros(new_shape, dtype=segmentation.dtype)
-
-        unique_labels = np.sort(pd.unique(segmentation.ravel()))
-        for i, c in enumerate(unique_labels):
-            mask = segmentation == c
-            reshaped_multihot = resize(mask.astype(float), new_shape, order, mode="edge", clip=True, anti_aliasing=False)
-            reshaped[reshaped_multihot >= 0.5] = c
-        return reshaped
+        return _resample_seg_by_argmax(
+            unique_labels(segmentation),
+            lambda c: resize((segmentation == c).astype(float), new_shape, order, mode="edge", clip=True,
+                             anti_aliasing=False),
+            lambda: resize(segmentation.astype(float), new_shape, 0, mode="edge", clip=True,
+                           anti_aliasing=False),
+            new_shape, tpe, seg_tiebreak)
 
 
 def resize_multichannel_image(multichannel_image, new_shape, order=3):
@@ -620,11 +786,18 @@ def resize_multichannel_image(multichannel_image, new_shape, order=3):
     :return:
     '''
     tpe = multichannel_image.dtype
+    is_int = np.issubdtype(tpe, np.integer)
     new_shp = [multichannel_image.shape[0]] + list(new_shape)
-    result = np.zeros(new_shp, dtype=multichannel_image.dtype)
+    # Integer input is accumulated in float and rounded at the end. Writing the interpolated float
+    # straight into an integer array truncates towards zero, which shifts every voxel that did not land
+    # exactly on a sample point down by up to one intensity step. Floating point input keeps its own
+    # dtype, so nothing about that path changes and the buffer does not grow.
+    result = np.zeros(new_shp, dtype=float if is_int else tpe)
     for i in range(multichannel_image.shape[0]):
         result[i] = resize(multichannel_image[i].astype(float), new_shape, order, clip=True, anti_aliasing=False)
-    return result.astype(tpe)
+    if is_int:
+        np.rint(result, out=result)
+    return result.astype(tpe, copy=False)
 
 
 def get_range_val(value, rnd_type="uniform"):

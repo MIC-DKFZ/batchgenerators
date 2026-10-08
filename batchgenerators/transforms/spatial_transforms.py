@@ -61,7 +61,7 @@ class Rot90Transform(AbstractTransform):
 
 class ZoomTransform(AbstractTransform):
     def __init__(self, zoom_factors=1, order=3, order_seg=1, concatenate_list=False, data_key="data",
-                 label_key="seg"):
+                 label_key="seg", *, seg_tiebreak='nearest'):
         """
         Zooms 'data' (and 'seg') by zoom_factors
         :param zoom_factors: int or list/tuple of int
@@ -81,6 +81,7 @@ class ZoomTransform(AbstractTransform):
         self.data_key = data_key
         self.label_key = label_key
         self.order = order
+        self.seg_tiebreak = seg_tiebreak
         self.zoom_factors = zoom_factors
 
     def __call__(self, **data_dict):
@@ -105,7 +106,8 @@ class ZoomTransform(AbstractTransform):
             sample_seg = None
             if seg is not None:
                 sample_seg = seg[b]
-            res_data, res_seg = augment_zoom(data[b], sample_seg, self.zoom_factors, self.order, self.order_seg)
+            res_data, res_seg = augment_zoom(data[b], sample_seg, self.zoom_factors, self.order, self.order_seg,
+                                             seg_tiebreak=self.seg_tiebreak)
             results.append((res_data, res_seg))
 
         if concatenate:
@@ -123,7 +125,7 @@ class ZoomTransform(AbstractTransform):
 class ResizeTransform(AbstractTransform):
 
     def __init__(self, target_size, order=3, order_seg=1, concatenate_list=False, data_key="data",
-                 label_key="seg"):
+                 label_key="seg", *, seg_tiebreak='nearest'):
         """
         Reshapes 'data' (and 'seg') to target_size
         :param target_size: int or list/tuple of int
@@ -143,6 +145,7 @@ class ResizeTransform(AbstractTransform):
         self.data_key = data_key
         self.label_key = label_key
         self.order = order
+        self.seg_tiebreak = seg_tiebreak
         self.target_size = target_size
 
     def __call__(self, **data_dict):
@@ -167,7 +170,8 @@ class ResizeTransform(AbstractTransform):
             sample_seg = None
             if seg is not None:
                 sample_seg = seg[b]
-            res_data, res_seg = augment_resize(data[b], sample_seg, self.target_size, self.order, self.order_seg)
+            res_data, res_seg = augment_resize(data[b], sample_seg, self.target_size, self.order, self.order_seg,
+                                               seg_tiebreak=self.seg_tiebreak)
             results.append((res_data, res_seg))
 
         if concatenate:
@@ -303,7 +307,8 @@ class SpatialTransform(AbstractTransform):
                  do_scale=True, scale=(0.75, 1.25), border_mode_data='nearest', border_cval_data=0, order_data=3,
                  border_mode_seg='constant', border_cval_seg=0, order_seg=0, random_crop=True, data_key="data",
                  label_key="seg", p_el_per_sample=1, p_scale_per_sample=1, p_rot_per_sample=1,
-                 independent_scale_for_each_axis=False, p_rot_per_axis:float=1, p_independent_scale_per_axis: int=1):
+                 independent_scale_for_each_axis=False, p_rot_per_axis:float=1, p_independent_scale_per_axis: int=1,
+                 *, seg_tiebreak: str='nearest'):
         self.independent_scale_for_each_axis = independent_scale_for_each_axis
         self.p_rot_per_sample = p_rot_per_sample
         self.p_scale_per_sample = p_scale_per_sample
@@ -330,6 +335,7 @@ class SpatialTransform(AbstractTransform):
         self.random_crop = random_crop
         self.p_rot_per_axis = p_rot_per_axis
         self.p_independent_scale_per_axis = p_independent_scale_per_axis
+        self.seg_tiebreak = seg_tiebreak
 
     def __call__(self, **data_dict):
         data = data_dict.get(self.data_key)
@@ -358,7 +364,8 @@ class SpatialTransform(AbstractTransform):
                                   p_rot_per_sample=self.p_rot_per_sample,
                                   independent_scale_for_each_axis=self.independent_scale_for_each_axis,
                                   p_rot_per_axis=self.p_rot_per_axis, 
-                                  p_independent_scale_per_axis=self.p_independent_scale_per_axis)
+                                  p_independent_scale_per_axis=self.p_independent_scale_per_axis,
+                                  seg_tiebreak=self.seg_tiebreak)
         data_dict[self.data_key] = ret_val[0]
         if seg is not None:
             data_dict[self.label_key] = ret_val[1]
@@ -419,7 +426,8 @@ class SpatialTransform_2(AbstractTransform):
                  do_scale=True, scale=(0.75, 1.25), border_mode_data='nearest', border_cval_data=0, order_data=3,
                  border_mode_seg='constant', border_cval_seg=0, order_seg=0, random_crop=True, data_key="data",
                  label_key="seg", p_el_per_sample=1, p_scale_per_sample=1, p_rot_per_sample=1,
-                 independent_scale_for_each_axis=False, p_rot_per_axis:float=1, p_independent_scale_per_axis: float=1):
+                 independent_scale_for_each_axis=False, p_rot_per_axis:float=1, p_independent_scale_per_axis: float=1,
+                 *, seg_tiebreak: str='nearest'):
         self.p_rot_per_sample = p_rot_per_sample
         self.p_scale_per_sample = p_scale_per_sample
         self.p_el_per_sample = p_el_per_sample
@@ -445,6 +453,7 @@ class SpatialTransform_2(AbstractTransform):
         self.p_independent_scale_per_axis = p_independent_scale_per_axis
         self.independent_scale_for_each_axis = independent_scale_for_each_axis
         self.p_rot_per_axis = p_rot_per_axis
+        self.seg_tiebreak = seg_tiebreak
 
     def __call__(self, **data_dict):
         data = data_dict.get(self.data_key)
@@ -473,7 +482,8 @@ class SpatialTransform_2(AbstractTransform):
                                     p_rot_per_sample=self.p_rot_per_sample,
                                   independent_scale_for_each_axis=self.independent_scale_for_each_axis,
                                   p_rot_per_axis=self.p_rot_per_axis,
-                                  p_independent_scale_per_axis=self.p_independent_scale_per_axis)
+                                  p_independent_scale_per_axis=self.p_independent_scale_per_axis,
+                                  seg_tiebreak=self.seg_tiebreak)
 
         data_dict[self.data_key] = ret_val[0]
         if seg is not None:
@@ -633,8 +643,9 @@ class MisalignTransform(AbstractTransform):
                  p_transl_per_sample=0.1, p_transl_per_dir=1.0,
                  border_mode_data='constant', border_cval_data=0,
                  border_mode_seg='constant', border_cval_seg=0,
-                 order_data=3, order_seg=0):
+                 order_data=3, order_seg=0, *, seg_tiebreak='nearest'):
 
+        self.seg_tiebreak = seg_tiebreak
         self.data_key = data_key
         self.label_key = label_key
 
@@ -709,7 +720,8 @@ class MisalignTransform(AbstractTransform):
                                    border_cval_data=self.border_cval_data,
                                    order_seg=self.order_seg,
                                    border_mode_seg=self.border_mode_seg,
-                                   border_cval_seg=self.border_cval_seg)
+                                   border_cval_seg=self.border_cval_seg,
+                                   seg_tiebreak=self.seg_tiebreak)
 
         data_dict[self.data_key] = ret_val[0]
         if seg is not None:
