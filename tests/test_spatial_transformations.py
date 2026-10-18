@@ -14,8 +14,12 @@
 # limitations under the License.
 
 import unittest
+from itertools import product
+from unittest.mock import patch
+
 import numpy as np
 
+from batchgenerators.augmentations import spatial_transformations
 from batchgenerators.augmentations.spatial_transformations import augment_rot90, augment_resize, augment_transpose_axes
 
 
@@ -135,6 +139,62 @@ class AugmentRot90(unittest.TestCase):
             if normal_rotated:
                 tmp += 1
         self.assertAlmostEqual(tmp, n_iter / 2., delta=20)
+
+
+class AugmentSpatialScale(unittest.TestCase):
+
+    def setUp(self):
+        self.addCleanup(np.random.set_state, np.random.get_state())
+
+    def _sample_scale(self, augment, dim, scale, independent, probability, seed=0):
+        data = np.arange(9 ** dim, dtype=np.float32).reshape((1, 1) + (9,) * dim)
+        np.random.seed(seed)
+        with patch.object(spatial_transformations, 'scale_coords',
+                          wraps=spatial_transformations.scale_coords) as scale_coords:
+            result, _ = augment(
+                data, None, (5,) * dim, do_elastic_deform=False, do_rotation=False,
+                scale=scale, order_data=1, random_crop=False,
+                independent_scale_for_each_axis=independent,
+                p_independent_scale_per_axis=probability,
+            )
+        self.assertEqual(result.shape, (1, 1) + (5,) * dim)
+        return np.atleast_1d(scale_coords.call_args[0][1])
+
+    def test_scale_below_one_respects_bounds(self):
+        for augment, dim, mode, scale, seed in product(
+                (spatial_transformations.augment_spatial, spatial_transformations.augment_spatial_2),
+                (2, 3), ((False, 1), (True, 1), (True, 0)),
+                ((0.7, 0.9), (0.8, 0.8)), (0, 1, 21)):
+            with self.subTest(augment=augment.__name__, dim=dim, mode=mode, scale=scale, seed=seed):
+                sampled = self._sample_scale(augment, dim, scale, *mode, seed=seed)
+                self.assertTrue(np.all(sampled >= scale[0]), sampled)
+                self.assertTrue(np.all(sampled <= scale[1]), sampled)
+
+    def test_scale_ending_at_one_keeps_identity_branch(self):
+        # This seed selects the original upper branch in both functions.
+        for augment in (spatial_transformations.augment_spatial, spatial_transformations.augment_spatial_2):
+            with self.subTest(augment=augment.__name__):
+                sampled = self._sample_scale(augment, 2, (0.7, 1), False, 1, seed=0)
+                np.testing.assert_array_equal(sampled, [1])
+
+    def test_scale_preserves_random_state(self):
+        # Original draw counts with elastic deformation and rotation disabled.
+        modes = ((2, False, 1, 3), (2, True, 1, 6), (2, True, 0, 4),
+                 (3, False, 1, 3), (3, True, 1, 8), (3, True, 0, 4))
+        for augment, mode, scale in product(
+                (spatial_transformations.augment_spatial, spatial_transformations.augment_spatial_2),
+                modes, ((0.7, 0.9), (0.8, 0.8), (0.75, 1.25), (1.1, 1.5), (0.7, 1), (1, 1))):
+            dim, independent, probability, draws = mode
+            with self.subTest(augment=augment.__name__, mode=mode, scale=scale):
+                expected = np.random.RandomState(0)
+                # augment_spatial_2 also draws before checking do_elastic_deform.
+                expected.random_sample(draws + (augment is spatial_transformations.augment_spatial_2))
+                self._sample_scale(augment, dim, scale, independent, probability)
+                actual_state = np.random.get_state()
+                expected_state = expected.get_state()
+                self.assertEqual(actual_state[0], expected_state[0])
+                np.testing.assert_array_equal(actual_state[1], expected_state[1])
+                self.assertEqual(actual_state[2:], expected_state[2:])
 
 
 if __name__ == '__main__':

@@ -252,14 +252,14 @@ def augment_spatial(data, seg, patch_size, patch_center_dist_from_border=30,
                 sc = []
                 for _ in range(dim):
                     if np.random.random() < 0.5 and scale[0] < 1:
-                        sc.append(np.random.uniform(scale[0], 1))
+                        sc.append(np.random.uniform(scale[0], min(1, scale[1])))
                     else:
-                        sc.append(np.random.uniform(max(scale[0], 1), scale[1]))
+                        sc.append(np.random.uniform(scale[0] if scale[1] < 1 else max(scale[0], 1), scale[1]))
             else:
                 if np.random.random() < 0.5 and scale[0] < 1:
-                    sc = np.random.uniform(scale[0], 1)
+                    sc = np.random.uniform(scale[0], min(1, scale[1]))
                 else:
-                    sc = np.random.uniform(max(scale[0], 1), scale[1])
+                    sc = np.random.uniform(scale[0] if scale[1] < 1 else max(scale[0], 1), scale[1])
 
             coords = scale_coords(coords, sc)
             modified_coords = True
@@ -416,14 +416,14 @@ def augment_spatial_2(data, seg, patch_size, patch_center_dist_from_border=30,
                 sc = []
                 for _ in range(dim):
                     if np.random.random() < 0.5 and scale[0] < 1:
-                        sc.append(np.random.uniform(scale[0], 1))
+                        sc.append(np.random.uniform(scale[0], min(1, scale[1])))
                     else:
-                        sc.append(np.random.uniform(max(scale[0], 1), scale[1]))
+                        sc.append(np.random.uniform(scale[0] if scale[1] < 1 else max(scale[0], 1), scale[1]))
             else:
                 if np.random.random() < 0.5 and scale[0] < 1:
-                    sc = np.random.uniform(scale[0], 1)
+                    sc = np.random.uniform(scale[0], min(1, scale[1]))
                 else:
-                    sc = np.random.uniform(max(scale[0], 1), scale[1])
+                    sc = np.random.uniform(scale[0] if scale[1] < 1 else max(scale[0], 1), scale[1])
 
             coords = scale_coords(coords, sc)
             modified_coords = True
