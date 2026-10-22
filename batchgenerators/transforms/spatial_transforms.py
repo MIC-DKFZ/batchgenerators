@@ -247,7 +247,7 @@ class ChannelTranslation(AbstractTransform):
 
         ret_val = augment_channel_translation(data=data, const_channel=self.const_channel, max_shifts=self.max_shift)
 
-        data_dict[self.data_key] = ret_val[0]
+        data_dict[self.data_key] = ret_val
 
         return data_dict
 
