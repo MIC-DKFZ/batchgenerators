@@ -43,10 +43,14 @@ def producer(queue: Queue, data_loader, transform, thread_id: int, seed,
     # Restore default SIGTERM handler to terminate the process
     signal.signal(signal.SIGTERM, signal.SIG_DFL)
 
+    # Forked workers inherit the parent's torch RNG state. Without a seed they would all draw the same numbers, so
+    # reseed torch from the OS, as np.random.seed(None) does for numpy.
     if torch is not None:
         torch.set_num_threads(1)
         if seed is not None:
             torch.manual_seed(seed)
+        else:
+            torch.seed()
 
     np.random.seed(seed)
 
