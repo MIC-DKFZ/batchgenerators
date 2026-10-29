@@ -211,8 +211,8 @@ class MultiThreadedAugmenter(object):
         while True:
             if self.abort_event.is_set():
                 self._finish()
-                raise RuntimeError("One or more background workers are no longer alive. Exiting. Please check the "
-                                   "print statements above for the actual error message")
+                raise RuntimeError("A background worker or the thread collecting their batches failed. Exiting. Please "
+                                   "check the output above for the actual error message")
 
             try:
                 return self.pin_memory_queue.get(timeout=self.wait_time)

@@ -242,8 +242,8 @@ class NonDetMultiThreadedAugmenter(object):
             if self.abort_event.is_set():
                 # the results loop checks for dead workers and will set the abort event if necessary
                 self._finish()
-                raise RuntimeError("One or more background workers are no longer alive. Exiting. Please check the "
-                                   "print statements above for the actual error message")
+                raise RuntimeError("A background worker or the thread collecting their batches failed. Exiting. Please "
+                                   "check the output above for the actual error message")
 
             try:
                 item = self.results_loop_queue.get(timeout=self.wait_time)

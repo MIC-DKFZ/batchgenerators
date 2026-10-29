@@ -38,7 +38,7 @@ class LargeBatchDL(SlimDataLoaderBase):
 class TestResultsThreadErrorsSurface(unittest.TestCase):
     """
     An error in the results thread (here: a batch that cannot be unpickled) must reach the caller of next() instead of
-    leaving it waiting for batches forever.
+    leaving it waiting for batches forever, and must not be reported as dead workers.
     """
 
     def setUp(self):
@@ -48,13 +48,15 @@ class TestResultsThreadErrorsSurface(unittest.TestCase):
 
     def check_error_surfaces(self, augmenter):
         result = []
+        messages = []
 
         def fetch():
             try:
                 next(augmenter)
                 result.append('returned')
-            except RuntimeError:
+            except RuntimeError as e:
                 result.append('RuntimeError')
+                messages.append(str(e))
 
         # start the workers here, forking from the fetcher thread would trigger python's fork() warning
         augmenter._start()
@@ -63,6 +65,7 @@ class TestResultsThreadErrorsSurface(unittest.TestCase):
         fetcher.join(timeout=10)
         try:
             self.assertEqual(result, ['RuntimeError'])
+            self.assertNotIn('no longer alive', messages[0])
             self.assertIn('ValueError', self.thread_errors)
         finally:
             augmenter._finish()
