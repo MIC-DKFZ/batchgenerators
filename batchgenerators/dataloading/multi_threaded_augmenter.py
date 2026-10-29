@@ -26,17 +26,14 @@ from multiprocessing import Event
 from time import sleep, time
 from threadpoolctl import threadpool_limits
 
-
-# Library code must not log through the root logger: logger.debug() installs a
-# handler on it, so an application's own records get echoed a second time.
-logger = logging.getLogger(__name__)
-
 from batchgenerators.dataloading.nondet_multi_threaded_augmenter import pin_memory_of_all_eligible_items_in_dict
 
 try:
     import torch
 except ImportError:
     torch = None
+
+logger = logging.getLogger(__name__)
 
 
 def producer(queue, data_loader, transform, thread_id, seed, abort_event,
@@ -268,7 +265,7 @@ class MultiThreadedAugmenter(object):
             self.was_initialized = True
         else:
             logger.debug("MultiThreadedGenerator Warning: start() has been called but it has already been "
-                          "initialized previously")
+                         "initialized previously")
 
     def _finish(self, timeout=10, force=False):
         """Shut down workers and the pin-memory thread.

@@ -30,15 +30,12 @@ from time import sleep, time
 from batchgenerators.dataloading.data_loader import DataLoader
 from threadpoolctl import threadpool_limits
 
-
-# Library code must not log through the root logger: logger.debug() installs a
-# handler on it, so an application's own records get echoed a second time.
-logger = logging.getLogger(__name__)
-
 try:
     import torch
 except ImportError:
     torch = None
+
+logger = logging.getLogger(__name__)
 
 
 def producer(queue: Queue, data_loader, transform, thread_id: int, seed,
