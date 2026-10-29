@@ -166,19 +166,19 @@ class TestRangesUpToOne(unittest.TestCase):
         self.addCleanup(np.random.set_state, np.random.get_state())
 
     @staticmethod
-    def sample_contrast(value_range, per_channel):
+    def _sample_contrast(value_range, per_channel):
         # each channel has mean 1, so its second value becomes 1 + factor
         data = np.array([[0., 2.], [0., 2.]])
         return augment_contrast(data, value_range, preserve_range=False, per_channel=per_channel)[:, 1] - 1
 
     @staticmethod
-    def sample_gamma(value_range, per_channel):
+    def _sample_gamma(value_range, per_channel):
         # with minimum 0, range 1 and no epsilon each channel's 0.5 becomes 0.5 ** gamma
         data = np.array([[0., 0.5, 1.], [0., 0.5, 1.]])
         return -np.log2(augment_gamma(data, value_range, epsilon=0, per_channel=per_channel)[:, 1])
 
     def test_ranges_up_to_one_are_respected(self):
-        for sample, value_range, per_channel, seed in product((self.sample_contrast, self.sample_gamma),
+        for sample, value_range, per_channel, seed in product((self._sample_contrast, self._sample_gamma),
                                                                ((0.7, 0.9), (0.8, 0.8), (0.7, 1)), (False, True),
                                                                range(20)):
             with self.subTest(sample=sample.__name__, value_range=value_range, per_channel=per_channel, seed=seed):
@@ -192,9 +192,9 @@ class TestRangesUpToOne(unittest.TestCase):
     def test_number_of_draws_is_unchanged(self):
         # contrast: per channel a p_per_channel check, plus a branch choice and a factor (per channel or once)
         # gamma: a branch choice and a gamma, per channel or once
-        draws = {('sample_contrast', False): 4, ('sample_contrast', True): 6,
-                 ('sample_gamma', False): 2, ('sample_gamma', True): 4}
-        for sample, value_range, per_channel in product((self.sample_contrast, self.sample_gamma),
+        draws = {('_sample_contrast', False): 4, ('_sample_contrast', True): 6,
+                 ('_sample_gamma', False): 2, ('_sample_gamma', True): 4}
+        for sample, value_range, per_channel in product((self._sample_contrast, self._sample_gamma),
                                                         ((0.7, 0.9), (0.8, 0.8), (0.75, 1.25), (0.7, 1.5), (1.1, 1.5),
                                                          (0.7, 1), (1, 1)), (False, True)):
             with self.subTest(sample=sample.__name__, value_range=value_range, per_channel=per_channel):

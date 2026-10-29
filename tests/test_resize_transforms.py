@@ -21,16 +21,17 @@ import numpy as np
 from batchgenerators.augmentations.spatial_transformations import augment_resize, augment_zoom
 from batchgenerators.transforms.spatial_transforms import ResizeTransform, ZoomTransform
 
+# transform, the function it applies to each sample, and the size argument for a batch
+OPERATIONS = {
+    "resize": (ResizeTransform, augment_resize, lambda data: (2,) * (data[0].ndim - 1)),
+    "zoom": (ZoomTransform, augment_zoom, lambda data: 0.5),
+}
+
 
 class TestResizeTransforms(unittest.TestCase):
-    def check_transform(self, operation, data, seg, concatenate=False):
-        if operation == "resize":
-            transform_class, augment = ResizeTransform, augment_resize
-            size = (2,) * (data[0].ndim - 1)
-        else:
-            transform_class, augment = ZoomTransform, augment_zoom
-            size = 0.5
-
+    def _check_transform(self, operation, data, seg, concatenate=False):
+        transform_class, augment, size_for = OPERATIONS[operation]
+        size = size_for(data)
         options = {"concatenate_list": True} if concatenate else {}
         transform = transform_class(size, order=0, order_seg=0, **options)
         metadata = object()
@@ -57,7 +58,7 @@ class TestResizeTransforms(unittest.TestCase):
 
     def test_fixed_size_batches(self):
         for ndim, operation, data_type, seg_type, concatenate in product(
-                (2, 3), ("resize", "zoom"), (list, tuple, np.stack),
+                (2, 3), OPERATIONS, (list, tuple, np.stack),
                 (None, list, tuple, np.stack), (False, True)):
             with self.subTest(ndim=ndim, operation=operation, data_type=data_type,
                               seg_type=seg_type, concatenate=concatenate):
@@ -68,11 +69,11 @@ class TestResizeTransforms(unittest.TestCase):
                     (sample[:1] > 5).astype(np.uint8),
                     (sample[:1] > 10).astype(np.uint8),
                 ])
-                self.check_transform(operation, data, seg, concatenate)
+                self._check_transform(operation, data, seg, concatenate)
 
     def test_variable_size_sequences(self):
         for ndim, operation, data_type, seg_type in product(
-                (2, 3), ("resize", "zoom"), (list, tuple), (list, tuple)):
+                (2, 3), OPERATIONS, (list, tuple), (list, tuple)):
             with self.subTest(ndim=ndim, operation=operation,
                               data_type=data_type, seg_type=seg_type):
                 samples = [
@@ -80,7 +81,7 @@ class TestResizeTransforms(unittest.TestCase):
                     for side in (4, 6)
                 ]
                 seg = seg_type([(sample[:1] > 5).astype(np.uint8) for sample in samples])
-                self.check_transform(operation, data_type(samples), seg)
+                self._check_transform(operation, data_type(samples), seg)
 
 
 if __name__ == "__main__":

@@ -81,3 +81,15 @@ class OneDotDataLoader(SlimDataLoaderBase):
         data = self.data[idx]
         seg = self.data[idx]
         return {'data': data, 'seg': seg}
+
+
+class ZerosDataLoader(SlimDataLoaderBase):
+    """
+    returns batches of zeros of the given shape (b, c, x, y(, z)), forever
+    """
+    def __init__(self, shape):
+        super(ZerosDataLoader, self).__init__(None, shape[0], None)
+        self.shape = shape
+
+    def generate_train_batch(self):
+        return {'data': np.zeros(self.shape, dtype=np.float32)}

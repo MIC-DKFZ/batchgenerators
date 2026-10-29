@@ -6,6 +6,7 @@ import numpy as np
 
 from batchgenerators.dataloading import multi_threaded_augmenter, nondet_multi_threaded_augmenter
 from batchgenerators.dataloading.data_loader import SlimDataLoaderBase
+from tests.augmenter_test_utils import forked_producer
 
 try:
     import torch
@@ -27,35 +28,23 @@ class TestWorkerSeeding(unittest.TestCase):
     workers when no seeds are given, and must be reproducible when they are, without torch repeating numpy's draws.
     """
 
-    def first_items(self, producer, seeds):
-        ctx = multiprocessing.get_context('fork')
+    def _first_items(self, producer, seeds):
         items = []
         for thread_id, seed in enumerate(seeds):
-            queue = ctx.Queue(maxsize=1)
-            abort_event = ctx.Event()
-            worker = ctx.Process(target=producer, args=(queue, TorchRandDL(None, 1), None, thread_id, seed, abort_event),
-                                 daemon=True)
-            worker.start()
-            try:
+            with forked_producer(producer, TorchRandDL(None, 1), thread_id, seed) as (_, queue):
                 items.append(queue.get(timeout=30))
-            finally:
-                abort_event.set()
-                worker.join(timeout=5)
-                if worker.is_alive():
-                    worker.kill()
-                    worker.join()
         return items
 
-    def check_producer(self, producer):
+    def _check_producer(self, producer):
         torch.manual_seed(0)
-        unseeded = self.first_items(producer, [None, None, None])
+        unseeded = self._first_items(producer, [None, None, None])
         for i in range(1, 3):
             self.assertFalse(np.array_equal(unseeded[0]['torch'], unseeded[i]['torch']))
             self.assertFalse(np.array_equal(unseeded[0]['numpy'], unseeded[i]['numpy']))
 
-        seeded = [self.first_items(producer, [1, 2, 3]) for _ in range(2)]
+        seeded = [self._first_items(producer, [1, 2, 3]) for _ in range(2)]
         # seeds are often numpy integers, which random.seed refuses
-        seeded.append(self.first_items(producer, list(np.arange(1, 4))))
+        seeded.append(self._first_items(producer, list(np.arange(1, 4))))
         self.assertFalse(np.array_equal(seeded[0][0]['torch'], seeded[0][1]['torch']))
         for items in seeded[1:]:
             for a, b in zip(seeded[0], items):
@@ -69,10 +58,10 @@ class TestWorkerSeeding(unittest.TestCase):
             self.assertFalse(np.allclose(item['torch'], (mt19937_output & 0xFFFFFF) / 2 ** 24))
 
     def test_multi_threaded_augmenter(self):
-        self.check_producer(multi_threaded_augmenter.producer)
+        self._check_producer(multi_threaded_augmenter.producer)
 
     def test_nondet_multi_threaded_augmenter(self):
-        self.check_producer(nondet_multi_threaded_augmenter.producer)
+        self._check_producer(nondet_multi_threaded_augmenter.producer)
 
 
 if __name__ == '__main__':

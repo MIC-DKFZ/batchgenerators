@@ -1,10 +1,10 @@
-import threading
 import unittest
 from time import sleep
 
 from batchgenerators.dataloading.data_loader import SlimDataLoaderBase
 from batchgenerators.dataloading.multi_threaded_augmenter import MultiThreadedAugmenter
 from batchgenerators.dataloading.nondet_multi_threaded_augmenter import NonDetMultiThreadedAugmenter
+from tests.augmenter_test_utils import capture_thread_errors
 
 try:
     import torch
@@ -33,11 +33,9 @@ class TestShutdownWithTensorBatches(unittest.TestCase):
     """
 
     def setUp(self):
-        self.thread_errors = []
-        self.addCleanup(setattr, threading, 'excepthook', threading.excepthook)
-        threading.excepthook = lambda args: self.thread_errors.append(args.exc_type.__name__)
+        self.thread_errors = capture_thread_errors(self)
 
-    def check_shutdowns(self, make_augmenter):
+    def _check_shutdowns(self, make_augmenter):
         for _ in range(10):
             augmenter = make_augmenter()
             next(augmenter)
@@ -45,10 +43,10 @@ class TestShutdownWithTensorBatches(unittest.TestCase):
         self.assertEqual(self.thread_errors, [])
 
     def test_multi_threaded_augmenter(self):
-        self.check_shutdowns(lambda: MultiThreadedAugmenter(TensorDL(1, 0.01), None, 1, 1))
+        self._check_shutdowns(lambda: MultiThreadedAugmenter(TensorDL(1, 0.01), None, 1, 1))
 
     def test_nondet_multi_threaded_augmenter(self):
-        self.check_shutdowns(lambda: NonDetMultiThreadedAugmenter(TensorDL(4, 0), None, 1, 1))
+        self._check_shutdowns(lambda: NonDetMultiThreadedAugmenter(TensorDL(4, 0), None, 1, 1))
 
 
 if __name__ == '__main__':

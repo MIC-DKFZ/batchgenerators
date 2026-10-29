@@ -161,12 +161,13 @@ class AugmentSpatialScale(unittest.TestCase):
         return np.atleast_1d(scale_coords.call_args[0][1])
 
     def test_scale_below_one_respects_bounds(self):
-        for augment, dim, mode, scale, seed in product(
+        for augment, dim, (independent, probability), scale, seed in product(
                 (spatial_transformations.augment_spatial, spatial_transformations.augment_spatial_2),
                 (2, 3), ((False, 1), (True, 1), (True, 0)),
                 ((0.7, 0.9), (0.8, 0.8), (0.7, 1)), (0, 1, 21)):
-            with self.subTest(augment=augment.__name__, dim=dim, mode=mode, scale=scale, seed=seed):
-                sampled = self._sample_scale(augment, dim, scale, *mode, seed=seed)
+            with self.subTest(augment=augment.__name__, dim=dim, independent=independent, probability=probability,
+                              scale=scale, seed=seed):
+                sampled = self._sample_scale(augment, dim, scale, independent, probability, seed=seed)
                 self.assertTrue(np.all(sampled >= scale[0]), sampled)
                 self.assertTrue(np.all(sampled <= scale[1]), sampled)
 
@@ -179,14 +180,14 @@ class AugmentSpatialScale(unittest.TestCase):
                 self.assertTrue(np.all(sampled < 1), sampled)
 
     def test_scale_preserves_random_state(self):
-        # Original draw counts with elastic deformation and rotation disabled.
-        modes = ((2, False, 1, 3), (2, True, 1, 6), (2, True, 0, 4),
-                 (3, False, 1, 3), (3, True, 1, 8), (3, True, 0, 4))
-        for augment, mode, scale in product(
+        # Original draw counts with elastic deformation and rotation disabled: (dim, independent, probability, draws)
+        draws_per_setting = ((2, False, 1, 3), (2, True, 1, 6), (2, True, 0, 4),
+                             (3, False, 1, 3), (3, True, 1, 8), (3, True, 0, 4))
+        for augment, (dim, independent, probability, draws), scale in product(
                 (spatial_transformations.augment_spatial, spatial_transformations.augment_spatial_2),
-                modes, ((0.7, 0.9), (0.8, 0.8), (0.75, 1.25), (1.1, 1.5), (0.7, 1), (1, 1))):
-            dim, independent, probability, draws = mode
-            with self.subTest(augment=augment.__name__, mode=mode, scale=scale):
+                draws_per_setting, ((0.7, 0.9), (0.8, 0.8), (0.75, 1.25), (1.1, 1.5), (0.7, 1), (1, 1))):
+            with self.subTest(augment=augment.__name__, dim=dim, independent=independent, probability=probability,
+                              scale=scale):
                 expected = np.random.RandomState(0)
                 # augment_spatial_2 also draws before checking do_elastic_deform.
                 expected.random_sample(draws + (augment is spatial_transformations.augment_spatial_2))

@@ -7,33 +7,31 @@ import threading
 import unittest
 from time import sleep, time
 
-import numpy as np
-
 from batchgenerators.dataloading.data_loader import SlimDataLoaderBase
 from batchgenerators.dataloading.multi_threaded_augmenter import MultiThreadedAugmenter
 from batchgenerators.dataloading.nondet_multi_threaded_augmenter import NonDetMultiThreadedAugmenter
+from tests.DataGenerators import ZerosDataLoader
+from tests.augmenter_test_utils import capture_thread_errors
 
 AUGMENTERS = {'mta': MultiThreadedAugmenter, 'nondet': NonDetMultiThreadedAugmenter}
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# larger than a pipe's buffer, so a worker's queue feeder blocks once nobody reads
+LARGE_BATCH_SHAPE = (1, 1, 512, 512)
 
 
 def _fail_to_unpickle():
     raise ValueError('this batch cannot be unpickled')
 
 
-class Unpicklable:
+class FailsToUnpickle:
     def __reduce__(self):
         return _fail_to_unpickle, ()
 
 
-class UnpicklableDL(SlimDataLoaderBase):
+class FailsToUnpickleDL(SlimDataLoaderBase):
     def generate_train_batch(self):
-        return {'data': Unpicklable()}
-
-
-class LargeBatchDL(SlimDataLoaderBase):
-    def generate_train_batch(self):
-        # larger than a pipe's buffer, so a worker's queue feeder blocks once nobody reads
-        return {'data': np.zeros((1, 1, 512, 512), dtype=np.float32)}
+        return {'data': FailsToUnpickle()}
 
 
 class TestResultsThreadErrorsSurface(unittest.TestCase):
@@ -43,11 +41,9 @@ class TestResultsThreadErrorsSurface(unittest.TestCase):
     """
 
     def setUp(self):
-        self.thread_errors = []
-        self.addCleanup(setattr, threading, 'excepthook', threading.excepthook)
-        threading.excepthook = lambda args: self.thread_errors.append(args.exc_type.__name__)
+        self.thread_errors = capture_thread_errors(self)
 
-    def check_error_surfaces(self, augmenter):
+    def _check_error_surfaces(self, augmenter):
         result = []
         messages = []
 
@@ -72,10 +68,10 @@ class TestResultsThreadErrorsSurface(unittest.TestCase):
             augmenter._finish()
 
     def test_multi_threaded_augmenter(self):
-        self.check_error_surfaces(MultiThreadedAugmenter(UnpicklableDL(None, 1), None, 1, 1))
+        self._check_error_surfaces(MultiThreadedAugmenter(FailsToUnpickleDL(None, 1), None, 1, 1))
 
     def test_nondet_multi_threaded_augmenter(self):
-        self.check_error_surfaces(NonDetMultiThreadedAugmenter(UnpicklableDL(None, 1), None, 1, 1))
+        self._check_error_surfaces(NonDetMultiThreadedAugmenter(FailsToUnpickleDL(None, 1), None, 1, 1))
 
 
 def _alive(pid):
@@ -93,9 +89,10 @@ class TestWorkersExitWhenParentDies(unittest.TestCase):
     instead of running on as orphans.
     """
 
-    def check_workers_exit(self, augmenter, fork_sibling=False):
-        args = [sys.executable, os.path.abspath(__file__), 'helper', augmenter]
-        helper = subprocess.Popen(args + (['fork_sibling'] if fork_sibling else []), stdout=subprocess.PIPE, text=True)
+    def _check_workers_exit(self, augmenter, fork_sibling=False):
+        args = [sys.executable, '-m', 'tests.test_augmenter_failures', 'helper', augmenter]
+        helper = subprocess.Popen(args + (['fork_sibling'] if fork_sibling else []), cwd=REPO_ROOT,
+                                  stdout=subprocess.PIPE, text=True)
         workers = []
         siblings = []
         try:
@@ -117,20 +114,20 @@ class TestWorkersExitWhenParentDies(unittest.TestCase):
                     os.kill(pid, signal.SIGKILL)
 
     def test_multi_threaded_augmenter(self):
-        self.check_workers_exit('mta')
+        self._check_workers_exit('mta')
 
     def test_nondet_multi_threaded_augmenter(self):
-        self.check_workers_exit('nondet')
+        self._check_workers_exit('nondet')
 
     # A process forked after the workers holds copies of the pipes through which they watch the parent, and keeps
     # them open after the parent is killed.
     @unittest.skipUnless('fork' in multiprocessing.get_all_start_methods(), 'needs the fork start method')
     def test_multi_threaded_augmenter_with_forked_sibling(self):
-        self.check_workers_exit('mta', fork_sibling=True)
+        self._check_workers_exit('mta', fork_sibling=True)
 
     @unittest.skipUnless('fork' in multiprocessing.get_all_start_methods(), 'needs the fork start method')
     def test_nondet_multi_threaded_augmenter_with_forked_sibling(self):
-        self.check_workers_exit('nondet', fork_sibling=True)
+        self._check_workers_exit('nondet', fork_sibling=True)
 
 
 def run_helper(augmenter, fork_sibling):
@@ -140,7 +137,7 @@ def run_helper(augmenter, fork_sibling):
     """
     if fork_sibling:
         multiprocessing.set_start_method('fork', force=True)
-    mt = AUGMENTERS[augmenter](LargeBatchDL(None, 1), None, 3, 1)
+    mt = AUGMENTERS[augmenter](ZerosDataLoader(LARGE_BATCH_SHAPE), None, 3, 1)
     next(mt)
     pids = [p.pid for p in mt._processes]
     if fork_sibling:
