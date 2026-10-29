@@ -24,6 +24,7 @@ from multiprocessing import parent_process
 from queue import Queue as thrQueue, Full, Empty
 import numpy as np
 import logging
+import os
 import random
 import signal
 from multiprocessing import Event
@@ -40,15 +41,21 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-def seed_worker_rngs(seed):
+def init_worker(seed):
     """
-    Seeds numpy, random and torch in a background worker.
+    Prepares a freshly started background worker: restores the default SIGTERM handler and seeds numpy, random and
+    torch.
 
-    Forked workers inherit the parent's torch RNG state. Without a seed they would all draw the same numbers, so torch
-    is reseeded from the OS, as np.random.seed(None) does for numpy (random reseeds itself after a fork).
+    Forked workers inherit the parent's signal handlers. A parent that catches SIGTERM must not keep its workers alive
+    when a scheduler such as SLURM sends SIGTERM to every process of the job.
+
+    Forked workers also inherit the parent's torch RNG state. Without a seed they would all draw the same numbers, so
+    torch is reseeded from the OS, as np.random.seed(None) does for numpy (random reseeds itself after a fork).
     With a seed, torch gets a seed derived from it, not the seed itself: numpy and torch both use MT19937, and with the
     same seed torch.rand would return the numbers numpy draws.
     """
+    signal.signal(signal.SIGTERM, signal.SIG_DFL)
+
     np.random.seed(seed)
     if seed is not None:
         # random.seed refuses numpy integers
@@ -60,26 +67,44 @@ def seed_worker_rngs(seed):
             torch.seed()
 
 
+class ParentWatch(object):
+    """
+    Tells a background worker whether the process that started it has died. A parent that is killed (SIGKILL, the OOM
+    killer) never sets abort_event, so its workers have to notice on their own.
+
+    parent_process().is_alive() watches a pipe whose other end the parent holds open. Under fork, every process the
+    parent forks later inherits that end too and keeps it open after the parent is gone. Under fork and spawn the
+    parent is also the worker's OS parent, so the worker is reparented when the parent dies and os.getppid() changes,
+    whoever holds the pipe. Under forkserver the OS parent is the fork server, and only the pipe is watched.
+    """
+
+    def __init__(self):
+        self.parent = parent_process()
+        self.watch_ppid = self.parent is not None and os.getppid() == self.parent.pid
+
+    def parent_died(self) -> bool:
+        if self.parent is None:
+            return False
+        return (self.watch_ppid and os.getppid() != self.parent.pid) or not self.parent.is_alive()
+
+
 def producer(queue: Queue, data_loader, transform, thread_id: int, seed,
              abort_event: Event, pause_event=None, wait_time: float = 0.02):
-    # Restore default SIGTERM handler to terminate the process
-    signal.signal(signal.SIGTERM, signal.SIG_DFL)
-
     if torch is not None:
         torch.set_num_threads(1)
-    seed_worker_rngs(seed)
+    init_worker(seed)
 
     # the producer will set the abort event if something happens
     with threadpool_limits(1, None):
         data_loader.set_thread_id(thread_id)
         item = None
-        parent = parent_process()
+        parent = ParentWatch()
 
         try:
             while not abort_event.is_set():
-                # A parent that was killed (SIGKILL, the OOM killer) never sets abort_event. Nobody reads the queue
-                # any more, so don't let the exit wait for the queue's feeder thread either.
-                if parent is not None and not parent.is_alive():
+                # Nobody reads the queue once the parent is gone, so don't let the exit wait for the queue's feeder
+                # thread either.
+                if parent.parent_died():
                     queue.cancel_join_thread()
                     return
 

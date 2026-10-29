@@ -16,18 +16,17 @@
 import traceback
 from typing import List, Union
 import threading
-from multiprocessing import Process, Queue, parent_process
+from multiprocessing import Process, Queue
 from queue import Queue as thrQueue, Full, Empty
 import numpy as np
 import sys
 import logging
-import signal
 from multiprocessing import Event
 from time import sleep, time
 from threadpoolctl import threadpool_limits
 
 from batchgenerators.dataloading.nondet_multi_threaded_augmenter import pin_memory_of_all_eligible_items_in_dict, \
-    seed_worker_rngs
+    init_worker, ParentWatch
 
 try:
     import torch
@@ -39,19 +38,16 @@ logger = logging.getLogger(__name__)
 
 def producer(queue, data_loader, transform, thread_id, seed, abort_event,
              pause_event=None, wait_time: float = 0.02):
-    # Restore default SIGTERM handler to terminate the process
-    signal.signal(signal.SIGTERM, signal.SIG_DFL)
-
-    seed_worker_rngs(seed)
+    init_worker(seed)
     data_loader.set_thread_id(thread_id)
     item = None
-    parent = parent_process()
+    parent = ParentWatch()
 
     try:
         while not abort_event.is_set():
-            # A parent that was killed (SIGKILL, the OOM killer) never sets abort_event. Nobody reads the queue any
-            # more, so don't let the exit wait for the queue's feeder thread either.
-            if parent is not None and not parent.is_alive():
+            # Nobody reads the queue once the parent is gone, so don't let the exit wait for the queue's feeder thread
+            # either.
+            if parent.parent_died():
                 queue.cancel_join_thread()
                 return
 

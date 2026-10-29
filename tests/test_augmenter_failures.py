@@ -1,3 +1,4 @@
+import multiprocessing
 import os
 import signal
 import subprocess
@@ -92,12 +93,14 @@ class TestWorkersExitWhenParentDies(unittest.TestCase):
     instead of running on as orphans.
     """
 
-    def check_workers_exit(self, augmenter):
-        helper = subprocess.Popen([sys.executable, os.path.abspath(__file__), 'helper', augmenter],
-                                  stdout=subprocess.PIPE, text=True)
+    def check_workers_exit(self, augmenter, fork_sibling=False):
+        args = [sys.executable, os.path.abspath(__file__), 'helper', augmenter]
+        helper = subprocess.Popen(args + (['fork_sibling'] if fork_sibling else []), stdout=subprocess.PIPE, text=True)
         workers = []
+        siblings = []
         try:
-            workers = [int(i) for i in helper.stdout.readline().split()]
+            pids = [int(i) for i in helper.stdout.readline().split()]
+            workers, siblings = pids[:3], pids[3:]
             self.assertEqual(len(workers), 3)
             helper.send_signal(signal.SIGKILL)
             helper.wait()
@@ -109,9 +112,9 @@ class TestWorkersExitWhenParentDies(unittest.TestCase):
             helper.kill()
             helper.wait()
             helper.stdout.close()
-            for w in workers:
-                if _alive(w):
-                    os.kill(w, signal.SIGKILL)
+            for pid in workers + siblings:
+                if _alive(pid):
+                    os.kill(pid, signal.SIGKILL)
 
     def test_multi_threaded_augmenter(self):
         self.check_workers_exit('mta')
@@ -119,17 +122,37 @@ class TestWorkersExitWhenParentDies(unittest.TestCase):
     def test_nondet_multi_threaded_augmenter(self):
         self.check_workers_exit('nondet')
 
+    # A process forked after the workers holds copies of the pipes through which they watch the parent, and keeps
+    # them open after the parent is killed.
+    @unittest.skipUnless('fork' in multiprocessing.get_all_start_methods(), 'needs the fork start method')
+    def test_multi_threaded_augmenter_with_forked_sibling(self):
+        self.check_workers_exit('mta', fork_sibling=True)
 
-def run_helper(augmenter):
-    """Starts an augmenter with three workers, prints their pids and waits to be killed."""
+    @unittest.skipUnless('fork' in multiprocessing.get_all_start_methods(), 'needs the fork start method')
+    def test_nondet_multi_threaded_augmenter_with_forked_sibling(self):
+        self.check_workers_exit('nondet', fork_sibling=True)
+
+
+def run_helper(augmenter, fork_sibling):
+    """
+    Starts an augmenter with three workers, prints their pids and waits to be killed. With fork_sibling, everything
+    is forked, and a process forked after the workers outlives the helper; its pid is printed last.
+    """
+    if fork_sibling:
+        multiprocessing.set_start_method('fork', force=True)
     mt = AUGMENTERS[augmenter](LargeBatchDL(None, 1), None, 3, 1)
     next(mt)
-    print(' '.join(str(p.pid) for p in mt._processes), flush=True)
+    pids = [p.pid for p in mt._processes]
+    if fork_sibling:
+        sibling = multiprocessing.Process(target=sleep, args=(60,))
+        sibling.start()
+        pids.append(sibling.pid)
+    print(' '.join(str(p) for p in pids), flush=True)
     sleep(60)
 
 
 if __name__ == '__main__':
     if sys.argv[1:2] == ['helper']:
-        run_helper(sys.argv[2])
+        run_helper(sys.argv[2], sys.argv[3:4] == ['fork_sibling'])
     else:
         unittest.main()
