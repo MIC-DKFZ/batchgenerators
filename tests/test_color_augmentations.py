@@ -14,6 +14,8 @@
 # limitations under the License.
 
 import unittest
+from itertools import product
+
 import numpy as np
 from batchgenerators.augmentations.color_augmentations import augment_contrast, augment_brightness_additive,\
     augment_brightness_multiplicative, augment_gamma
@@ -152,6 +154,51 @@ class TestAugmentGamma(unittest.TestCase):
         self.assertTrue(self.d_3D.min().round(decimals=3) == self.data_input_3D.min().round(decimals=3) and
                         self.d_3D.max().round(decimals=3) == self.data_input_3D.max().round(decimals=3),
                         "Input range does not equal output range")
+
+
+class TestRangesBelowOne(unittest.TestCase):
+    """Contrast and gamma ranges that lie below one must be respected, as the spatial scale range is (issue #137)."""
+
+    def setUp(self):
+        self.addCleanup(np.random.set_state, np.random.get_state())
+
+    @staticmethod
+    def sample_contrast(value_range, per_channel):
+        # each channel has mean 1, so its second value becomes 1 + factor
+        data = np.array([[0., 2.], [0., 2.]])
+        return augment_contrast(data, value_range, preserve_range=False, per_channel=per_channel)[:, 1] - 1
+
+    @staticmethod
+    def sample_gamma(value_range, per_channel):
+        # with minimum 0, range 1 and no epsilon each channel's 0.5 becomes 0.5 ** gamma
+        data = np.array([[0., 0.5, 1.], [0., 0.5, 1.]])
+        return -np.log2(augment_gamma(data, value_range, epsilon=0, per_channel=per_channel)[:, 1])
+
+    def test_ranges_below_one_are_respected(self):
+        for sample, value_range, per_channel, seed in product((self.sample_contrast, self.sample_gamma),
+                                                               ((0.7, 0.9), (0.8, 0.8)), (False, True), range(20)):
+            with self.subTest(sample=sample.__name__, value_range=value_range, per_channel=per_channel, seed=seed):
+                np.random.seed(seed)
+                sampled = sample(value_range, per_channel)
+                self.assertTrue(np.all(sampled >= value_range[0] - 1e-9), sampled)
+                self.assertTrue(np.all(sampled <= value_range[1] + 1e-9), sampled)
+
+    def test_number_of_draws_is_unchanged(self):
+        # contrast: per channel a p_per_channel check, plus a branch choice and a factor (per channel or once)
+        # gamma: a branch choice and a gamma, per channel or once
+        draws = {('sample_contrast', False): 4, ('sample_contrast', True): 6,
+                 ('sample_gamma', False): 2, ('sample_gamma', True): 4}
+        for sample, value_range, per_channel in product((self.sample_contrast, self.sample_gamma),
+                                                        ((0.7, 0.9), (0.8, 0.8), (0.75, 1.25), (0.7, 1.5), (1.1, 1.5),
+                                                         (0.7, 1), (1, 1)), (False, True)):
+            with self.subTest(sample=sample.__name__, value_range=value_range, per_channel=per_channel):
+                expected = np.random.RandomState(0)
+                expected.random_sample(draws[(sample.__name__, per_channel)])
+                np.random.seed(0)
+                sample(value_range, per_channel)
+                actual_state, expected_state = np.random.get_state(), expected.get_state()
+                np.testing.assert_array_equal(actual_state[1], expected_state[1])
+                self.assertEqual(actual_state[2:], expected_state[2:])
 
 
 if __name__ == '__main__':

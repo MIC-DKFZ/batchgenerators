@@ -30,7 +30,9 @@ def augment_contrast(data_sample: np.ndarray,
             factor = contrast_range()
         else:
             if np.random.random() < 0.5 and contrast_range[0] < 1:
-                factor = np.random.uniform(contrast_range[0], 1)
+                factor = np.random.uniform(contrast_range[0], min(1, contrast_range[1]))
+            elif contrast_range[1] < 1:
+                factor = np.random.uniform(contrast_range[0], contrast_range[1])
             else:
                 factor = np.random.uniform(max(contrast_range[0], 1), contrast_range[1])
 
@@ -53,7 +55,9 @@ def augment_contrast(data_sample: np.ndarray,
                     factor = contrast_range()
                 else:
                     if np.random.random() < 0.5 and contrast_range[0] < 1:
-                        factor = np.random.uniform(contrast_range[0], 1)
+                        factor = np.random.uniform(contrast_range[0], min(1, contrast_range[1]))
+                    elif contrast_range[1] < 1:
+                        factor = np.random.uniform(contrast_range[0], contrast_range[1])
                     else:
                         factor = np.random.uniform(max(contrast_range[0], 1), contrast_range[1])
 
@@ -115,7 +119,9 @@ def augment_gamma(data_sample, gamma_range=(0.5, 2), invert_image=False, epsilon
             mn = data_sample.mean()
             sd = data_sample.std()
         if np.random.random() < 0.5 and gamma_range[0] < 1:
-            gamma = np.random.uniform(gamma_range[0], 1)
+            gamma = np.random.uniform(gamma_range[0], min(1, gamma_range[1]))
+        elif gamma_range[1] < 1:
+            gamma = np.random.uniform(gamma_range[0], gamma_range[1])
         else:
             gamma = np.random.uniform(max(gamma_range[0], 1), gamma_range[1])
         minm = data_sample.min()
@@ -132,7 +138,9 @@ def augment_gamma(data_sample, gamma_range=(0.5, 2), invert_image=False, epsilon
                 mn = data_sample[c].mean()
                 sd = data_sample[c].std()
             if np.random.random() < 0.5 and gamma_range[0] < 1:
-                gamma = np.random.uniform(gamma_range[0], 1)
+                gamma = np.random.uniform(gamma_range[0], min(1, gamma_range[1]))
+            elif gamma_range[1] < 1:
+                gamma = np.random.uniform(gamma_range[0], gamma_range[1])
             else:
                 gamma = np.random.uniform(max(gamma_range[0], 1), gamma_range[1])
             minm = data_sample[c].min()
