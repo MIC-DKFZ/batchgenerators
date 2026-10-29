@@ -17,7 +17,8 @@ from builtins import range
 from typing import Tuple, Union, Callable
 
 import numpy as np
-from batchgenerators.augmentations.utils import general_cc_var_num_channels, illumination_jitter
+from batchgenerators.augmentations.utils import general_cc_var_num_channels, illumination_jitter, \
+    sample_factor_around_one
 
 
 def augment_contrast(data_sample: np.ndarray,
@@ -29,12 +30,7 @@ def augment_contrast(data_sample: np.ndarray,
         if callable(contrast_range):
             factor = contrast_range()
         else:
-            if np.random.random() < 0.5 and contrast_range[0] < 1:
-                factor = np.random.uniform(contrast_range[0], min(1, contrast_range[1]))
-            elif contrast_range[1] < 1:
-                factor = np.random.uniform(contrast_range[0], contrast_range[1])
-            else:
-                factor = np.random.uniform(max(contrast_range[0], 1), contrast_range[1])
+            factor = sample_factor_around_one(contrast_range)
 
         for c in range(data_sample.shape[0]):
             if np.random.uniform() < p_per_channel:
@@ -54,12 +50,7 @@ def augment_contrast(data_sample: np.ndarray,
                 if callable(contrast_range):
                     factor = contrast_range()
                 else:
-                    if np.random.random() < 0.5 and contrast_range[0] < 1:
-                        factor = np.random.uniform(contrast_range[0], min(1, contrast_range[1]))
-                    elif contrast_range[1] < 1:
-                        factor = np.random.uniform(contrast_range[0], contrast_range[1])
-                    else:
-                        factor = np.random.uniform(max(contrast_range[0], 1), contrast_range[1])
+                    factor = sample_factor_around_one(contrast_range)
 
                 mn = data_sample[c].mean()
                 if preserve_range:
@@ -118,12 +109,7 @@ def augment_gamma(data_sample, gamma_range=(0.5, 2), invert_image=False, epsilon
         if retain_stats_here:
             mn = data_sample.mean()
             sd = data_sample.std()
-        if np.random.random() < 0.5 and gamma_range[0] < 1:
-            gamma = np.random.uniform(gamma_range[0], min(1, gamma_range[1]))
-        elif gamma_range[1] < 1:
-            gamma = np.random.uniform(gamma_range[0], gamma_range[1])
-        else:
-            gamma = np.random.uniform(max(gamma_range[0], 1), gamma_range[1])
+        gamma = sample_factor_around_one(gamma_range)
         minm = data_sample.min()
         rnge = data_sample.max() - minm
         data_sample = np.power(((data_sample - minm) / float(rnge + epsilon)), gamma) * rnge + minm
@@ -137,12 +123,7 @@ def augment_gamma(data_sample, gamma_range=(0.5, 2), invert_image=False, epsilon
             if retain_stats_here:
                 mn = data_sample[c].mean()
                 sd = data_sample[c].std()
-            if np.random.random() < 0.5 and gamma_range[0] < 1:
-                gamma = np.random.uniform(gamma_range[0], min(1, gamma_range[1]))
-            elif gamma_range[1] < 1:
-                gamma = np.random.uniform(gamma_range[0], gamma_range[1])
-            else:
-                gamma = np.random.uniform(max(gamma_range[0], 1), gamma_range[1])
+            gamma = sample_factor_around_one(gamma_range)
             minm = data_sample[c].min()
             rnge = data_sample[c].max() - minm
             data_sample[c] = np.power(((data_sample[c] - minm) / float(rnge + epsilon)), gamma) * float(rnge + epsilon) + minm

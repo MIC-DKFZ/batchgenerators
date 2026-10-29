@@ -21,7 +21,7 @@ from batchgenerators.augmentations.utils import create_zero_centered_coordinate_
     interpolate_img, \
     rotate_coords_2d, rotate_coords_3d, scale_coords, resize_segmentation, resize_multichannel_image, \
     elastic_deform_coordinates_2, \
-    get_organ_gradient_field, ignore_anatomy
+    get_organ_gradient_field, ignore_anatomy, sample_factor_around_one
 from batchgenerators.augmentations.crop_and_pad_augmentations import random_crop as random_crop_aug
 from batchgenerators.augmentations.crop_and_pad_augmentations import center_crop as center_crop_aug
 
@@ -251,17 +251,9 @@ def augment_spatial(data, seg, patch_size, patch_center_dist_from_border=30,
 
         if do_scale and np.random.uniform() < p_scale_per_sample:
             if independent_scale_for_each_axis and np.random.uniform() < p_independent_scale_per_axis:
-                sc = []
-                for _ in range(dim):
-                    if np.random.random() < 0.5 and scale[0] < 1:
-                        sc.append(np.random.uniform(scale[0], min(1, scale[1])))
-                    else:
-                        sc.append(np.random.uniform(scale[0] if scale[1] < 1 else max(scale[0], 1), scale[1]))
+                sc = [sample_factor_around_one(scale) for _ in range(dim)]
             else:
-                if np.random.random() < 0.5 and scale[0] < 1:
-                    sc = np.random.uniform(scale[0], min(1, scale[1]))
-                else:
-                    sc = np.random.uniform(scale[0] if scale[1] < 1 else max(scale[0], 1), scale[1])
+                sc = sample_factor_around_one(scale)
 
             coords = scale_coords(coords, sc)
             modified_coords = True
@@ -415,17 +407,9 @@ def augment_spatial_2(data, seg, patch_size, patch_center_dist_from_border=30,
 
         if do_scale and np.random.uniform() < p_scale_per_sample:
             if independent_scale_for_each_axis and np.random.uniform() < p_independent_scale_per_axis:
-                sc = []
-                for _ in range(dim):
-                    if np.random.random() < 0.5 and scale[0] < 1:
-                        sc.append(np.random.uniform(scale[0], min(1, scale[1])))
-                    else:
-                        sc.append(np.random.uniform(scale[0] if scale[1] < 1 else max(scale[0], 1), scale[1]))
+                sc = [sample_factor_around_one(scale) for _ in range(dim)]
             else:
-                if np.random.random() < 0.5 and scale[0] < 1:
-                    sc = np.random.uniform(scale[0], min(1, scale[1]))
-                else:
-                    sc = np.random.uniform(scale[0] if scale[1] < 1 else max(scale[0], 1), scale[1])
+                sc = sample_factor_around_one(scale)
 
             coords = scale_coords(coords, sc)
             modified_coords = True

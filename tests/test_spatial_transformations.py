@@ -164,18 +164,19 @@ class AugmentSpatialScale(unittest.TestCase):
         for augment, dim, mode, scale, seed in product(
                 (spatial_transformations.augment_spatial, spatial_transformations.augment_spatial_2),
                 (2, 3), ((False, 1), (True, 1), (True, 0)),
-                ((0.7, 0.9), (0.8, 0.8)), (0, 1, 21)):
+                ((0.7, 0.9), (0.8, 0.8), (0.7, 1)), (0, 1, 21)):
             with self.subTest(augment=augment.__name__, dim=dim, mode=mode, scale=scale, seed=seed):
                 sampled = self._sample_scale(augment, dim, scale, *mode, seed=seed)
                 self.assertTrue(np.all(sampled >= scale[0]), sampled)
                 self.assertTrue(np.all(sampled <= scale[1]), sampled)
 
-    def test_scale_ending_at_one_keeps_identity_branch(self):
-        # This seed selects the original upper branch in both functions.
+    def test_scale_ending_at_one_draws_from_the_range(self):
+        # This seed selects the upper branch in both functions, which used to return exactly 1.
         for augment in (spatial_transformations.augment_spatial, spatial_transformations.augment_spatial_2):
             with self.subTest(augment=augment.__name__):
                 sampled = self._sample_scale(augment, 2, (0.7, 1), False, 1, seed=0)
-                np.testing.assert_array_equal(sampled, [1])
+                self.assertTrue(np.all(sampled >= 0.7), sampled)
+                self.assertTrue(np.all(sampled < 1), sampled)
 
     def test_scale_preserves_random_state(self):
         # Original draw counts with elastic deformation and rotation disabled.

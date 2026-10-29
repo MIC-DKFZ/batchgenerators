@@ -156,8 +156,11 @@ class TestAugmentGamma(unittest.TestCase):
                         "Input range does not equal output range")
 
 
-class TestRangesBelowOne(unittest.TestCase):
-    """Contrast and gamma ranges that lie below one must be respected, as the spatial scale range is (issue #137)."""
+class TestRangesUpToOne(unittest.TestCase):
+    """
+    Contrast and gamma ranges that end at or below one must be sampled from the range, as the spatial scale range is
+    (issue #137). A range ending at one used to return exactly one for half of the draws.
+    """
 
     def setUp(self):
         self.addCleanup(np.random.set_state, np.random.get_state())
@@ -174,14 +177,17 @@ class TestRangesBelowOne(unittest.TestCase):
         data = np.array([[0., 0.5, 1.], [0., 0.5, 1.]])
         return -np.log2(augment_gamma(data, value_range, epsilon=0, per_channel=per_channel)[:, 1])
 
-    def test_ranges_below_one_are_respected(self):
+    def test_ranges_up_to_one_are_respected(self):
         for sample, value_range, per_channel, seed in product((self.sample_contrast, self.sample_gamma),
-                                                               ((0.7, 0.9), (0.8, 0.8)), (False, True), range(20)):
+                                                               ((0.7, 0.9), (0.8, 0.8), (0.7, 1)), (False, True),
+                                                               range(20)):
             with self.subTest(sample=sample.__name__, value_range=value_range, per_channel=per_channel, seed=seed):
                 np.random.seed(seed)
                 sampled = sample(value_range, per_channel)
                 self.assertTrue(np.all(sampled >= value_range[0] - 1e-9), sampled)
                 self.assertTrue(np.all(sampled <= value_range[1] + 1e-9), sampled)
+                # uniform never returns its upper bound, so a factor of exactly one comes from the old upper branch
+                self.assertTrue(np.all(sampled < 1), sampled)
 
     def test_number_of_draws_is_unchanged(self):
         # contrast: per channel a p_per_channel check, plus a branch choice and a factor (per channel or once)

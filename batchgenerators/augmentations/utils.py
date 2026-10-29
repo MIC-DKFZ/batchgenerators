@@ -157,6 +157,19 @@ def scale_coords(coords, scale):
     return coords
 
 
+def sample_factor_around_one(factor_range):
+    """
+    Draws a factor (scale, contrast, gamma) from factor_range. If the range contains one, factors below and above one
+    are equally likely, however asymmetric the range is around one: (0.5, 2) shrinks as often as it enlarges. A range
+    that ends at or below one, or starts at or above one, is sampled uniformly.
+    """
+    if np.random.random() < 0.5 and factor_range[0] < 1:
+        return np.random.uniform(factor_range[0], min(1, factor_range[1]))
+    if factor_range[1] <= 1:
+        return np.random.uniform(factor_range[0], factor_range[1])
+    return np.random.uniform(max(factor_range[0], 1), factor_range[1])
+
+
 def uncenter_coords(coords):
     shp = coords.shape[1:]
     coords = deepcopy(coords)
