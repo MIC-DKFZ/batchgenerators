@@ -112,9 +112,13 @@ class ZoomTransform(AbstractTransform):
 
         if concatenate:
             data = np.vstack([i[0][None] for i in results])
+        else:
+            data = type(data)(i[0] for i in results)
 
         if concatenate_seg is not None and concatenate_seg:
             seg = np.vstack([i[1][None] for i in results])
+        elif seg is not None:
+            seg = type(seg)(i[1] for i in results)
 
         data_dict[self.data_key] = data
         if seg is not None:
@@ -176,9 +180,13 @@ class ResizeTransform(AbstractTransform):
 
         if concatenate:
             data = np.vstack([i[0][None] for i in results])
+        else:
+            data = type(data)(i[0] for i in results)
 
         if concatenate_seg is not None and concatenate_seg:
             seg = np.vstack([i[1][None] for i in results])
+        elif seg is not None:
+            seg = type(seg)(i[1] for i in results)
 
         data_dict[self.data_key] = data
         if seg is not None:
