@@ -414,21 +414,21 @@ def random_crop_3D_image(img, crop_size):
             img.shape), "If you provide a list/tuple as center crop make sure it has the same len as your data has dims (3d)"
 
     if crop_size[0] < img.shape[0]:
-        lb_x = np.random.randint(0, img.shape[0] - crop_size[0])
+        lb_x = np.random.randint(0, img.shape[0] - crop_size[0] + 1)
     elif crop_size[0] == img.shape[0]:
         lb_x = 0
     else:
         raise ValueError("crop_size[0] must be smaller or equal to the images x dimension")
 
     if crop_size[1] < img.shape[1]:
-        lb_y = np.random.randint(0, img.shape[1] - crop_size[1])
+        lb_y = np.random.randint(0, img.shape[1] - crop_size[1] + 1)
     elif crop_size[1] == img.shape[1]:
         lb_y = 0
     else:
         raise ValueError("crop_size[1] must be smaller or equal to the images y dimension")
 
     if crop_size[2] < img.shape[2]:
-        lb_z = np.random.randint(0, img.shape[2] - crop_size[2])
+        lb_z = np.random.randint(0, img.shape[2] - crop_size[2] + 1)
     elif crop_size[2] == img.shape[2]:
         lb_z = 0
     else:
@@ -445,21 +445,21 @@ def random_crop_3D_image_batched(img, crop_size):
             img.shape) - 2), "If you provide a list/tuple as center crop make sure it has the same len as your data has dims (3d)"
 
     if crop_size[0] < img.shape[2]:
-        lb_x = np.random.randint(0, img.shape[2] - crop_size[0])
+        lb_x = np.random.randint(0, img.shape[2] - crop_size[0] + 1)
     elif crop_size[0] == img.shape[2]:
         lb_x = 0
     else:
         raise ValueError("crop_size[0] must be smaller or equal to the images x dimension")
 
     if crop_size[1] < img.shape[3]:
-        lb_y = np.random.randint(0, img.shape[3] - crop_size[1])
+        lb_y = np.random.randint(0, img.shape[3] - crop_size[1] + 1)
     elif crop_size[1] == img.shape[3]:
         lb_y = 0
     else:
         raise ValueError("crop_size[1] must be smaller or equal to the images y dimension")
 
     if crop_size[2] < img.shape[4]:
-        lb_z = np.random.randint(0, img.shape[4] - crop_size[2])
+        lb_z = np.random.randint(0, img.shape[4] - crop_size[2] + 1)
     elif crop_size[2] == img.shape[4]:
         lb_z = 0
     else:
@@ -476,14 +476,14 @@ def random_crop_2D_image(img, crop_size):
             img.shape), "If you provide a list/tuple as center crop make sure it has the same len as your data has dims (2d)"
 
     if crop_size[0] < img.shape[0]:
-        lb_x = np.random.randint(0, img.shape[0] - crop_size[0])
+        lb_x = np.random.randint(0, img.shape[0] - crop_size[0] + 1)
     elif crop_size[0] == img.shape[0]:
         lb_x = 0
     else:
         raise ValueError("crop_size[0] must be smaller or equal to the images x dimension")
 
     if crop_size[1] < img.shape[1]:
-        lb_y = np.random.randint(0, img.shape[1] - crop_size[1])
+        lb_y = np.random.randint(0, img.shape[1] - crop_size[1] + 1)
     elif crop_size[1] == img.shape[1]:
         lb_y = 0
     else:
@@ -500,14 +500,14 @@ def random_crop_2D_image_batched(img, crop_size):
             img.shape) - 2), "If you provide a list/tuple as center crop make sure it has the same len as your data has dims (2d)"
 
     if crop_size[0] < img.shape[2]:
-        lb_x = np.random.randint(0, img.shape[2] - crop_size[0])
+        lb_x = np.random.randint(0, img.shape[2] - crop_size[0] + 1)
     elif crop_size[0] == img.shape[2]:
         lb_x = 0
     else:
         raise ValueError("crop_size[0] must be smaller or equal to the images x dimension")
 
     if crop_size[1] < img.shape[3]:
-        lb_y = np.random.randint(0, img.shape[3] - crop_size[1])
+        lb_y = np.random.randint(0, img.shape[3] - crop_size[1] + 1)
     elif crop_size[1] == img.shape[3]:
         lb_y = 0
     else:

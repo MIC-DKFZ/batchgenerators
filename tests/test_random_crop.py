@@ -17,6 +17,8 @@ import unittest
 from unittest.mock import patch
 import numpy as np
 from batchgenerators.augmentations.crop_and_pad_augmentations import random_crop
+from batchgenerators.augmentations.utils import random_crop_2D_image, random_crop_2D_image_batched, \
+    random_crop_3D_image, random_crop_3D_image_batched
 
 
 class TestRandomCrop(unittest.TestCase):
@@ -122,6 +124,29 @@ class TestRandomCrop(unittest.TestCase):
 
         self.assertEqual(np.sum(s == 0), 0, "Zeros encountered in seg meaning that we did padding which should not have"
                                             " happened here!")
+
+
+class TestRandomCropUtils(unittest.TestCase):
+    """The random crops in augmentations/utils.py must be able to draw the last valid origin too."""
+
+    def _assert_last_origin(self, crop, shape, n_spatial):
+        img = np.arange(np.prod(shape)).reshape(shape)
+        with patch('numpy.random.randint', side_effect=lambda low, high: high - 1):
+            cropped = crop(img, 3)
+        expected = img[(slice(None),) * (len(shape) - n_spatial) + (slice(-3, None),) * n_spatial]
+        np.testing.assert_array_equal(cropped, expected)
+
+    def test_last_origin_2D(self):
+        self._assert_last_origin(random_crop_2D_image, (5, 6), 2)
+
+    def test_last_origin_2D_batched(self):
+        self._assert_last_origin(random_crop_2D_image_batched, (2, 1, 5, 6), 2)
+
+    def test_last_origin_3D(self):
+        self._assert_last_origin(random_crop_3D_image, (5, 6, 4), 3)
+
+    def test_last_origin_3D_batched(self):
+        self._assert_last_origin(random_crop_3D_image_batched, (2, 1, 5, 6, 4), 3)
 
 
 if __name__ == '__main__':
