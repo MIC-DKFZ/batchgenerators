@@ -1,69 +1,37 @@
-import re
-import torch
+import argparse
 import numpy as np
 import os
 from batchgenerators.dataloading.data_loader import DataLoaderFromDataset
 from batchgenerators.dataloading.multi_threaded_augmenter import MultiThreadedAugmenter
-from batchgenerators.datasets.cifar import HighPerformanceCIFARLoader, CifarDataset
+from batchgenerators.datasets.cifar import HighPerformanceCIFARLoader, CifarDataset, maybe_download_and_prepare_cifar
 from batchgenerators.transforms.abstract_transforms import Compose
 from batchgenerators.transforms.spatial_transforms import SpatialTransform
 from batchgenerators.transforms.utility_transforms import NumpyToTensor
-from torch._six import int_classes, string_classes, container_abcs
-from torch.utils.data.dataloader import numpy_type_map
-
-_use_shared_memory = False
+from torch.utils.data import default_collate
 
 
-def default_collate(batch):
-    r"""Puts each data field into a tensor with outer dimension batch size"""
-
-    error_msg = "batch must contain tensors, numbers, dicts or lists; found {}"
-    elem_type = type(batch[0])
-    if isinstance(batch[0], torch.Tensor):
-        out = None
-        if _use_shared_memory:
-            # If we're in a background process, concatenate directly into a
-            # shared memory tensor to avoid an extra copy
-            numel = sum([x.numel() for x in batch])
-            storage = batch[0].storage()._new_shared(numel)
-            out = batch[0].new(storage)
-        return torch.stack(batch, 0, out=out)
-    elif elem_type.__module__ == 'numpy' and elem_type.__name__ != 'str_' \
-            and elem_type.__name__ != 'string_':
-        elem = batch[0]
-        if elem_type.__name__ == 'ndarray':
-            # array of string classes and object
-            if re.search('[SaUO]', elem.dtype.str) is not None:
-                raise TypeError(error_msg.format(elem.dtype))
-
-            return torch.stack([torch.from_numpy(b) for b in batch], 0)
-        if elem.shape == ():  # scalars
-            py_type = float if elem.dtype.name.startswith('float') else int
-            return numpy_type_map[elem.dtype.name](list(map(py_type, batch)))
-    elif isinstance(batch[0], int_classes):
-        return torch.LongTensor(batch)
-    elif isinstance(batch[0], float):
-        return torch.DoubleTensor(batch)
-    elif isinstance(batch[0], string_classes):
-        return batch
-    elif isinstance(batch[0], container_abcs.Mapping):
-        return {key: default_collate([d[key] for d in batch]) for key in batch[0]}
-    elif isinstance(batch[0], container_abcs.Sequence):
-        transposed = zip(*batch)
-        return [default_collate(samples) for samples in transposed]
-
-    raise TypeError((error_msg.format(type(batch[0]))))
+def collate(batch):
+    """
+    CifarDataset returns each sample with a batch dimension of 1 (SpatialTransform needs one), so default_collate
+    stacks the images to (b, 1, c, x, y). Used by both DataLoaders so that they do the same work.
+    """
+    batch = default_collate(batch)
+    batch['data'] = batch['data'][:, 0]
+    return batch
 
 
 if __name__ == '__main__':
-    ### current implementation of betchgenerators stuff for this script does not use _use_shared_memory!
+    parser = argparse.ArgumentParser(description='Benchmarks batchgenerators against the pytorch DataLoader on CIFAR-10')
+    parser.add_argument('dataset_dir', help='folder for CIFAR-10, it is downloaded there if not present')
+    args = parser.parse_args()
 
     from time import time
     batch_size = 50
     num_workers = 8
     pin_memory = False
     num_epochs = 3
-    dataset_dir = '/media/fabian/data/data/cifar10'
+    dataset_dir = args.dataset_dir
+    maybe_download_and_prepare_cifar(dataset_dir)
     numpy_to_tensor = NumpyToTensor(['data', 'labels'], cast_to=None)
     fname = os.path.join(dataset_dir, 'cifar10_training_data.npz')
     dataset = np.load(fname)
@@ -80,7 +48,7 @@ if __name__ == '__main__':
 
     cifar_dataset = CifarDataset(dataset_dir, train=True, transform=tr_transforms)
 
-    dl = DataLoaderFromDataset(cifar_dataset, batch_size, num_workers, 1)
+    dl = DataLoaderFromDataset(cifar_dataset, batch_size, num_workers, 1, collate_fn=collate)
     mt = MultiThreadedAugmenter(dl, None, num_workers, 1, None, pin_memory)
 
     batches = 0
@@ -125,7 +93,7 @@ if __name__ == '__main__':
     from torch.utils.data import DataLoader as TorchDataLoader
 
     trainloader = TorchDataLoader(cifar_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers,
-                                  pin_memory=pin_memory, collate_fn=default_collate)
+                                  pin_memory=pin_memory, collate_fn=collate)
 
     batches = 0
     for _ in iter(trainloader):
