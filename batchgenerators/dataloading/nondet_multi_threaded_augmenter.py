@@ -30,6 +30,11 @@ from time import sleep, time
 from batchgenerators.dataloading.data_loader import DataLoader
 from threadpoolctl import threadpool_limits
 
+
+# Library code must not log through the root logger: logger.debug() installs a
+# handler on it, so an application's own records get echoed a second time.
+logger = logging.getLogger(__name__)
+
 try:
     import torch
 except ImportError:
@@ -233,7 +238,7 @@ class NonDetMultiThreadedAugmenter(object):
             self.abort_event = Event()
             self.pause_event = Event()
 
-            logging.debug("starting workers")
+            logger.debug("starting workers")
             if isinstance(self.generator, DataLoader):
                 self.generator.was_initialized = False
 
@@ -262,7 +267,7 @@ class NonDetMultiThreadedAugmenter(object):
 
             self.initialized = True
         else:
-            logging.debug("MultiThreadedGenerator Warning: start() has been called but workers are already running")
+            logger.debug("MultiThreadedGenerator Warning: start() has been called but workers are already running")
 
     def _finish(self, timeout=10, force=False):
         """Graceful shutdown — same pause-drain-exit handshake as MTA.
@@ -336,7 +341,7 @@ class NonDetMultiThreadedAugmenter(object):
         self._start()
 
     def __del__(self):
-        logging.debug("MultiThreadedGenerator: destructor was called")
+        logger.debug("MultiThreadedGenerator: destructor was called")
         self._finish(timeout=2, force=True)
 
 

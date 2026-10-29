@@ -26,6 +26,11 @@ from multiprocessing import Event
 from time import sleep, time
 from threadpoolctl import threadpool_limits
 
+
+# Library code must not log through the root logger: logger.debug() installs a
+# handler on it, so an application's own records get echoed a second time.
+logger = logging.getLogger(__name__)
+
 from batchgenerators.dataloading.nondet_multi_threaded_augmenter import pin_memory_of_all_eligible_items_in_dict
 
 try:
@@ -210,7 +215,7 @@ class MultiThreadedAugmenter(object):
                 if self._end_ctr == self.num_processes:
                     self._end_ctr = 0
                     self._queue_ctr = 0
-                    logging.debug("MultiThreadedGenerator: finished data generation")
+                    logger.debug("MultiThreadedGenerator: finished data generation")
                     raise StopIteration
 
                 item = self.__get_next_item()
@@ -218,7 +223,7 @@ class MultiThreadedAugmenter(object):
             return item
 
         except KeyboardInterrupt:
-            logging.error("MultiThreadedGenerator: caught exception: {}".format(sys.exc_info()))
+            logger.error("MultiThreadedGenerator: caught exception: {}".format(sys.exc_info()))
             self.abort_event.set()
             self._finish()
             raise KeyboardInterrupt
@@ -229,7 +234,7 @@ class MultiThreadedAugmenter(object):
             self.abort_event.clear()
             self.pause_event.clear()
 
-            logging.debug("starting workers")
+            logger.debug("starting workers")
             self._queue_ctr = 0
             self._end_ctr = 0
 
@@ -262,7 +267,7 @@ class MultiThreadedAugmenter(object):
 
             self.was_initialized = True
         else:
-            logging.debug("MultiThreadedGenerator Warning: start() has been called but it has already been "
+            logger.debug("MultiThreadedGenerator Warning: start() has been called but it has already been "
                           "initialized previously")
 
     def _finish(self, timeout=10, force=False):
@@ -307,7 +312,7 @@ class MultiThreadedAugmenter(object):
         #    feeder threads need pipe space to flush before the worker
         #    process can fully exit; draining concurrently unblocks them.
         if len(self._processes) > 0:
-            logging.debug("MultiThreadedGenerator: shutting down workers...")
+            logger.debug("MultiThreadedGenerator: shutting down workers...")
             deadline = time() + timeout
             drain_tick = max(self.wait_time, 0.01)
             while time() < deadline and any(p.is_alive() for p in self._processes):
@@ -352,7 +357,7 @@ class MultiThreadedAugmenter(object):
         self._start()
 
     def __del__(self):
-        logging.debug("MultiThreadedGenerator: destructor was called")
+        logger.debug("MultiThreadedGenerator: destructor was called")
         # Interpreter shutdown may have already torn down parts of
         # multiprocessing; take the fast path with a short timeout.
         self._finish(timeout=2, force=True)
