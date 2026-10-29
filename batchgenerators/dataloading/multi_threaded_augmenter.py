@@ -16,7 +16,7 @@
 import traceback
 from typing import List, Union
 import threading
-from multiprocessing import Process, Queue
+from multiprocessing import Process, Queue, parent_process
 from queue import Queue as thrQueue, Full, Empty
 import numpy as np
 import sys
@@ -55,9 +55,16 @@ def producer(queue, data_loader, transform, thread_id, seed, abort_event,
         random.seed(seed)
     data_loader.set_thread_id(thread_id)
     item = None
+    parent = parent_process()
 
     try:
         while not abort_event.is_set():
+            # A parent that was killed (SIGKILL, the OOM killer) never sets abort_event. Nobody reads the queue any
+            # more, so don't let the exit wait for the queue's feeder thread either.
+            if parent is not None and not parent.is_alive():
+                queue.cancel_join_thread()
+                return
+
             # When paused, hold any in-flight item and stop interacting with the
             # queue. This guarantees no new bytes hit the pipe after pause is
             # observed, which is what _finish() relies on for safe shutdown.

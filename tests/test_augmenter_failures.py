@@ -1,9 +1,18 @@
+import os
+import signal
+import subprocess
+import sys
 import threading
 import unittest
+from time import sleep, time
+
+import numpy as np
 
 from batchgenerators.dataloading.data_loader import SlimDataLoaderBase
 from batchgenerators.dataloading.multi_threaded_augmenter import MultiThreadedAugmenter
 from batchgenerators.dataloading.nondet_multi_threaded_augmenter import NonDetMultiThreadedAugmenter
+
+AUGMENTERS = {'mta': MultiThreadedAugmenter, 'nondet': NonDetMultiThreadedAugmenter}
 
 
 def _fail_to_unpickle():
@@ -18,6 +27,12 @@ class Unpicklable:
 class UnpicklableDL(SlimDataLoaderBase):
     def generate_train_batch(self):
         return {'data': Unpicklable()}
+
+
+class LargeBatchDL(SlimDataLoaderBase):
+    def generate_train_batch(self):
+        # larger than a pipe's buffer, so a worker's queue feeder blocks once nobody reads
+        return {'data': np.zeros((1, 1, 512, 512), dtype=np.float32)}
 
 
 class TestResultsThreadErrorsSurface(unittest.TestCase):
@@ -59,5 +74,59 @@ class TestResultsThreadErrorsSurface(unittest.TestCase):
         self.check_error_surfaces(NonDetMultiThreadedAugmenter(UnpicklableDL(None, 1), None, 1, 1))
 
 
+def _alive(pid):
+    try:
+        with open('/proc/%d/stat' % pid) as f:
+            return f.read().rsplit(')', 1)[1].split()[0] != 'Z'
+    except FileNotFoundError:
+        return False
+
+
+@unittest.skipUnless(sys.platform.startswith('linux'), 'reads process states from /proc')
+class TestWorkersExitWhenParentDies(unittest.TestCase):
+    """
+    A parent that is killed (SIGKILL, the OOM killer) never tells its workers to stop. They must notice on their own
+    instead of running on as orphans.
+    """
+
+    def check_workers_exit(self, augmenter):
+        helper = subprocess.Popen([sys.executable, os.path.abspath(__file__), 'helper', augmenter],
+                                  stdout=subprocess.PIPE, text=True)
+        workers = []
+        try:
+            workers = [int(i) for i in helper.stdout.readline().split()]
+            self.assertEqual(len(workers), 3)
+            helper.send_signal(signal.SIGKILL)
+            helper.wait()
+            deadline = time() + 10
+            while time() < deadline and any(_alive(w) for w in workers):
+                sleep(0.1)
+            self.assertEqual([w for w in workers if _alive(w)], [])
+        finally:
+            helper.kill()
+            helper.wait()
+            helper.stdout.close()
+            for w in workers:
+                if _alive(w):
+                    os.kill(w, signal.SIGKILL)
+
+    def test_multi_threaded_augmenter(self):
+        self.check_workers_exit('mta')
+
+    def test_nondet_multi_threaded_augmenter(self):
+        self.check_workers_exit('nondet')
+
+
+def run_helper(augmenter):
+    """Starts an augmenter with three workers, prints their pids and waits to be killed."""
+    mt = AUGMENTERS[augmenter](LargeBatchDL(None, 1), None, 3, 1)
+    next(mt)
+    print(' '.join(str(p.pid) for p in mt._processes), flush=True)
+    sleep(60)
+
+
 if __name__ == '__main__':
-    unittest.main()
+    if sys.argv[1:2] == ['helper']:
+        run_helper(sys.argv[2])
+    else:
+        unittest.main()

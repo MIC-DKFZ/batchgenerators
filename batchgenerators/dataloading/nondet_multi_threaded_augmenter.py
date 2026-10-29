@@ -20,6 +20,7 @@ import threading
 from builtins import range
 from multiprocessing import Process
 from multiprocessing import Queue
+from multiprocessing import parent_process
 from queue import Queue as thrQueue, Full, Empty
 import numpy as np
 import logging
@@ -58,9 +59,16 @@ def producer(queue: Queue, data_loader, transform, thread_id: int, seed,
     with threadpool_limits(1, None):
         data_loader.set_thread_id(thread_id)
         item = None
+        parent = parent_process()
 
         try:
             while not abort_event.is_set():
+                # A parent that was killed (SIGKILL, the OOM killer) never sets abort_event. Nobody reads the queue
+                # any more, so don't let the exit wait for the queue's feeder thread either.
+                if parent is not None and not parent.is_alive():
+                    queue.cancel_join_thread()
+                    return
+
                 # When paused, stop producing and stop putting. This is the
                 # handshake _finish() uses to drain queues safely.
                 if pause_event is not None and pause_event.is_set():
