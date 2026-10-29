@@ -143,8 +143,8 @@ def augment_channel_translation(data, const_channel=0, max_shifts=None):
 
     shape = data.shape
 
-    const_data = data[:, [const_channel]]
-    trans_data = data[:, [i for i in range(shape[1]) if i != const_channel]]
+    trans_channels = [i for i in range(shape[1]) if i != const_channel]
+    trans_data = data[:, trans_channels]
 
     # iterate the batch dimension
     for j in range(shape[0]):
@@ -161,7 +161,7 @@ def augment_channel_translation(data, const_channel=0, max_shifts=None):
 
         # iterate the image dimensions, randomly draw shifts/translations
         for i, v in enumerate(dims):
-            rand_shift = np.random.choice(list(range(-max_shifts[v], max_shifts[v], 1)))
+            rand_shift = np.random.choice(list(range(-max_shifts[v], max_shifts[v] + 1)))
 
             if rand_shift > 0:
                 ixs[v] = {'lo': 0, 'hi': -rand_shift}
@@ -184,7 +184,9 @@ def augment_channel_translation(data, const_channel=0, max_shifts=None):
 
         trans_data[j] = slice
 
-    data_return = np.concatenate([const_data, trans_data], axis=1)
+    # the constant channel keeps its position
+    data_return = data.copy()
+    data_return[:, trans_channels] = trans_data
     return data_return
 
 
