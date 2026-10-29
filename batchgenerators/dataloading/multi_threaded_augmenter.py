@@ -152,6 +152,10 @@ def results_loop(in_queues: List[Queue], out_queue: thrQueue, abort_event: Event
         except KeyboardInterrupt:
             abort_event.set()
             raise KeyboardInterrupt
+        except Exception:
+            # the main thread only watches abort_event, without it next() would wait for batches forever
+            abort_event.set()
+            raise
 
 
 class MultiThreadedAugmenter(object):
