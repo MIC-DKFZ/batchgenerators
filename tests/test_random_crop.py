@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import unittest
+from unittest.mock import patch
 import numpy as np
 from batchgenerators.augmentations.crop_and_pad_augmentations import random_crop
 
@@ -22,6 +23,57 @@ class TestRandomCrop(unittest.TestCase):
 
     def setUp(self):
         np.random.seed(1234)
+
+    def _assert_last_origin(self, dim, size, margin, expected_slice, padding):
+        data = np.arange(1, size ** dim + 1).reshape((1, 1) + (size,) * dim)
+        seg = data + 100
+        with patch('numpy.random.randint', side_effect=lambda low, high: high - 1):
+            cropped, cropped_seg = random_crop(data, seg, crop_size=3, margins=margin)
+
+        slices = (slice(None), slice(None)) + (expected_slice,) * dim
+        pad_width = [(0, 0), (0, 0)] + [padding] * dim
+        np.testing.assert_array_equal(cropped, np.pad(data[slices], pad_width))
+        np.testing.assert_array_equal(cropped_seg, np.pad(seg[slices], pad_width))
+
+    def test_last_origin_2D(self):
+        self._assert_last_origin(2, 4, 0, slice(1, 4), (0, 0))
+
+    def test_last_origin_3D(self):
+        self._assert_last_origin(3, 4, 0, slice(1, 4), (0, 0))
+
+    def test_last_origin_with_positive_margin_2D(self):
+        self._assert_last_origin(2, 6, 1, slice(2, 5), (0, 0))
+
+    def test_last_origin_with_positive_margin_3D(self):
+        self._assert_last_origin(3, 6, 1, slice(2, 5), (0, 0))
+
+    def test_last_origin_with_negative_margin_2D(self):
+        self._assert_last_origin(2, 2, -1, slice(0, 2), (0, 1))
+
+    def test_last_origin_with_negative_margin_3D(self):
+        self._assert_last_origin(3, 2, -1, slice(0, 2), (0, 1))
+
+    def _assert_single_origin(self, dim, size, crop_size, margin, expected_slice, padding):
+        data = np.arange(1, size ** dim + 1).reshape((1, 1) + (size,) * dim)
+        with patch('numpy.random.randint') as randint:
+            cropped, seg = random_crop(data, crop_size=crop_size, margins=margin)
+        randint.assert_not_called()
+        expected = data[(slice(None), slice(None)) + (expected_slice,) * dim]
+        expected = np.pad(expected, [(0, 0), (0, 0)] + [padding] * dim)
+        np.testing.assert_array_equal(cropped, expected)
+        self.assertIsNone(seg)
+
+    def test_single_valid_origin_2D(self):
+        self._assert_single_origin(2, 5, 3, 1, slice(1, 4), (0, 0))
+
+    def test_single_valid_origin_3D(self):
+        self._assert_single_origin(3, 5, 3, 1, slice(1, 4), (0, 0))
+
+    def test_oversized_crop_2D(self):
+        self._assert_single_origin(2, 2, 4, 0, slice(0, 2), (1, 1))
+
+    def test_oversized_crop_3D(self):
+        self._assert_single_origin(3, 2, 4, 0, slice(0, 2), (1, 1))
 
     def test_random_crop_3D(self):
         data = np.random.random((32, 4, 64, 56, 48))

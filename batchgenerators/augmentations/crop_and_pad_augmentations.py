@@ -33,7 +33,7 @@ def get_lbs_for_random_crop(crop_size, data_shape, margins):
     lbs = []
     for i in range(len(data_shape) - 2):
         if data_shape[i+2] - crop_size[i] - margins[i] > margins[i]:
-            lbs.append(np.random.randint(margins[i], data_shape[i+2] - crop_size[i] - margins[i]))
+            lbs.append(np.random.randint(margins[i], data_shape[i+2] - crop_size[i] - margins[i] + 1))
         else:
             lbs.append((data_shape[i+2] - crop_size[i]) // 2)
     return lbs
