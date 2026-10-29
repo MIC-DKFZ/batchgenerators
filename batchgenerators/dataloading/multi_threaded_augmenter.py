@@ -123,6 +123,13 @@ def results_loop(in_queues: List[Queue], out_queue: thrQueue, abort_event: Event
                     item = current_queue.get(timeout=wait_time)
                 except Empty:
                     continue  # retry the same queue; abort_event re-checked at top of loop
+                except Exception:
+                    # A worker can still put a batch during shutdown and exit right after. Torch tensors are unpickled
+                    # by fetching their file descriptor from the sending process, so that batch may fail to load. It
+                    # would be discarded anyway.
+                    if abort_event.is_set():
+                        return
+                    raise
                 # if we do pin memory, do it now, otherwise skip this. The isinstance(dict) guard keeps the 'end'
                 # string sentinel from reaching the pinning logic.
                 if do_pin_memory:
