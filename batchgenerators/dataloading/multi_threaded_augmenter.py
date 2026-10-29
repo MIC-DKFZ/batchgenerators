@@ -25,6 +25,7 @@ import signal
 from multiprocessing import Event
 from time import sleep, time
 from threadpoolctl import threadpool_limits
+import random
 
 from batchgenerators.dataloading.nondet_multi_threaded_augmenter import pin_memory_of_all_eligible_items_in_dict
 
@@ -42,6 +43,8 @@ def producer(queue, data_loader, transform, thread_id, seed, abort_event,
     signal.signal(signal.SIGTERM, signal.SIG_DFL)
 
     np.random.seed(seed)
+    random.seed(seed) if seed is not None else None
+    torch.manual_seed(seed) if seed is not None else None
     data_loader.set_thread_id(thread_id)
     item = None
 
