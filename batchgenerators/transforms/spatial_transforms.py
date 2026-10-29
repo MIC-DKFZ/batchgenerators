@@ -59,6 +59,27 @@ class Rot90Transform(AbstractTransform):
         return data_dict
 
 
+def _augment_per_sample(data, seg, augment, concatenate_list):
+    """
+    Applies augment(sample_data, sample_seg) to every sample of data and seg (seg can be None). An ndarray batch comes
+    back as one ndarray. A list or tuple of samples, which may differ in size, comes back as the same container type,
+    or as one ndarray if concatenate_list is set.
+    """
+    results = [augment(data[b], None if seg is None else seg[b]) for b in range(len(data))]
+
+    if isinstance(data, np.ndarray) or concatenate_list:
+        data = np.vstack([i[0][None] for i in results])
+    else:
+        data = type(data)(i[0] for i in results)
+
+    if seg is not None:
+        if isinstance(seg, np.ndarray) or concatenate_list:
+            seg = np.vstack([i[1][None] for i in results])
+        else:
+            seg = type(seg)(i[1] for i in results)
+    return data, seg
+
+
 class ZoomTransform(AbstractTransform):
     def __init__(self, zoom_factors=1, order=3, order_seg=1, concatenate_list=False, data_key="data",
                  label_key="seg", *, seg_tiebreak='nearest'):
@@ -85,41 +106,12 @@ class ZoomTransform(AbstractTransform):
         self.zoom_factors = zoom_factors
 
     def __call__(self, **data_dict):
-        data = data_dict.get(self.data_key)
-        seg = data_dict.get(self.label_key)
+        def zoom(sample_data, sample_seg):
+            return augment_zoom(sample_data, sample_seg, self.zoom_factors, self.order, self.order_seg,
+                                seg_tiebreak=self.seg_tiebreak)
 
-        if isinstance(data, np.ndarray):
-            concatenate = True
-        else:
-            concatenate = self.concatenate_list
-
-        if seg is not None:
-            if isinstance(seg, np.ndarray):
-                concatenate_seg = True
-            else:
-                concatenate_seg = self.concatenate_list
-        else:
-            concatenate_seg = None
-
-        results = []
-        for b in range(len(data)):
-            sample_seg = None
-            if seg is not None:
-                sample_seg = seg[b]
-            res_data, res_seg = augment_zoom(data[b], sample_seg, self.zoom_factors, self.order, self.order_seg,
-                                             seg_tiebreak=self.seg_tiebreak)
-            results.append((res_data, res_seg))
-
-        if concatenate:
-            data = np.vstack([i[0][None] for i in results])
-        else:
-            data = type(data)(i[0] for i in results)
-
-        if concatenate_seg is not None and concatenate_seg:
-            seg = np.vstack([i[1][None] for i in results])
-        elif seg is not None:
-            seg = type(seg)(i[1] for i in results)
-
+        data, seg = _augment_per_sample(data_dict.get(self.data_key), data_dict.get(self.label_key), zoom,
+                                        self.concatenate_list)
         data_dict[self.data_key] = data
         if seg is not None:
             data_dict[self.label_key] = seg
@@ -153,41 +145,12 @@ class ResizeTransform(AbstractTransform):
         self.target_size = target_size
 
     def __call__(self, **data_dict):
-        data = data_dict.get(self.data_key)
-        seg = data_dict.get(self.label_key)
+        def resize(sample_data, sample_seg):
+            return augment_resize(sample_data, sample_seg, self.target_size, self.order, self.order_seg,
+                                  seg_tiebreak=self.seg_tiebreak)
 
-        if isinstance(data, np.ndarray):
-            concatenate = True
-        else:
-            concatenate = self.concatenate_list
-
-        if seg is not None:
-            if isinstance(seg, np.ndarray):
-                concatenate_seg = True
-            else:
-                concatenate_seg = self.concatenate_list
-        else:
-            concatenate_seg = None
-
-        results = []
-        for b in range(len(data)):
-            sample_seg = None
-            if seg is not None:
-                sample_seg = seg[b]
-            res_data, res_seg = augment_resize(data[b], sample_seg, self.target_size, self.order, self.order_seg,
-                                               seg_tiebreak=self.seg_tiebreak)
-            results.append((res_data, res_seg))
-
-        if concatenate:
-            data = np.vstack([i[0][None] for i in results])
-        else:
-            data = type(data)(i[0] for i in results)
-
-        if concatenate_seg is not None and concatenate_seg:
-            seg = np.vstack([i[1][None] for i in results])
-        elif seg is not None:
-            seg = type(seg)(i[1] for i in results)
-
+        data, seg = _augment_per_sample(data_dict.get(self.data_key), data_dict.get(self.label_key), resize,
+                                        self.concatenate_list)
         data_dict[self.data_key] = data
         if seg is not None:
             data_dict[self.label_key] = seg
@@ -253,9 +216,8 @@ class ChannelTranslation(AbstractTransform):
     def __call__(self, **data_dict):
         data = data_dict.get(self.data_key)
 
-        ret_val = augment_channel_translation(data=data, const_channel=self.const_channel, max_shifts=self.max_shift)
-
-        data_dict[self.data_key] = ret_val
+        data_dict[self.data_key] = augment_channel_translation(data=data, const_channel=self.const_channel,
+                                                               max_shifts=self.max_shift)
 
         return data_dict
 
