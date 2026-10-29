@@ -25,9 +25,9 @@ import signal
 from multiprocessing import Event
 from time import sleep, time
 from threadpoolctl import threadpool_limits
-import random
 
-from batchgenerators.dataloading.nondet_multi_threaded_augmenter import pin_memory_of_all_eligible_items_in_dict
+from batchgenerators.dataloading.nondet_multi_threaded_augmenter import pin_memory_of_all_eligible_items_in_dict, \
+    seed_worker_rngs
 
 try:
     import torch
@@ -42,17 +42,7 @@ def producer(queue, data_loader, transform, thread_id, seed, abort_event,
     # Restore default SIGTERM handler to terminate the process
     signal.signal(signal.SIGTERM, signal.SIG_DFL)
 
-    # Forked workers inherit the parent's torch RNG state. Without a seed they would all draw the same numbers, so
-    # reseed torch from the OS, as np.random.seed(None) does for numpy.
-    if torch is not None:
-        if seed is not None:
-            torch.manual_seed(seed)
-        else:
-            torch.seed()
-
-    np.random.seed(seed)
-    if seed is not None:
-        random.seed(seed)
+    seed_worker_rngs(seed)
     data_loader.set_thread_id(thread_id)
     item = None
     parent = parent_process()
@@ -178,7 +168,7 @@ class MultiThreadedAugmenter(object):
         num_cached_per_queue (int): number of batches cached per process (each process has its own
         multiprocessing.Queue). We found 2 to be ideal.
         seeds (list of int): one seed for each worker. Must have len(num_processes).
-        If None then seeds = range(num_processes)
+        If None, every worker seeds itself from the OS and runs are not reproducible
         pin_memory (bool): set to True if all torch tensors in data_dict are to be pinned. Pytorch only.
         timeout (int): How long do we wait for the background workers to do stuff? If timeout seconds have passed and
         self.__get_next_item still has not gotten an item from the workers we will perform a check whether all

@@ -24,6 +24,7 @@ from multiprocessing import parent_process
 from queue import Queue as thrQueue, Full, Empty
 import numpy as np
 import logging
+import random
 import signal
 from multiprocessing import Event
 from time import sleep, time
@@ -39,21 +40,34 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
+def seed_worker_rngs(seed):
+    """
+    Seeds numpy, random and torch in a background worker.
+
+    Forked workers inherit the parent's torch RNG state. Without a seed they would all draw the same numbers, so torch
+    is reseeded from the OS, as np.random.seed(None) does for numpy (random reseeds itself after a fork).
+    With a seed, torch gets a seed derived from it, not the seed itself: numpy and torch both use MT19937, and with the
+    same seed torch.rand would return the numbers numpy draws.
+    """
+    np.random.seed(seed)
+    if seed is not None:
+        # random.seed refuses numpy integers
+        random.seed(int(seed))
+    if torch is not None:
+        if seed is not None:
+            torch.manual_seed(int(np.random.SeedSequence(int(seed)).generate_state(1)[0]))
+        else:
+            torch.seed()
+
+
 def producer(queue: Queue, data_loader, transform, thread_id: int, seed,
              abort_event: Event, pause_event=None, wait_time: float = 0.02):
     # Restore default SIGTERM handler to terminate the process
     signal.signal(signal.SIGTERM, signal.SIG_DFL)
 
-    # Forked workers inherit the parent's torch RNG state. Without a seed they would all draw the same numbers, so
-    # reseed torch from the OS, as np.random.seed(None) does for numpy.
     if torch is not None:
         torch.set_num_threads(1)
-        if seed is not None:
-            torch.manual_seed(seed)
-        else:
-            torch.seed()
-
-    np.random.seed(seed)
+    seed_worker_rngs(seed)
 
     # the producer will set the abort event if something happens
     with threadpool_limits(1, None):
