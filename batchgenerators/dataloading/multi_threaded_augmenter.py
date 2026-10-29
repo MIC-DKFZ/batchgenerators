@@ -42,9 +42,12 @@ def producer(queue, data_loader, transform, thread_id, seed, abort_event,
     # Restore default SIGTERM handler to terminate the process
     signal.signal(signal.SIGTERM, signal.SIG_DFL)
 
+    if torch is not None and seed is not None:
+        torch.manual_seed(seed)
+
     np.random.seed(seed)
-    random.seed(seed) if seed is not None else None
-    torch.manual_seed(seed) if seed is not None else None
+    if seed is not None:
+        random.seed(seed)
     data_loader.set_thread_id(thread_id)
     item = None
 
