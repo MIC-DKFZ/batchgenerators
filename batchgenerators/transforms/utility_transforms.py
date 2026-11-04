@@ -172,9 +172,10 @@ class ConvertSegToArgmaxTransform(AbstractTransform):
                 seg = np.expand_dims(seg, 1)
             if self.labels is not None:
                 if list(self.labels) != list(range(n_labels)):
+                    label_indices = seg.copy()
                     for index, value in enumerate(reversed(self.labels)):
                         index = n_labels - index - 1
-                        seg[seg == index] = value
+                        seg[label_indices == index] = value
             data_dict["seg"] = seg
         else:
             from warnings import warn
@@ -210,9 +211,10 @@ class ConvertMultiSegToArgmaxTransform(AbstractTransform):
                 output[:, i] = np.argmax(seg[:, i*n_labels:(i+1)*n_labels], 1)
             if self.labels is not None:
                 if list(self.labels) != list(range(n_labels)):
+                    label_indices = output.copy()
                     for index, value in enumerate(reversed(self.labels)):
                         index = n_labels - index - 1
-                        output[output == index] = value
+                        output[label_indices == index] = value
             data_dict["seg"] = output
         else:
             from warnings import warn
