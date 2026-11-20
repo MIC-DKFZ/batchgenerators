@@ -949,8 +949,8 @@ def mask_random_square(img, square_size, n_val, channel_wise_n_val=False, square
     img = img.copy()
 
     if square_pos is None:
-        w_start = np.random.randint(0, img_w - square_size)
-        h_start = np.random.randint(0, img_h - square_size)
+        w_start = np.random.randint(0, img_w - square_size + 1)
+        h_start = np.random.randint(0, img_h - square_size + 1)
     else:
         pos_wh = square_pos[np.random.randint(0, len(square_pos))]
         w_start = pos_wh[0]
@@ -971,7 +971,7 @@ def mask_random_square(img, square_size, n_val, channel_wise_n_val=False, square
         if channel_wise_n_val:
             for i in range(img.shape[0]):
                 rnd_n_val = get_range_val(n_val)
-                img[:, i, h_start:(h_start + square_size), w_start:(w_start + square_size)] = rnd_n_val
+                img[i, :, h_start:(h_start + square_size), w_start:(w_start + square_size)] = rnd_n_val
         else:
             rnd_n_val = get_range_val(n_val)
             img[:, :, h_start:(h_start + square_size), w_start:(w_start + square_size)] = rnd_n_val
