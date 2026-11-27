@@ -574,7 +574,7 @@ def augment_misalign(data, seg, data_size,
                                                                   border_mode_data, cval=border_cval_data)
             if seg is not None:
                 for channel_id in range(seg.shape[1]):
-                    if channel_id in im_channels_2_misalign:
+                    if channel_id in label_channels_2_misalign:
                         seg[sample_id, channel_id] = interpolate_img(seg[sample_id, channel_id], coords, order_seg,
                                                                      border_mode_seg, cval=border_cval_seg,
                                                                      is_seg=True, seg_tiebreak=seg_tiebreak)
@@ -607,7 +607,7 @@ def augment_misalign(data, seg, data_size,
                                                                   border_mode_data, cval=border_cval_data)
             if seg is not None:
                 for channel_id in range(seg.shape[1]):
-                    if channel_id in im_channels_2_misalign:
+                    if channel_id in label_channels_2_misalign:
                         seg[sample_id, channel_id] = interpolate_img(seg[sample_id, channel_id], coords, order_seg,
                                                                      border_mode_seg, cval=border_cval_seg,
                                                                      is_seg=True, seg_tiebreak=seg_tiebreak)
